@@ -167,6 +167,22 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         await db.messages.update_one({"app_id": app_id, "message_id": message_id}, {"$set": upd})
         return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
 
+    @api.post("/apps/{app_id}/inbox/{message_id}/ai-draft")
+    async def ai_draft(app_id: str, message_id: str, user: dict = Depends(get_current_user)):
+        app_doc = await get_user_app(app_id, user)
+        msg = await db.messages.find_one({"app_id": app_id, "message_id": message_id}, {"_id": 0})
+        if not msg:
+            raise HTTPException(404, "Message not found")
+        from studio import _claude
+        system = (f"You write short, warm, professional email replies on behalf of {app_doc['name']} ({app_doc.get('industry', '')}). "
+                  "Answer the lead's actual questions, propose one concrete next step (call, quote, booking), keep it under 120 words, plain text, no subject line, sign off with the business name.")
+        prompt = f"Lead name: {msg.get('from_name') or 'there'}\nSubject: {msg.get('subject', '')}\nMessage:\n{(msg.get('body') or '')[:3000]}"
+        try:
+            draft = (await _claude(system, prompt, f"draft-{message_id}")).strip()
+        except Exception as e:
+            raise HTTPException(500, f"Draft failed: {str(e)[:120]}")
+        return {"draft": draft}
+
     @api.post("/apps/{app_id}/inbox/{message_id}/reply")
     async def reply_message(app_id: str, message_id: str, body: ReplyIn, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)

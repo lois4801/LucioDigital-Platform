@@ -3,8 +3,8 @@ from fastapi import HTTPException, Depends
 
 # Prebuilt industry templates → applied as App Mode blueprints (screens/components/models) + light theme with industry palette.
 P = {"amber": ("#F59E0B", "#0F172A"), "orange": ("#F97316", "#1E293B"), "teal": ("#0D9488", "#0F766E"), "navy": ("#1E3A8A", "#10B981"), "violet": ("#7C3AED", "#EC4899"),
-     "terracotta": ("#C2410C", "#F59E0B"), "red": ("#DC2626", "#F97316"), "blue": ("#2563EB", "#06B6D4"), "indigo": ("#4F46E5", "#22D3EE"), "emerald": ("#059669", "#0EA5E9"),
-     "rose": ("#E11D48", "#F59E0B"), "slate": ("#334155", "#0EA5E9"), "green": ("#16A34A", "#F59E0B"), "cyan": ("#0891B2", "#7C3AED"), "purple": ("#9333EA", "#F97316"), "sky": ("#0284C7", "#F97316"), "lime": ("#65A30D", "#0D9488"), "brown": ("#92400E", "#D97706")}
+     "terracotta": ("#C2410C", "#F59E0B"), "red": ("#B45309", "#F97316"), "blue": ("#475569", "#0EA5E9"), "indigo": ("#4F46E5", "#22D3EE"), "emerald": ("#166534", "#0EA5E9"),
+     "rose": ("#E11D48", "#F59E0B"), "slate": ("#7F1D1D", "#B45309"), "green": ("#16A34A", "#F59E0B"), "cyan": ("#4338CA", "#F59E0B"), "purple": ("#9333EA", "#F472B6"), "sky": ("#0284C7", "#F97316"), "lime": ("#65A30D", "#0D9488"), "brown": ("#92400E", "#D97706")}
 
 # key: (name, industry, palette, [ (screen, route, [ (comp_type, label, model, [fields]) ]) ], [ (model, [field:type*]) ])
 T = {

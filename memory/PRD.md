@@ -98,6 +98,13 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Niche Switcher** in Site Mode (`NicheSwitcher.jsx`, "Try another look" `niche-switcher-btn`): `POST /apps/{id}/site/niche-preview {niche}` returns a non-destructive 4-page preview + theme; Builder shows `niche-preview-bar` + `niche-preview-canvas` with page pills; "Apply this look" calls premium-rebuild; "Back to my site" restores.
 - Testing: iteration_12.json — 16/16 backend, frontend flows pass.
 
+### Jun 2026 (v12) — Lead Reply Inline, Client Look Voting, Brand Preservation, tenant app standards
+- **Lead Reply Inline** (`LeadReply.jsx` on /leads): `POST /apps/{id}/inbox/{mid}/ai-draft` (Claude) drafts a reply; composer expands inline (framer-motion), sends via existing reply endpoint (email via Resend when address present), reply history + delivery status on the card, status chip "Replied".
+- **Client Look Voting** (`LookVoting.jsx` in /portal): `GET /apps/{id}/site/look-options` (5 curated looks: current + 2 same-mood + 2 contrasting), `POST /apps/{id}/site/look-vote` stores `apps.look_vote` and logs `look.voted` (owner notifications). Owner sees `ClientVoteBanner` in Site Mode → Preview & apply; applying the voted niche sets `look_vote.applied`.
+- **Brand Preservation** (`extract_brand`): tenant name/email/phone/address/logo pulled from `apps.brand_profile` + existing contact/navbar blocks; pack sample values and placeholders (example.com) are never treated as real. `niche-preview`/`premium-rebuild` return `preserved`; `apply-look-confirm` dialog lists preserved fields before applying.
+- **Tenant app standards** (App Mode export): `<html class='light'>`, dark-mode toggle in sidebar, `.dark` vars, scroll-reveal `.reveal`, scale-on-hover, idle float keyframe; template palette map updated (Finance navy/emerald, Legal burgundy, Logistics steel blue, Education indigo, Restaurants amber, Events purple, IT cyan, Real Estate forest green).
+- Testing: iteration_13.json (all pass except stale banner) → fixed → iteration_14.json.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

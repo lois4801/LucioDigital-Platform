@@ -260,7 +260,8 @@ def starter_frontend_files(spec: dict, theme: dict = None) -> Dict[str, str]:
         routes.append(f'        <Route path="{route}" element={{<{n} />}} />')
         if s.get("nav", True):
             nav.append(f'<NavLink to="{route}" end>{esc(s.get("name"))}</NavLink>')
-    files["frontend/src/App.jsx"] = f"""import {{ BrowserRouter, Routes, Route, NavLink, useLocation }} from "react-router-dom";
+    files["frontend/src/App.jsx"] = f"""import {{ useEffect, useState }} from "react";
+import {{ BrowserRouter, Routes, Route, NavLink, useLocation }} from "react-router-dom";
 {chr(10).join(imports)}
 import "./styles.css";
 
@@ -273,10 +274,14 @@ function Breadcrumbs() {{
 }}
 
 export default function App() {{
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  useEffect(() => {{ document.documentElement.classList.toggle("dark", dark); document.documentElement.classList.toggle("light", !dark); localStorage.setItem("theme", dark ? "dark" : "light"); }}, [dark]);
+  useEffect(() => {{ const io = new IntersectionObserver(es => es.forEach(e => e.isIntersecting && e.target.classList.add("in")), {{ rootMargin: "-40px" }}); document.querySelectorAll(".card,.stat").forEach(el => {{ el.classList.add("reveal"); io.observe(el); }}); return () => io.disconnect(); }});
   return (
     <BrowserRouter>
       <div className="shell">
-        <aside className="sidebar"><div className="brand"><span className="dot" />{esc(spec.get('name', 'App'))}</div><nav>{''.join(nav)}</nav></aside>
+        <aside className="sidebar"><div className="brand"><span className="dot" />{esc(spec.get('name', 'App'))}</div><nav>{''.join(nav)}</nav>
+          <button className="toggle" onClick={{() => setDark(d => !d)}}>{{dark ? "☀ Light mode" : "☾ Dark mode"}}</button></aside>
         <div className="content">
           <Breadcrumbs />
           <Routes>
@@ -325,11 +330,14 @@ export function DataForm({ collection, fields }) {
         ".content{margin-left:240px;flex:1;display:flex;flex-direction:column}.topbar{display:flex;align-items:center;gap:10px;padding:14px 32px;border-bottom:1px solid var(--bd);background:var(--sf);font-size:13px;color:var(--mut);position:sticky;top:0}.topbar strong{color:var(--p)}.sep{opacity:.5}"
         ".page{max-width:1120px;padding:36px 32px}.muted{color:var(--mut)}.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:24px;margin-top:20px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:20px}.stat{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px}.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}.stat strong{display:block;font-size:28px;margin-top:6px}"
         ".table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:10px;border-bottom:1px solid var(--bd)}.table th{color:var(--mut);font-size:12px;font-weight:600}.form{display:grid;gap:10px}.form input{padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg)}.form button{background:var(--p);color:#fff;border:0;padding:12px;border-radius:999px;font-weight:600;cursor:pointer}"
-        "@media(max-width:860px){.sidebar{position:static;width:auto;inset:auto;border-right:0;border-bottom:1px solid var(--bd)}.sidebar nav{flex-direction:row;flex-wrap:wrap}.shell{flex-direction:column}.content{margin-left:0}}")
+        "@media(max-width:860px){.sidebar{position:static;width:auto;inset:auto;border-right:0;border-bottom:1px solid var(--bd)}.sidebar nav{flex-direction:row;flex-wrap:wrap}.shell{flex-direction:column}.content{margin-left:0}}"
+        ".dark{--bg:#0A0A0F;--sf:#141420;--fg:#F8FAFC;--mut:#A1A7B8;--bd:#262637}.toggle{margin-top:auto;border:1px solid var(--bd);background:transparent;color:var(--mut);border-radius:999px;padding:8px 12px;font-size:12px;cursor:pointer}"
+        ".reveal{opacity:0;transform:translateY(16px);transition:opacity .45s cubic-bezier(.22,1,.36,1),transform .45s cubic-bezier(.22,1,.36,1)}.reveal.in{opacity:1;transform:none}.card,.stat{transition:transform .2s,box-shadow .2s}.card:hover,.stat:hover{transform:scale(1.015) translateY(-2px);box-shadow:0 20px 50px -30px var(--p)}"
+        "@keyframes idle{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.stat:first-child{animation:idle 5s ease-in-out infinite}")
     files["frontend/src/theme.json"] = json.dumps({"mode": theme.get("mode", "light"), "primary": p, "secondary": s2, "layout": "fixed-left-sidebar"}, indent=2)
     files["frontend/package.json"] = json.dumps({"name": _snake(spec.get("name", "app")), "private": True, "dependencies": {"react": "^19.0.0", "react-dom": "^19.0.0", "react-router-dom": "^7.0.0", "react-scripts": "5.0.1"}, "scripts": {"start": "react-scripts start", "build": "react-scripts build"}}, indent=2)
     files["frontend/src/index.js"] = 'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\nReactDOM.createRoot(document.getElementById("root")).render(<App />);\n'
-    files["frontend/public/index.html"] = "<!doctype html><html><head><meta charset='utf-8'><title>App</title></head><body><div id='root'></div></body></html>"
+    files["frontend/public/index.html"] = "<!doctype html><html class='light'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>App</title></head><body><div id='root'></div></body></html>"
     files["frontend/.env.example"] = "REACT_APP_BACKEND_URL=http://localhost:8001\n"
     return files
 

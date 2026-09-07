@@ -10,7 +10,7 @@ import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
-import { NicheSwitcher, NichePreviewBar } from "@/components/builder/NicheSwitcher";
+import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/builder/NicheSwitcher";
 import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -80,11 +80,18 @@ export default function Builder({ appId, appDoc }) {
   const [nichePreview, setNichePreview] = useState(null);
   const [previewPage, setPreviewPage] = useState(0);
   const [applyingNiche, setApplyingNiche] = useState(false);
+  const [lookVote, setLookVote] = useState(appDoc?.look_vote || null);
+  useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
   async function applyNiche() {
-    if (!nichePreview || !window.confirm(`Apply the ${nichePreview.brand} look? Current pages will be replaced with this ${nichePreview.pages.length}-page site.`)) return;
+    if (!nichePreview) return;
     setApplyingNiche(true);
-    try { await api.post(`/apps/${appId}/site/premium-rebuild`, { niche: nichePreview.niche }); toast.success(`Applied ${nichePreview.niche.replace(/_/g, " ")} look`); setNichePreview(null); await load(); }
+    try { const { data } = await api.post(`/apps/${appId}/site/premium-rebuild`, { niche: nichePreview.niche }); toast.success(`Applied ${nichePreview.niche.replace(/_/g, " ")} look · kept ${Object.keys(data.preserved || {}).join(", ") || "pack defaults"}`); if (lookVote?.niche === nichePreview.niche) setLookVote(v => ({ ...v, applied: true })); setNichePreview(null); await load(); }
     catch (e) { toast.error(e.response?.data?.detail || "Apply failed"); } finally { setApplyingNiche(false); }
+  }
+  async function previewNiche(niche) {
+    setApplyingNiche(true);
+    try { const { data } = await api.post(`/apps/${appId}/site/niche-preview`, { niche }); setNichePreview(data); setPreviewPage(0); }
+    catch (e) { toast.error(e.response?.data?.detail || "Preview failed"); } finally { setApplyingNiche(false); }
   }
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
@@ -181,6 +188,7 @@ export default function Builder({ appId, appDoc }) {
         </div>
       </div>
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
+      <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
       <NichePreviewBar preview={nichePreview} onApply={applyNiche} onExit={() => setNichePreview(null)} applying={applyingNiche} />
       {nichePreview && (
         <div className="min-h-[600px]" data-testid="niche-preview-canvas">

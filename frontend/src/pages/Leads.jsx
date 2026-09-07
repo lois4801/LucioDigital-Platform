@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowLeft, Flame, Mail, MessageSquare, FileText, Star, Archive, CheckCheck, Inbox, ExternalLink } from "lucide-react";
 import api from "@/lib/api";
+import { LeadReply } from "@/components/LeadReply";
 
 const SRC = { contact: { label: "Contact form", Icon: Mail }, chat: { label: "AI chat", Icon: MessageSquare }, request: { label: "Change request", Icon: FileText } };
 const FILTERS = [["unread", "New"], ["read", "Reviewed"], ["archived", "Archived"], ["all", "All"]];
@@ -69,7 +70,7 @@ export default function Leads() {
                     <td className="px-4 py-3 hidden md:table-cell text-[var(--mut)] text-xs">{m.from_email || "—"}</td>
                     <td className="px-4 py-3 hidden lg:table-cell"><span className="inline-flex items-center gap-1.5 text-xs text-[var(--mut)]"><s.Icon size={12} /> {s.label}</span></td>
                     <td className="px-4 py-3 hidden md:table-cell text-xs text-[var(--mut)] whitespace-nowrap">{new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</td>
-                    <td className="px-4 py-3"><span data-testid={`lead-status-${m.message_id}`} className={`chip ${m.status === "unread" ? "chip-active" : ""}`}>{m.status === "unread" ? "New" : m.status === "read" ? "Reviewed" : "Archived"}</span>{m.score != null && <span className="ml-2 text-[10px] font-mono text-[var(--dim)]">{m.score}</span>}</td>
+                    <td className="px-4 py-3"><span data-testid={`lead-status-${m.message_id}`} className={`chip ${m.status === "unread" ? "chip-active" : ""}`}>{m.status === "unread" ? "New" : m.replies?.length ? "Replied" : m.status === "read" ? "Reviewed" : "Archived"}</span>{m.score != null && <span className="ml-2 text-[10px] font-mono text-[var(--dim)]">{m.score}</span>}</td>
                     <td className="px-2 py-3 text-right"><button data-testid={`lead-star-${m.message_id}`} onClick={e => { e.stopPropagation(); patch(m, { starred: !m.starred }); }} className={`p-1.5 rounded-md hover:bg-white/10 ${m.starred ? "text-amber-400" : "text-[var(--dim)]"}`}><Star size={13} fill={m.starred ? "currentColor" : "none"} /></button></td>
                   </tr>); })}
               </tbody>
@@ -99,6 +100,7 @@ export default function Leads() {
                   : <button data-testid="lead-unarchive-btn" onClick={() => patch(open, { status: "read" })} className="btn-ghost text-xs !py-1.5 !px-3">Restore</button>}
                 <button data-testid="lead-open-project-btn" onClick={() => nav(`/apps/${open.app_id}`)} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1">Open in project <ExternalLink size={12} /></button>
               </div>
+              <LeadReply lead={open} onUpdated={(m) => { setOpen(m); setData(d => ({ ...d, messages: d.messages.map(x => x.message_id === m.message_id ? m : x) })); }} />
             </div>
           )}
         </aside>

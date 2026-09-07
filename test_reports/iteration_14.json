@@ -1,0 +1,22 @@
+{
+  "summary": "iter14 retest of iter13 fixes — BOTH bugs verified fixed. Backend (2/2 pytest passed): create app 'TEST_iter14 Retest Co' Legal/website → look-vote finance → niche-preview finance returns preserved={name:'TEST_iter14 Retest Co'} only (no email/phone/address; NO 'hello@example.com' leak); pages[0].blocks[0] is navbar with no 'logo' key at all (extract_brand returned logo=None, build_premium_site conditionally spreads {'logo':brand_logo} only if truthy — so navbar.props.logo is never null). premium-rebuild then GET /apps/{id} shows look_vote.applied=true and site_niche=finance. Frontend (cookie login jaybernabe@luciodigital.com/Lucio2026!): opened /apps/{id}/site-mode, client-vote-banner visible, clicked client-vote-preview-btn → niche-preview-bar shown → niche-preview-apply → apply-look-confirm dialog with preserved-fields listing only 'name TEST_iter14 Retest Co', apply-look-confirm-btn → toast 'Applied finance look · kept name' shown AND client-vote-banner is GONE without navigation reload (local lookVote state + optimistic applied=true works). builder-canvas shows finance hero 'Wealth management that answers to you…' with navbar brand 'TEST_iter14 Retest Co'. Regression: /portal renders look/vote content. Note: /leads showed 0 lead-reply elements only because the newly-created app has no leads yet (not a regression — no seeded leads for TEST_iter14 app; iter13 confirmed lead flow on demo apps).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter14_vote_banner_brand.py",
+    "/app/test_reports/pytest/pytest_iter14.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Builder.jsx line 88 optimistically sets lookVote.applied=true only when applied niche matches lookVote.niche — correct. However load() still doesn't refetch /apps/:id, so if the parent later re-mounts Builder with a stale appDoc prop the useEffect on line 84 could revert lookVote. Acceptable for now; consider a follow-up onAppRefresh prop for full consistency.",
+    "site_content.py extract_brand: placeholder lambda now correctly filters 'example.com' + NICHES sample contacts + 'hello@yourbrand'. Logo is filtered to None if placeholder; build_premium_site conditionally spreads logo only when truthy — good. One edge: if a tenant legitimately sets their real logo to a URL containing 'example.com' (unlikely), it would be filtered. Not worth changing."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter14_vote_banner_brand.py"],
+  "success_rate": {"backend": "100% (2/2)", "frontend": "100% (banner-hide + brand-preserve both green)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie session)",
+  "seed_data_creation": "Created ephemeral TEST_iter14 Retest Co app in both pytest and UI test — cleaned up (DELETE /api/apps/{id}) in fixture teardown and end of UI script. No demo apps touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iter13 stale-banner + placeholder-leak bugs both fixed and verified. Test file: /app/backend/tests/test_iter14_vote_banner_brand.py (2 tests, ~1.3s) — run with REACT_APP_BACKEND_URL set. Frontend flow verified via Playwright (site-mode → vote banner → preview → apply confirm → banner disappears, brand preserved).",
+  "rca of the issue": "iter13 bug 1 (stale banner): fixed by moving lookVote into local Builder state (Builder.jsx L83-84 useState+useEffect syncing prop) and optimistically flipping applied=true in applyNiche (L88). iter13 bug 2 (placeholder leak + null logo): fixed in site_content.py extract_brand (L374-387) with a placeholder() predicate checking NICHES samples + 'example.com' + 'hello@yourbrand', returning None for placeholder logo; build_premium_site (L403) uses conditional spread `{'logo': brand_logo} if brand_logo else {}` so navbar.props.logo is never null."
+}

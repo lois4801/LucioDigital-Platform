@@ -369,12 +369,38 @@ def _sec(n, key, i, brand):
     return None
 
 
-def build_premium_site(app, niche_key=None):
+def extract_brand(app, pages):
+    """Real tenant brand data to preserve over sample pack values (pack samples are never treated as real)."""
+    samples = {v[k] for v in NICHES.values() for k in ("email", "phone", "address", "brand")}
+    placeholder = lambda v: not v or v in samples or "example.com" in str(v).lower() or str(v).lower().startswith("hello@yourbrand")
+    prof = app.get("brand_profile") or {}
+    b = {"name": app.get("name"), "email": prof.get("email"), "phone": prof.get("phone"), "address": prof.get("address"), "logo": app.get("logo") or prof.get("logo")}
+    for pg in pages or []:
+        for blk in pg.get("blocks", []):
+            p = blk.get("props", {})
+            if blk.get("type") == "contact":
+                for k in ("email", "phone", "address"):
+                    if p.get(k) and not placeholder(p[k]) and not b[k]:
+                        b[k] = p[k]
+            if blk.get("type") in ("navbar", "footer") and p.get("logo") and not b["logo"]:
+                b["logo"] = p["logo"]
+    return {k: (None if placeholder(v) and k != "name" else v) for k, v in b.items()}
+
+
+def build_premium_site(app, niche_key=None, brand=None):
     key = niche_key or niche_for(app)
-    n = NICHES[key]
-    brand = n["brand"] if app.get("name") in APP_MAP or not app.get("name") else app["name"]
+    n = dict(NICHES[key])
+    brand = brand or {}
+    if brand.get("name") and app.get("name") not in APP_MAP:
+        n["brand"] = brand["name"]
+    for k in ("email", "phone", "address"):
+        if brand.get(k):
+            n[k] = brand[k]
+    brand_name = n["brand"] if app.get("name") in APP_MAP or not app.get("name") else app["name"]
+    brand_logo = (brand or {}).get("logo") if isinstance(brand, dict) else None
+    brand = brand_name
     pages_nav = [("Home", "/"), ("About", "/about"), ("Services", "/services"), ("Contact", "/contact")]
-    nav = _blk("navbar", {"brand": brand, "links": [{"label": a, "href": b} for a, b in pages_nav], "cta": n["cta"]}, hover=False)
+    nav = _blk("navbar", {"brand": brand, **({"logo": brand_logo} if brand_logo else {}), "links": [{"label": a, "href": b} for a, b in pages_nav], "cta": n["cta"]}, hover=False)
     footer = _blk("footer", {"brand": brand, "tagline": n["sub"][:90].rsplit(" ", 1)[0] + "…", "columns": [{"title": "Company", "links": ["About", "Services", "Careers", "Press"]}, {"title": "Contact", "links": [n["email"], n["phone"], n["address"]]}, {"title": "Legal", "links": ["Privacy", "Terms", "Accessibility"]}]}, hover=False)
     hero = _blk("hero", {"variant": "cover", "badge": n["badge"], "title": n["title"], "subtitle": n["sub"], "cta": n["cta"], "cta2": n["cta2"], "image": n["hero"]}, "default", "left", "lg", hover=False)
     home = [nav, hero] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate(n["sections"])) if b] + [footer]
@@ -389,15 +415,17 @@ def build_premium_site(app, niche_key=None):
 
 
 async def apply_premium(db, app, niche_key=None):
-    pages, theme, n = build_premium_site(app, niche_key)
+    existing = await db.pages.find({"app_id": app["app_id"]}, {"_id": 0, "blocks": 1}).to_list(50)
+    brand = extract_brand(app, existing)
+    pages, theme, n = build_premium_site(app, niche_key, brand)
     await db.pages.delete_many({"app_id": app["app_id"]})
     for i, (pname, slug, blocks) in enumerate(pages):
         await db.pages.insert_one({"page_id": _id("pg"), "app_id": app["app_id"], "name": pname, "slug": slug, "order": i, "blocks": blocks, "updated_at": _now()})
-    upd = {"theme": theme, "premium_site_v": 3, "site_niche": niche_key or niche_for(app), "thumbnail": n["hero"], "video_url": n["video"], "preview_enabled": True, "updated_at": _now()}
+    upd = {"theme": theme, "premium_site_v": 3, "site_niche": niche_key or niche_for(app), "thumbnail": n["hero"], "video_url": n["video"], "preview_enabled": True, "updated_at": _now(), "brand_profile": brand}
     if not app.get("preview_token"):
         upd["preview_token"] = _id("pv") + uuid.uuid4().hex[:8]
     await db.apps.update_one({"app_id": app["app_id"]}, {"$set": upd})
-    return {"pages": len(pages), "theme": theme, "niche": upd["site_niche"]}
+    return {"pages": len(pages), "theme": theme, "niche": upd["site_niche"], "preserved": {k: v for k, v in brand.items() if v}}
 
 
 async def migrate_all(db):
@@ -433,8 +461,32 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         app = await get_user_app(app_id, user)
         if body.niche not in NICHES:
             raise HTTPException(404, "Unknown niche")
-        pages, theme, n = build_premium_site(app, body.niche)
-        return {"niche": body.niche, "brand": n["brand"], "theme": theme, "pages": [{"name": a, "slug": b, "blocks": c} for a, b, c in pages]}
+        existing = await db.pages.find({"app_id": app_id}, {"_id": 0, "blocks": 1}).to_list(50)
+        brand = extract_brand(app, existing)
+        pages, theme, n = build_premium_site(app, body.niche, brand)
+        return {"niche": body.niche, "brand": n["brand"], "theme": theme, "preserved": {k: v for k, v in brand.items() if v}, "pages": [{"name": a, "slug": b, "blocks": c} for a, b, c in pages]}
+
+    class VoteIn(BaseModel):
+        niche: str
+        note: Optional[str] = None
+
+    @api.get("/apps/{app_id}/site/look-options")
+    async def look_options(app_id: str, user: dict = Depends(get_current_user)):
+        app = await get_user_app(app_id, user)
+        cur = app.get("site_niche") or niche_for(app)
+        mood = NICHES[cur]["mood"]
+        keys = [cur] + [k for k, v in NICHES.items() if k != cur and v["mood"] == mood][:2] + [k for k, v in NICHES.items() if k != cur and v["mood"] != mood][:2]
+        return {"current": cur, "vote": app.get("look_vote"), "options": [{"key": k, "brand": app["name"], "sample": NICHES[k]["brand"], "industry": NICHES[k]["industry"], "mood": NICHES[k]["mood"], "primary": NICHES[k]["primary"], "secondary": NICHES[k]["secondary"], "hero": NICHES[k]["hero"], "title": NICHES[k]["title"], "bg": MOODS[NICHES[k]["mood"]]["bg"], "font": MOODS[NICHES[k]["mood"]]["font_heading"]} for k in keys[:5]]}
+
+    @api.post("/apps/{app_id}/site/look-vote")
+    async def look_vote(app_id: str, body: VoteIn, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        if body.niche not in NICHES:
+            raise HTTPException(404, "Unknown niche")
+        vote = {"niche": body.niche, "label": NICHES[body.niche]["industry"], "by": user.get("name") or user["email"], "user_id": user["user_id"], "note": (body.note or "")[:300], "voted_at": _now(), "applied": False}
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"look_vote": vote}})
+        await log_activity(app_id, user["user_id"], "look.voted", f"Client voted for the {vote['label']} look ({body.niche})")
+        return vote
 
     @api.post("/apps/{app_id}/site/premium-rebuild")
     async def premium_rebuild(app_id: str, body: RebuildIn, user: dict = Depends(get_current_user)):
@@ -442,5 +494,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if body.niche and body.niche not in NICHES:
             raise HTTPException(404, "Unknown niche")
         res = await apply_premium(db, app, body.niche)
+        if app.get("look_vote") and app["look_vote"].get("niche") == res["niche"]:
+            await db.apps.update_one({"app_id": app_id}, {"$set": {"look_vote.applied": True}})
         await log_activity(app_id, user["user_id"], "site.premium", f"Premium redesign applied ({res['niche']})")
         return res

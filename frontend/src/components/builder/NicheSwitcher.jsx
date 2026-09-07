@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Palette, Loader2, Check, X, Eye } from "lucide-react";
+import { Palette, Loader2, Check, X, Eye, ShieldCheck, Vote } from "lucide-react";
 import api from "@/lib/api";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
@@ -32,15 +32,40 @@ export function NicheSwitcher({ appId, current, onPreview, open, onOpenChange })
   );
 }
 
-export function NichePreviewBar({ preview, onApply, onExit, applying }) {
-  if (!preview) return null;
+export function ClientVoteBanner({ vote, onPreview, busy }) {
+  if (!vote || vote.applied) return null;
   return (
+    <div data-testid="client-vote-banner" className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-xl border border-amber-400/40 bg-amber-400/10 text-sm">
+      <Vote size={14} className="text-amber-300" /><span><b>{vote.by}</b> voted for the <b>{vote.label}</b> look on {new Date(vote.voted_at).toLocaleDateString()}.{vote.note ? ` “${vote.note}”` : ""}</span>
+      <button data-testid="client-vote-preview-btn" onClick={() => onPreview(vote.niche)} disabled={busy} className="ml-auto btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1">{busy ? <Loader2 size={12} className="animate-spin" /> : <Eye size={12} />} Preview & apply</button>
+    </div>
+  );
+}
+
+export function NichePreviewBar({ preview, onApply, onExit, applying }) {
+  const [confirm, setConfirm] = useState(false);
+  if (!preview) return null;
+  const kept = Object.entries(preview.preserved || {}).filter(([k]) => k !== "logo");
+  return (
+    <>
     <div data-testid="niche-preview-bar" className="flex flex-wrap items-center gap-3 px-4 py-2.5 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/10 text-sm">
       <Eye size={14} className="text-[var(--acc)]" /><span>Previewing <b>{preview.brand}</b> ({preview.niche.replace(/_/g, " ")}) — {preview.pages.length} pages. Your saved site is untouched.</span>
       <div className="ml-auto flex gap-2">
         <button data-testid="niche-preview-exit" onClick={onExit} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1"><X size={12} /> Back to my site</button>
-        <button data-testid="niche-preview-apply" onClick={onApply} disabled={applying} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1">{applying ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Apply this look</button>
+        <button data-testid="niche-preview-apply" onClick={() => setConfirm(true)} disabled={applying} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1">{applying ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} Apply this look</button>
       </div>
     </div>
+    <Dialog open={confirm} onOpenChange={setConfirm}>
+      <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-md" data-testid="apply-look-confirm">
+        <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><ShieldCheck size={16} className="text-[var(--acc)]" /> Apply the {preview.niche.replace(/_/g, " ")} look?</DialogTitle></DialogHeader>
+        <p className="text-sm text-[var(--mut)]">Pages will be rebuilt with this design and content structure. Your real brand details below are <b className="text-[var(--fg)]">preserved</b> — sample names and placeholder contacts from the pack never overwrite them.</p>
+        <ul data-testid="preserved-fields" className="text-sm rounded-xl border border-[var(--line)] divide-y divide-[var(--line)]">
+          {kept.length === 0 && <li className="px-3 py-2 text-[var(--mut)]">No existing brand details found — pack defaults will be used.</li>}
+          {kept.map(([k, v]) => <li key={k} className="px-3 py-2 flex items-center gap-3"><Check size={12} className="text-[var(--acc)] shrink-0" /><span className="text-[var(--dim)] w-16 capitalize">{k}</span><span className="truncate">{v}</span></li>)}
+        </ul>
+        <div className="flex justify-end gap-2"><button data-testid="apply-look-cancel" onClick={() => setConfirm(false)} className="btn-ghost text-sm">Cancel</button><button data-testid="apply-look-confirm-btn" onClick={() => { setConfirm(false); onApply(); }} className="btn-primary text-sm">Apply look</button></div>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

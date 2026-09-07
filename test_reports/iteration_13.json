@@ -1,0 +1,36 @@
+{
+  "summary": "iter13 covered lead reply/AI-draft, look voting (portal), niche-preview + apply confirm (site-mode), brand preservation, export starter. Backend: 4/4 pytest cases passed (AI-draft returns non-empty Claude reply, /inbox/{id}/reply appends with delivery marker + status=read, /site/look-options returns exactly 5 options with all required keys (key/brand/sample/industry/mood/primary/secondary/hero/title/bg/font) and brand==tenant app name & first option==current, /site/look-vote 404 on unknown niche + emits look.voted activity via /notifications, premium-rebuild with voted niche flips look_vote.applied=true, brand preservation preserves tenant name/email/phone/address across niche-preview and sample pack contacts (hello@emberandoak.ca et al) never leak into preserved, export/source zip contains index.html class='light', App.jsx with setDark + toggle button, styles.css with .dark{ and .reveal). Frontend: /leads flow works — lead-reply-toggle & lead-ai-draft-btn visible, AI draft prefills lead-reply-input (~561 chars), send appends to lead-reply-history with 'in app' delivery text; /portal look-voting renders 5 options, clicking cycles preview, look-vote-btn casts vote → look-vote-status shows 'You voted: <industry>' and button becomes disabled; Site Mode client-vote-banner appears with voter name+look, client-vote-preview-btn opens niche-preview-bar + niche-preview-canvas, niche-preview-apply opens apply-look-confirm dialog listing preserved-fields (name/email/phone/address for our seeded app), apply-look-cancel closes; apply-look-confirm-btn applies successfully. One notable UX bug: after apply, client-vote-banner does NOT hide because Builder.jsx line 66 uses appDoc as a prop and its local load() only refetches pages — appDoc.look_vote stays stale until user re-navigates. Regression: /leads still loads; landing hero renders but the top-of-page has no direct /p/ card anchor visible above the fold (showcase section is further down and is a canvas iframe) — was not fully verified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Builder + ClientVoteBanner", "issue": "After successful applyNiche (POST /site/premium-rebuild sets look_vote.applied=true confirmed via backend), the client-vote-banner stays visible because Builder.jsx receives appDoc as a prop and its internal load() only refetches pages/theme — appDoc.look_vote is not refreshed. Parent (AppDetail/SiteMode) needs to refetch appDoc after apply, or Builder needs to lift look_vote into local state and update it. Test confirmed banner still present 6s after apply.", "selector": "[data-testid=\"client-vote-banner\"]", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter13_reply_vote_brand_export.py",
+    "/app/test_reports/pytest/pytest_iter13.xml"
+  ],
+  "action_items": [
+    "Fix Builder.jsx applyNiche path so ClientVoteBanner reflects vote.applied=true immediately — either lift appDoc.look_vote into Builder state or have the parent refetch appDoc and pass it fresh.",
+    "Silent catch swallow in Builder.jsx applyNiche error branch (already flagged in iter12) still present — surface toast.error already in place, but consider disabling the confirm button while applyingNiche=true (currently only niche-preview-apply is disabled).",
+    "Optional: mention preserved fields count in the toast (currently shows 'kept name, email, phone, address' — good) so tests can assert on toast text if desired."
+  ],
+  "critical_code_review_comments": [
+    "Builder.jsx: appDoc is treated as immutable prop; applyNiche relies on parent to refresh but there's no callback prop (e.g., onAppChanged). This is the root cause of the stale ClientVoteBanner. Recommend adding `onAppRefresh` prop or making Builder own an `appDoc` state seeded from prop and updated after apply.",
+    "site_content.py extract_brand: The `not b[k]` guard means the FIRST value found wins — this permanently poisons brand_profile with placeholder emails like 'hello@example.com' from the default seed page IF the tenant does premium-rebuild before editing the contact block. Consider prioritizing pages contact blocks over brand_profile OR prefer the LATEST/most-recently-edited contact block. This test scenario worked only after patching the contact block BEFORE premium-rebuild.",
+    "server.py _default_blocks line 476: contact block uses 'hello@example.com' as placeholder — this is not in the NICHES samples set so extract_brand treats it as REAL tenant data. Either add 'hello@example.com' to the samples set OR leave the email field empty in _default_blocks.",
+    "LeadReply.jsx: status chip 'Replied' only appears in the leads-page table row (Leads.jsx line 73), not in the lead-detail aside. Task instruction implies detail chip — consider adding a small chip in the detail header that mirrors the row status for clarity."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter13_reply_vote_brand_export.py"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "~85% (leads, portal, site-mode preview/apply all pass; banner-disappears-after-apply fails due to stale prop)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie session)",
+  "seed_data_creation": "Created ephemeral TEST_iter13_* apps in each pytest test with cleanup; UI test created TEST_iter13_ui_<ts> app, patched Home contact block with real email/phone/address, premium-rebuilt, seeded a public contact message, cast a look-vote, then deleted app at end.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "test file at /app/backend/tests/test_iter13_reply_vote_brand_export.py (4 tests, ~6s). Run with `python -m pytest -o addopts= backend/tests/test_iter13_reply_vote_brand_export.py -v`. The extract_brand `not b[k]` first-wins semantics + hello@example.com default seed can cause preserved.email to be 'hello@example.com' if premium-rebuild runs before user edits contact — worked around in test by patching contact BEFORE first premium-rebuild. Banner-still-shows-after-apply UI bug is reproducible on any fresh app with an unapplied vote: apply confirm → banner should disappear but does not (stale appDoc prop in Builder.jsx). Deleted TEST_iter13_ui_* test app after run.",
+  "rca of the issue": "ClientVoteBanner (NicheSwitcher.jsx line 36) reads `vote.applied` from appDoc.look_vote. Builder.jsx (line 66) receives appDoc as a read-only prop from its parent. When applyNiche succeeds and backend sets look_vote.applied=true, Builder calls await load() but load() only refetches /pages and /apps/:id/theme — never re-reads /apps/:id — so appDoc.look_vote.applied stays false in the tree. Fix options: (1) pass an `onAppRefresh` prop and call it in applyNiche; (2) make Builder own appDoc as local state initialized from prop and refetch /apps/:id after apply; (3) lift the ClientVoteBanner up to the parent that already refetches appDoc."
+}
