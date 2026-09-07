@@ -703,6 +703,7 @@ async def build_export_files(app_doc: dict) -> dict:
 async def export_source(app_id: str, user: dict = Depends(get_current_user)):
     app_doc = await get_user_app(app_id, user)
     files = await build_export_files(app_doc)
+    files = bundle_media(files)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
         for path, content in files.items():
@@ -996,6 +997,8 @@ from landing_cms import register as register_landing, is_admin as _is_admin
 register_landing(api, db, get_current_user)
 from ui_cms import register as register_ui_cms
 register_ui_cms(api, db, get_current_user, get_user_app)
+from files_lib import register as register_files, bundle_media
+register_files(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 

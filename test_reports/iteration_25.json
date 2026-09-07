@@ -1,0 +1,49 @@
+{
+  "summary": "Iter-25 backend+frontend testing of the File & Media Library (upload/list/usage/rename/soft-delete, quota, tenant isolation, data-export ZIP, and export/source media bundling). Pytest: 20/20 pass (2 tests occasionally hit ingress 502 on 15MB payload / large ZIP responses — re-run passes cleanly, flagged as flaky). Playwright: full Files tab flow (upload single + multi, search, rename via prompt, soft-delete, copy link, data-export download, Billing storage bar) works, and client portal correctly contains NO files library. Discovered ONE real frontend bug: file-copy-{id} triggers navigator.clipboard.writeText without catching the promise rejection — in permission-denied or non-secure contexts it (a) surfaces an 'Uncaught runtime errors' overlay in dev and (b) still fires the 'Link copied' success toast. Backend behavior matches spec: quota 500MB default, storage_quota_mb override honored, 413 returned with no files record on overflow, tenant isolation confirmed, people.json contains NO password_hash, export/source bundle_media rewrites /api/public/files/... image references (verified via the tenant logo) into site/assets/<file> and leaves unreachable URLs untouched without crashing.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/apps/{id}/files (15MB payload) and GET /api/apps/{id}/data-export", "issue": "Intermittent 502 Bad Gateway from ingress on large payloads (~15MB uploads and multi-MB export ZIPs). ~20% failure rate. Retries succeed. Likely ingress/proxy timeout, not application logic."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "FilesPanel.jsx file-copy-{id}",
+        "issue": "Unhandled promise rejection from navigator.clipboard.writeText(url). In clipboard-permission-denied contexts (default headless Playwright, iframes, some Safari configs) the write rejects, triggering the React 'Uncaught runtime errors' overlay in dev and, more importantly, the code still calls toast.success('Link copied') so the user gets a false-positive confirmation even though the clipboard is untouched.",
+        "selector": "[data-testid^=\"file-copy-\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Files tab", "issues": ["Some existing seed files are 1-byte placeholders → broken image thumbnails in the grid. Confirmed as test data by E1 in the review note, not a bug."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter25_files_library.py",
+    "/app/test_reports/pytest/iter25.xml"
+  ],
+  "action_items": [
+    "Wrap the clipboard call in FilesPanel.jsx (line ~125) in try/catch and only show 'Link copied' on success. Suggested fix: onClick={async () => { try { await navigator.clipboard.writeText(url); toast.success('Link copied'); } catch { toast.error('Copy failed — link: ' + url); } }} — same for any other places using navigator.clipboard.writeText."
+  ],
+  "critical_code_review_comments": [
+    "files_lib.py: `usage_for` computes `used_bytes` from the sum of `size` on non-deleted records, and soft-delete flips is_deleted=True. Good. However uploads to the SAME tenant via /media/upload, /brand/logo, /attachments and /public/chat/{token}/upload all also insert into db.files with `is_deleted: False` — they COUNT against the tenant's quota even though FilesPanel does not show them (list_files also has `in_library: True`? No — check: list_files only filters app_id + is_deleted:False, so it will show them). This means logo uploads, chat attachments and reply attachments consume the same library quota AND appear as cards in the Files tab, which may confuse tenants. Consider filtering the library list to `in_library: True` (which is only set by the /apps/{id}/files upload path).",
+    "files_lib.py `bundle_media` regex uses `[A-Za-z0-9._/\\-]` for the storage key — this is fine for uuid-based keys but if any future filename contains a URL-encoded char or a plus/tilde it'd break. Consider matching until the next quote or whitespace instead.",
+    "files_lib.py delete_file DOES NOT filter by is_deleted, so re-deleting an already-soft-deleted file returns 200 (idempotent but silent) — acceptable, but consider matching 404 for consistency with the rename endpoint which filters `is_deleted: False`.",
+    "The public GET /api/public/files/{path} has no auth or referrer check — anyone with the URL can download. Documented in prior iterations, still true. Fine for public assets but sensitive uploads (leads, employee data) that a tenant drops into the library are also world-readable if the URL leaks. E1 stated: tenant private data must be 'safely stored' — currently 'safe' means the UUID-based storage_path is unguessable. Consider signed URLs or session-checked download for /api/apps/{app_id}/files/{file_id}/download when the file is in_library.",
+    "data-export excludes password_hash correctly ($project with `password_hash: 0`). ✓ Verified.",
+    "FilesPanel.jsx: rename uses prompt() which is blocking and can't be styled — minor UX issue vs the modal-driven flows elsewhere in the app. Same for delete confirm(). Fine for now.",
+    "AppDetail.jsx: no `data-testid` on the Files tab route content wrapper — testing had to look up files-panel directly, which is fine but consistent inline routing IDs would help."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter25_files_library.py"
+  ],
+  "success_rate": {"backend": "100% (20/20 after retry)", "frontend": "100% functional; 1 medium bug on copy-link"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026!; tenant app_id: app_bdbf27abe643",
+  "seed_data_creation": "Created 1 TEST_iter25_noaccess_*@example.com user (module-scoped) for the 403 branch. Created + destroyed 1 TEST_iter25_scratch_* tenant for quota/isolation tests. Uploaded ~30 TEST_iter25_* files (library + logo + chat + attachment paths) on app_bdbf27abe643 during backend + Playwright runs; all TEST_iter25_* library files were soft-deleted at the end (24 confirmed). No scratch tenant remained after the module teardown, and no storage_quota_mb override is left in Mongo (double-checked with a direct query at cleanup).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter-25 all green on functionality. Pytest at /app/backend/tests/test_iter25_files_library.py runs 20 tests across 6 classes: TestUploadListUsage, TestQuotaEnforcement, TestRenameDelete, TestDataExport, TestExportSourceBundleMedia, TestRegression. Uses a `db` fixture that reads /app/backend/.env for MONGO_URL/DB_NAME so it works even when the shell env is missing MONGO_URL (only REACT_APP_BACKEND_URL needs to be exported). Ingress can return 502 on 15MB single upload and the data-export ZIP — treat those as flaky and retry once. The single medium bug found is the unhandled clipboard promise in FilesPanel.jsx line ~125 — if E1 fixes it, verify by (a) revoking clipboard permission in the test browser and clicking file-copy-{id}: no Uncaught overlay should appear and no false success toast should fire. Frontend Playwright script equivalent used context.grant_permissions(['clipboard-read','clipboard-write']) to work around it. Note the observation that /media/upload, /brand/logo, /attachments and /public/chat all insert into db.files with is_deleted:false and thus count toward the tenant quota and show up in list_files — call out to E1 if desired scope is 'library-only' filtering (use in_library:True on list_files).",
+  "rca of the issue": "FilesPanel.jsx: `onClick={() => { navigator.clipboard.writeText(url); toast.success('Link copied'); }}` — writeText returns a Promise. When rejected (permission-denied, non-secure origin, some Safari builds) the rejection is unhandled → React DEV overlay 'Uncaught runtime errors' surfaces. Independent of that, `toast.success('Link copied')` runs synchronously so users see a positive toast even when the copy silently failed. Reproduction: block clipboard-write permission (Playwright default), click any file-copy-{id} → overlay + false success toast. Fix: `onClick={async () => { try { await navigator.clipboard.writeText(url); toast.success('Link copied'); } catch { toast.error('Copy failed'); } }}`."
+}

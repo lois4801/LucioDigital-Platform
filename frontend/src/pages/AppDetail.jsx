@@ -19,6 +19,7 @@ import WorkflowsPanel from "@/components/WorkflowsPanel";
 import CmsPanel from "@/components/CmsPanel";
 import { UiLabelsProvider, L } from "@/components/UiLabels";
 import { CursorFXPicker } from "@/components/CursorFX";
+import FilesPanel from "@/components/FilesPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -28,6 +29,7 @@ const TABS = [
   { key: "workflows", label: "Workflows" },
   { key: "inbox", label: "Inbox" },
   { key: "media", label: "AI Media" },
+  { key: "files", label: "Files" },
   { key: "billing", label: "Billing" },
   { key: "domain", label: "Domain" },
   { key: "handoff", label: "Handoff & Export" },
@@ -128,6 +130,7 @@ export default function AppDetail() {
         {tab === "workflows" && <WorkflowsPanel appId={appId} />}
         {tab === "inbox" && <InboxPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
+        {tab === "files" && <FilesPanel appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
         {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} setAppDoc={setAppDoc} />}

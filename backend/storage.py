@@ -149,6 +149,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, now_iso):
         rec = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})
         if not rec:
             raise HTTPException(404, "File not found")
+        if rec.get("private"):
+            raise HTTPException(403, "This file is private — open it from the tenant's Files tab")
         try:
             data, ct = get_object(path)
         except Exception as e:

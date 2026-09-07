@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { CreditCard, FileSpreadsheet, Upload, CheckCircle2, Loader2, Receipt } from "lucide-react";
+import { StorageUsageBar } from "@/components/FilesPanel";
 
 export default function BillingPanel({ appDoc }) {
   const [plans, setPlans] = useState([]);
@@ -9,6 +10,7 @@ export default function BillingPanel({ appDoc }) {
   const [tx, setTx] = useState([]);
   const [busy, setBusy] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [usage, setUsage] = useState(null);
   const fileRef = useRef();
 
   useEffect(() => { load(); }, [appDoc.app_id]);
@@ -16,6 +18,7 @@ export default function BillingPanel({ appDoc }) {
     try {
       const [{ data: p }, { data: t }] = await Promise.all([api.get("/billing/plans"), api.get(`/billing/transactions?app_id=${appDoc.app_id}`)]);
       setPlans(p.plans); setMeta(p); setTx(t);
+      api.get(`/apps/${appDoc.app_id}/files/usage`).then(r => setUsage(r.data)).catch(() => {});
     } catch { toast.error("Failed to load billing"); }
   }
 
@@ -52,6 +55,7 @@ export default function BillingPanel({ appDoc }) {
             </div>
             {appDoc.plan && <span data-testid="current-plan-chip" className="chip chip-active"><CheckCircle2 size={11} /> {appDoc.plan} active</span>}
           </div>
+          {usage && <div className="mb-4"><StorageUsageBar usage={usage} /></div>}
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
             {plans.map((p) => {
               const current = appDoc.plan_lookup_key === p.lookup_key;
