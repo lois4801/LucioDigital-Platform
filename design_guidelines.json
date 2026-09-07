@@ -1,0 +1,111 @@
+{
+  "project_title": "Agency Showcase & Multi-Tenant App Platform",
+  "theme": "Dark Mode Primary (Achromatic Slate & Tactical Emerald Accent)",
+  "design_archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST / TACTICAL MINIMALISM",
+  "typography": {
+    "font_family_heading": "'Space Grotesk', 'Outfit', sans-serif",
+    "font_family_body": "'JetBrains Mono', 'Plus Jakarta Sans', sans-serif",
+    "font_family_mono": "'JetBrains Mono', monospace",
+    "font_rules": [
+      "Do NOT use Inter or Roboto for main headings.",
+      "Headings (H1-H4) must use tight tracking (tracking-tight or tracking-tighter).",
+      "Labels, badges, and overlines MUST be uppercase with wider tracking (tracking-[0.18em] text-xs font-semibold).",
+      "H1 Max limit: text-4xl sm:text-5xl lg:text-6xl (do not exceed text-6xl)."
+    ]
+  },
+  "colors": {
+    "background_primary": "#090A0F",
+    "background_secondary": "#11131C",
+    "surface_card": "#161924",
+    "surface_card_hover": "#1E2232",
+    "border": "#282D3F",
+    "border_subtle": "rgba(255, 255, 255, 0.08)",
+    "text_primary": "#F1F5F9",
+    "text_secondary": "#94A3B8",
+    "text_muted": "#64748B",
+    "accent_primary": "#10B981",
+    "accent_primary_glow": "rgba(16, 185, 129, 0.25)",
+    "accent_cyan": "#06B6D4",
+    "accent_amber": "#F59E0B",
+    "status_active": "#10B981",
+    "status_maintenance": "#F59E0B",
+    "status_handover": "#06B6D4",
+    "rules": [
+      "No generic purple gradient slop (#7351B7 forbidden).",
+      "Tint greys with dark navy blue undertones (#090A0F, #11131C).",
+      "Ensure all hover text explicitly defines high-contrast text colors.",
+      "High visibility tactical look with subtle 1px crisp borders."
+    ]
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-[#090A0F]/80 border border-white/10 shadow-2xl",
+    "tracing_beam_effect": "A 1px glowing emerald/cyan gradient border animation on active tenant cards.",
+    "subtle_grid_lines": "Background subtle grid lines with linear gradient masks to prevent digital flatness.",
+    "live_status_badges": "Pill badges with pulsing live indicators (emerald pinging dot for Active, amber for Maintenance, cyan for Handover)."
+  },
+  "video_showcase_strategy": {
+    "overview": "Video showcases are a central feature of the platform. Video cards and hero showcases must feature muted, looping preview videos with smooth play/pause controls, fullscreen modal preview, and interactive capability tags.",
+    "video_sources": [
+      {
+        "id": "app_video_1",
+        "title": "E-Commerce Nexus Dashboard & App Showcase",
+        "category": "E-commerce",
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+        "poster": "https://images.unsplash.com/photo-1625838144804-300f3907c110?crop=entropy&cs=srgb&fm=jpg&q=85"
+      },
+      {
+        "id": "app_video_2",
+        "title": "SaaS AI Workflow & Analytics Portal",
+        "category": "SaaS Portals",
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+        "poster": "https://images.unsplash.com/photo-1675410202405-5ef270c857d3?crop=entropy&cs=srgb&fm=jpg&q=85"
+      },
+      {
+        "id": "app_video_3",
+        "title": "Internal Logistics & Fleet Dispatcher",
+        "category": "Internal Tools",
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+        "poster": "https://images.unsplash.com/photo-1758626099012-2904337e9c60?crop=entropy&cs=srgb&fm=jpg&q=85"
+      },
+      {
+        "id": "app_video_4",
+        "title": "Aura Health & Service Booking Native Mobile App",
+        "category": "Service Booking",
+        "url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4",
+        "poster": "https://images.unsplash.com/photo-1558655146-6c222b05fce4?crop=entropy&cs=srgb&fm=jpg&q=85"
+      }
+    ]
+  },
+  "image_urls": {
+    "hero_workspace": "https://images.unsplash.com/photo-1625838144804-300f3907c110?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "dashboard_desk": "https://images.unsplash.com/photo-1675410202405-5ef270c857d3?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "mobile_app_preview": "https://images.unsplash.com/photo-1558655146-6c222b05fce4?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "laptop_ai_workspace": "https://images.unsplash.com/photo-1758626099012-2904337e9c60?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "agency_lead_avatar": "https://images.unsplash.com/photo-1742119803195-aaf41d6b2e61?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "key_features_to_build": [
+    "Master Agency Showcase Dashboard with 5+ distinct client app cards, status indicators, live metrics (CPU, RAM, API response time, active visitors), industry filters, search bar, and view switcher (Grid vs List).",
+    "App Detail Page with nested multi-tab layout: Overview, Visual Builder (Frame.ai Style block engine), Export & Handover Pipeline, Activity Logs & Error Monitoring, and Team RBAC & Isolation Settings.",
+    "Frame.ai Style Modular Builder: Block-based drag-and-drop or prompt-driven visual element editor featuring Hero, Feature Grid, Pricing Matrix, Contact Form, and Data Charts with real-time preview & prompt AI generator input.",
+    "Client Handover & Export tab: Downloadable production-ready source bundle generator (.zip mock), iOS (.ipa) & Android (.apk/.aab) build panel with live build progress simulator, and Client Transfer Mode toggle (rebranding, ownership handover, API key rotation).",
+    "Multi-Tenant Isolation & Activity Log: Detailed logs timeline with error reporting, deployment events, maintenance status toggles, and notification tray.",
+    "Auth Pages: Dual login & signup modal/pages supporting JWT credentials and Emergent Google OAuth flow.",
+    "Marketing Landing View: Autoplay video hero showcase, client logos, interactive tenant matrix, pricing tier calculator, and quick-launch modal."
+  ],
+  "testing_and_data_attributes": {
+    "rule": "ALL interactive components (buttons, tabs, inputs, cards, selects, toggles) MUST include explicit data-testid attributes in kebab-case format.",
+    "examples": [
+      "data-testid='agency-master-dashboard'",
+      "data-testid='app-card-ecommerce-nexus'",
+      "data-testid='builder-ai-prompt-input'",
+      "data-testid='builder-add-hero-block-btn'",
+      "data-testid='export-source-zip-btn'",
+      "data-testid='export-ios-build-btn'",
+      "data-testid='client-transfer-toggle'",
+      "data-testid='auth-google-login-btn'",
+      "data-testid='auth-jwt-submit-btn'",
+      "data-testid='industry-filter-saas-btn'"
+    ]
+  },
+  "instructions_to_main_agent": "Ensure the application is built modularly with React Router. Seed comprehensive mock data for 5+ tenants (E-commerce, SaaS, Internal Tools, Service Booking, AI Portal) with full interactive state (switching tabs, adding blocks in builder, triggering AI prompts, running export simulations, changing user roles, toggling maintenance modes, and playing video previews)."
+}
