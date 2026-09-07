@@ -971,6 +971,8 @@ from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin
 register_landing(api, db, get_current_user)
+from ui_cms import register as register_ui_cms
+register_ui_cms(api, db, get_current_user, get_user_app)
 
 app.include_router(api)
 

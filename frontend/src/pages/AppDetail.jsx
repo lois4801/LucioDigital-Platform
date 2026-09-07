@@ -17,6 +17,7 @@ import BlueprintPanel from "@/components/BlueprintPanel";
 import InboxPanel from "@/components/InboxPanel";
 import WorkflowsPanel from "@/components/WorkflowsPanel";
 import CmsPanel from "@/components/CmsPanel";
+import { UiLabelsProvider, L } from "@/components/UiLabels";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -72,6 +73,7 @@ export default function AppDetail() {
   }
 
   return (
+    <UiLabelsProvider appId={appId}>
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)]">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
@@ -81,10 +83,10 @@ export default function AppDetail() {
               <ArrowLeft size={16} />
             </button>
             <div>
-              <div className="overline">Tenant</div>
+              <L k="header_tenant_overline" d="Tenant" as="div" className="overline" testid="label-header-overline" />
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
-                {appDoc.name}
+                <L k="header_tenant_name" d={appDoc.name} testid="label-tenant-name" />
                 <span data-testid="header-kind-chip" className={`chip ${appDoc.kind === "app" ? "chip-handover" : ""}`} style={{ padding: "2px 8px" }}>{appDoc.kind === "app" ? "App" : "Website"}</span>
                 {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
                 {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}
@@ -110,7 +112,7 @@ export default function AppDetail() {
           {TABS.map((t) => (
             <button key={t.key} data-testid={`tab-${t.key}-btn`} onClick={() => setTab(t.key)}
               data-active={tab === t.key} className="tab-underline">
-              {t.label}
+              <L k={`tab_${t.key}`} d={t.label} testid={`label-tab-${t.key}`} />
             </button>
           ))}
         </div>
@@ -131,5 +133,6 @@ export default function AppDetail() {
         {tab === "members" && <MembersPanel appId={appId} currentUser={user} />}
       </main>
     </div>
+    </UiLabelsProvider>
   );
 }

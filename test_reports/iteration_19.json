@@ -1,0 +1,39 @@
+{
+  "summary": "Tested iter-19 UI Labels CMS feature end-to-end. Backend: 10/10 pytest cases pass covering GET shape, PUT tenant persistence, PUT global (admin-only) + defaults surfacing on other apps, tenant-overrides-global merge, DELETE scope=tenant vs scope=all, and permission gating (403 for non-owner/non-admin GET, non-admin global PUT and non-admin scope=all DELETE). Frontend: verified admin login on /apps/app_bdbf27abe643, toolbar visible, all target labels (tenant name, tab-inbox, analytics heading, daily-views, top-pages, hosting-metrics) are contentEditable, edits save on blur, persist after page refresh, tab switching still works when clicking the editable tab label, and Reset all restores defaults. Cleaned up test apps and cleared globals afterwards.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "PUT /api/apps/{id}/ui_labels", "issue": "ui_cms._clean does not strip '.' from label keys. A key containing '.' becomes a nested field via MongoDB dot-path in $set (e.g. key 'tab.inbox' stored as {tab:{inbox:...}} inside ui_overrides). Merged {**g, **t} response then reports the top-level key from globals, so tenant override is silently ignored. All current frontend keys use underscores so functionally safe, but should sanitise: reject or replace '.' and '$' in keys."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AppDetail tab bar", "issues": ["Tab labels rendered with text-transform:uppercase so edited value is visually uppercased even though DB stores lowercase — expected but worth confirming with product."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter19_ui_labels.py",
+    "/app/test_reports/pytest/iter19_ui_labels.xml"
+  ],
+  "action_items": [
+    "Sanitize label keys in ui_cms._clean by rejecting or replacing '.' and '$' characters to prevent silent dot-path nesting in MongoDB $set (defensive; current frontend unaffected)."
+  ],
+  "critical_code_review_comments": [
+    "ui_cms.put_ui_labels: `_clean` allows keys with '.' which MongoDB interprets as nested path; add key.replace('.', '_') or 400 error.",
+    "ui_cms.reset_ui_labels: `scope=all` also unsets tenant overrides on the current app but does not touch other apps' tenant overrides — reasonable; documented.",
+    "UiLabels.jsx L component: contentEditable span is nested INSIDE the <button data-testid=tab-*-btn> handler. Clicking the label both triggers tab switch AND enters edit mode. Verified navigation still works, but consider stopPropagation on focus/mousedown when can_edit so admins don't accidentally switch tabs while renaming.",
+    "UiLabels.jsx save(): silently drops keys equal to previous value; ok. However there is no debounce so rapid Tab-through edits fire one PUT per label — fine at low volume."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter19_ui_labels.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026! ; existing tenant app_id: app_bdbf27abe643",
+  "seed_data_creation": "Created and cleaned up two TEST_ apps via /api/apps for permission/global-scope isolation. Cleared global ui_labels after tests.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All ui_labels endpoints and inline-edit UX confirmed working. If key sanitisation is added, re-run backend tests to confirm no regression. Backend tests live at /app/backend/tests/test_iter19_ui_labels.py and self-cleanup via module-scope fixture.",
+  "rca of the issue": "N/A — no blocking bugs. Only a defensive minor: dotted keys in ui_labels cause nested writes because MongoDB `$set` treats '.' as a nested-path separator. Reproduction: PUT /apps/{id}/ui_labels body={labels:{'a.b':'X'},scope:'tenant'} — resulting apps.ui_overrides = {a:{b:'X'}} instead of {'a.b':'X'}. Mitigation: replace '.' and '$' in keys inside ui_cms._clean() or return 400."
+}

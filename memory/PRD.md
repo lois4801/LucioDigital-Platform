@@ -133,3 +133,9 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 
 ## Stripe notes
 - Sandbox account CA (`acct_1UCqXZRU6y7XBGGy`), keys in backend/.env. Claim link shared with user in finish summary. Tax mode: Stripe-managed (full) with automatic fallback to calc-only.
+
+## 2026-06 — Tenant Overview Label CMS (DONE)
+- New `/app/backend/ui_cms.py`: GET/PUT/DELETE `/api/apps/{app_id}/ui_labels`. Tenant labels in `apps.ui_overrides`; global defaults in `site_settings` key `ui_labels`. Merge = global then tenant override. Edit allowed for platform admin (ADMIN_EMAIL) or app owner; keys sanitized (no `.`/`$`).
+- New `/app/frontend/src/components/UiLabels.jsx`: `UiLabelsProvider`, `<L k d>` inline contentEditable label (saves on blur + "Saved" toast), `UiLabelsToolbar` with "Apply to all tenants" and "Reset all".
+- Wired into AppDetail.jsx (Tenant overline, tenant name, all 12 tab labels), OverviewPanel.jsx (Lifecycle status, Live hosting metrics + metric labels, Visitors 24h, Quick links, card title/desc), AnalyticsCard.jsx (analytics heading/subheading, 5 stat titles, Daily views, Top pages).
+- Tested: iteration_19.json — backend 10/10 pytest, frontend 100% (persistence, per-tenant scoping, permission gating, tab nav intact).
