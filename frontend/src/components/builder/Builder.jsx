@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Eye, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -148,7 +148,7 @@ export default function Builder({ appId, appDoc }) {
         <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage} />
         <div className="ml-auto flex items-center gap-2">
           <div className="flex card-surface !p-0.5 rounded-full">
-            {[["desktop", Monitor], ["mobile", Smartphone]].map(([d, I]) => <button key={d} data-testid={`device-${d}-btn`} onClick={() => setDevice(d)} className={`w-8 h-8 rounded-full flex items-center justify-center ${device === d ? "bg-white/10 text-white" : "text-[var(--mut)]"}`}><I size={14} /></button>)}
+            {[["desktop", Monitor], ["tablet", Tablet], ["mobile", Smartphone]].map(([d, I]) => <button key={d} data-testid={`device-${d}-btn`} onClick={() => setDevice(d)} className={`w-8 h-8 rounded-full flex items-center justify-center ${device === d ? "bg-white/10 text-white" : "text-[var(--mut)]"}`}><I size={14} /></button>)}
           </div>
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
@@ -177,7 +177,7 @@ export default function Builder({ appId, appDoc }) {
         </aside>
 
         <div className="min-h-[600px]">
-          <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : "max-w-full"}`}>
+          <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : device === "tablet" ? "max-w-[820px]" : "max-w-full"}`}>
             <div className="rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl" style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">

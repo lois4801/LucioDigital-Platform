@@ -926,10 +926,12 @@ async def shutdown():
 from extras import register as register_extras
 from studio import register as register_studio
 from inbox import register as register_inbox
+from workflows import register as register_workflows
 from seed_sites import reseed_demo_sites
 register_extras(api, db, get_current_user, get_user_app, log_activity)
-INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files)
-register_studio(api, db, get_current_user, get_user_app, log_activity, INBOX_HOOKS)
+WF_HOOKS = register_workflows(api, db, get_current_user, get_user_app, log_activity)
+INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files, WF_HOOKS)
+register_studio(api, db, get_current_user, get_user_app, log_activity, {**INBOX_HOOKS, **WF_HOOKS})
 
 app.include_router(api)
 

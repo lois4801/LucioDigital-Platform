@@ -283,6 +283,42 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         await log_activity(app_id, user["user_id"], "ai.app", f"Generated app blueprint: {spec.get('name', '')}")
         return spec
 
+    # ===== AI: APP MODE CHAT (refine blueprint conversationally) =====
+    class RefineIn(BaseModel):
+        message: str
+        target: Optional[Dict[str, Any]] = None  # {screen, component}
+
+    @api.get("/apps/{app_id}/ai/app-chat")
+    async def app_chat_history(app_id: str, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        return await db.app_chats.find({"app_id": app_id}, {"_id": 0}).sort("created_at", 1).limit(60).to_list(60)
+
+    @api.post("/apps/{app_id}/ai/refine-app")
+    async def refine_app(app_id: str, body: RefineIn, user: dict = Depends(get_current_user)):
+        doc = await get_user_app(app_id, user)
+        spec = doc.get("app_spec")
+        if not spec:
+            raise HTTPException(400, "Generate a blueprint first")
+        target = f"\nTARGET ELEMENT: screen '{body.target.get('screen')}', component '{body.target.get('component')}'. Apply the change primarily there." if body.target else ""
+        system = ("You are a Lovable-style app architect. You receive the current app blueprint JSON and a change request. Return ONLY JSON: "
+                  "{\"spec\": <full updated blueprint with the same shape (name, tagline, screens[], models[], api[], roles[], integrations[])>, \"summary\": \"one or two sentences describing what changed\"}. "
+                  "Keep everything not mentioned unchanged. Components use types navbar|stats|table|form|list|cards|chart|detail|kanban|calendar|chat|settings|hero|auth with fields[] and model.")
+        prompt = f"CURRENT BLUEPRINT:\n{json.dumps({k: v for k, v in spec.items() if k not in ('generated_at', 'brief')})[:14000]}\n\nCHANGE REQUEST: {body.message}{target}"
+        await db.app_chats.insert_one({"app_id": app_id, "role": "user", "content": body.message, "target": body.target, "created_at": now_iso()})
+        try:
+            data = _parse_json(await _claude(system, prompt, f"refine-{app_id}-{uid('r')}"))
+            new_spec = data.get("spec") or data
+            if not isinstance(new_spec, dict) or "screens" not in new_spec:
+                raise ValueError("bad spec")
+        except Exception as e:
+            raise HTTPException(500, f"Refinement failed: {str(e)[:140]}")
+        new_spec.update({"generated_at": now_iso(), "brief": spec.get("brief")})
+        summary = data.get("summary") if isinstance(data, dict) else "Updated the blueprint."
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"app_spec": new_spec}})
+        await db.app_chats.insert_one({"app_id": app_id, "role": "assistant", "content": summary, "created_at": now_iso()})
+        await log_activity(app_id, user["user_id"], "ai.app.refine", f"App refined: {body.message[:70]}")
+        return {"spec": new_spec, "summary": summary}
+
     # ===== PUBLIC SITE (multi-page) =====
     @api.get("/public/site/{token}")
     async def public_site(token: str):

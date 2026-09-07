@@ -60,7 +60,8 @@ f.style.cssText='position:fixed;right:0;bottom:0;width:420px;height:640px;max-wi
 document.body.appendChild(f);})();"""
 
 
-def register(api, db, get_current_user, get_user_app, log_activity, build_export_files):
+def register(api, db, get_current_user, get_user_app, log_activity, build_export_files, wf=None):
+    wf = wf or {}
 
     # ===== LEADS / INBOX =====
     async def _new_message(app_id: str, source: str, name: str, email: str, subject: str, body: str, session_id: str = None):
@@ -77,6 +78,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         if not app_doc:
             raise HTTPException(404, "Site not found")
         doc = await _new_message(app_doc["app_id"], "contact", body.name.strip()[:120], body.email.lower(), (body.subject or f"Website inquiry from {body.name.strip()}")[:160], body.message.strip()[:4000])
+        if wf.get("fire_event"):
+            await wf["fire_event"](app_doc["app_id"], "form_submitted", {"name": body.name.strip(), "email": body.email.lower(), "message": body.message.strip()[:500], "subject": doc["subject"]})
         return {"ok": True, "message_id": doc["message_id"]}
 
     async def upsert_chat_lead(app_id: str, session_id: str, user_msg: str, reply: str):
@@ -87,6 +90,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                                          {"$set": {"body": (existing["body"] + "\n\n" + line)[-8000:], "updated_at": now_iso(), "status": "unread" if existing["status"] != "archived" else "archived"}})
         else:
             await _new_message(app_id, "chat", "Website visitor", "", f"Chat: {user_msg[:60]}", line, session_id)
+            if wf.get("fire_event"):
+                await wf["fire_event"](app_id, "chat_lead", {"name": "Website visitor", "email": "", "message": user_msg[:500]})
 
     @api.get("/inbox")
     async def global_inbox(status: Optional[str] = None, user: dict = Depends(get_current_user)):
@@ -129,8 +134,10 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         msg = await db.messages.find_one({"app_id": app_id, "message_id": message_id})
         if not msg:
             raise HTTPException(404, "Message not found")
-        reply = {"reply_id": uid("rp"), "by": user.get("name") or user["email"], "body": body.body.strip()[:4000], "created_at": now_iso(),
-                 "delivery": "email_queued" if msg.get("from_email") else "in_app"}
+        reply = {"reply_id": uid("rp"), "by": user.get("name") or user["email"], "body": body.body.strip()[:4000], "created_at": now_iso(), "delivery": "in_app"}
+        if msg.get("from_email") and wf.get("send_email"):
+            res = await wf["send_email"](msg["from_email"], f"Re: {msg.get('subject', 'your message')}", reply["body"])
+            reply["delivery"] = "email_sent" if res["status"] == "sent" else "email_queued"
         await db.messages.update_one({"message_id": message_id}, {"$push": {"replies": reply}, "$set": {"status": "read", "updated_at": now_iso()}})
         await log_activity(app_id, user["user_id"], "lead.replied", f"Replied to {msg.get('from_name') or 'lead'}")
         return await db.messages.find_one({"message_id": message_id}, {"_id": 0})

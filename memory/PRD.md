@@ -47,10 +47,17 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Seeded demo apps reseeded (`demo_site_v=2`) with unique themes (light/dark, fonts, colors), 4 pages each, niche Unsplash imagery and videos. TTS prefers ElevenLabs when key configured.
 - Testing: iteration_4.json — 15/15 backend, frontend flows pass.
 
+### Jun 2026 (v5) — Workflow engine, App Mode chat, Deployment Hub (`/app/backend/workflows.py`)
+- **Workflow Engine** tab: triggers (form_submitted, chat_lead, payment_succeeded, member_invited, page_published) → conditions (==, !=, contains, >, <) → actions (email via Emergent managed mail w/ guardrail gate, db_write → `db.workflow_records`, webhook POST, notify → activity log). Step builder UI, Test run with sample payloads, enable toggle, run stats. Hooks fire from contact form, chat leads, Stripe paid.
+- **Email**: Emergent managed email (EMERGENT_EMAIL_KEY, EMAIL_FROM_NAME=OmniStack AI, reply-to jaybernabe@luciodigital.com). Inbox replies email the lead (delivery email_sent) — recipients always server-side.
+- **App Mode chat**: split-screen chat (`POST /apps/{id}/ai/refine-app`, history `GET .../ai/app-chat`), click prototype components to target them; Claude returns updated spec + summary.
+- **Deployment Hub** `/deploy`: all projects with Live/Draft, domain, GitHub status lights; publish/unpublish, push.
+- Tablet viewport in Site Mode; landing image strip; buttons glow on :active.
+- Testing: iteration_5.json — 10/10 backend, frontend pass.
+
 ## Phase 2 (next) — OmniStack spec items not yet built
-- Site Mode: tablet breakpoint (desktop/mobile exist), CMS collections bound to blocks.
-- App Mode: split chat ↔ live preview with click-to-target contextual edits; iterative chat refinement of blueprint; live schema drafting panel.
-- Deployment Hub page (subdomain + domain mapping in one view); GitHub OAuth app (currently PAT); email provider for inbox replies (Resend/SendGrid).
+- CMS collections (blog posts / case studies) bound to list & detail blocks.
+- Real sandboxed React code preview in App Mode (currently structured prototype from blueprint), GitHub OAuth app (PAT today), Stripe customer portal.
 
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

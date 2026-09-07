@@ -33,6 +33,18 @@ export default function BlueprintPanel({ appId, apiRoot }) {
     catch (e) { toast.error(e.response?.data?.detail || "Generation failed"); } finally { setBusy(false); }
   }
 
+  const [chat, setChat] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [target, setTarget] = useState(null);
+  const [refining, setRefining] = useState(false);
+  useEffect(() => { api.get(`/apps/${appId}/ai/app-chat`).then(r => setChat(r.data)).catch(() => {}); }, [appId]);
+  async function refine() {
+    if (!msg.trim() || refining) return;
+    const text = msg; setMsg(""); setRefining(true);
+    setChat(c => [...c, { role: "user", content: text, target }]);
+    try { const { data } = await api.post(`/apps/${appId}/ai/refine-app`, { message: text, target }, { timeout: 300000 }); setSpec(data.spec); setChat(c => [...c, { role: "assistant", content: data.summary }]); setTarget(null); toast.success("Blueprint updated"); }
+    catch (e) { toast.error(e.response?.data?.detail || "Refinement failed"); } finally { setRefining(false); }
+  }
   const s = spec?.screens?.[screen];
   return (
     <div data-testid="blueprint-panel" className="space-y-6">
@@ -51,8 +63,18 @@ export default function BlueprintPanel({ appId, apiRoot }) {
       {loading ? null : !spec ? (
         <div className="card-surface p-12 text-center text-[var(--mut)] text-sm">No blueprint yet. Describe your app above — the result becomes a navigable prototype here and React + FastAPI starter code in the .zip export.</div>
       ) : (
-        <div className="grid lg:grid-cols-[260px_1fr_300px] gap-5">
+        <div className="grid lg:grid-cols-[300px_1fr_280px] gap-5">
           <aside className="space-y-4">
+            <div className="card-surface p-3 flex flex-col h-[560px]" data-testid="app-chat-panel">
+              <div className="overline px-1 mb-2 flex items-center gap-2"><Sparkles size={11} className="text-[var(--acc)]" /> Ask AI to build or modify</div>
+              <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2 px-1 text-xs">
+                {chat.length === 0 && <div className="text-[var(--mut)] p-2">Click any element in the preview to target it, then describe the change — e.g. “add a status filter dropdown to this table”.</div>}
+                {chat.map((m, i) => <div key={i} data-testid={`app-chat-${m.role}`} className={`px-3 py-2 rounded-xl ${m.role === "user" ? "bg-[var(--acc)]/15 ml-4" : "bg-white/5 mr-4"}`}>{m.target && <div className="text-[9px] font-mono text-[var(--acc)] mb-0.5">@ {m.target.screen} › {m.target.component}</div>}{m.content}</div>)}
+                {refining && <div className="px-3 py-2 rounded-xl bg-white/5 mr-4 flex items-center gap-2 text-[var(--mut)]"><Loader2 size={11} className="animate-spin" /> Updating blueprint…</div>}
+              </div>
+              {target && <div data-testid="app-chat-target" className="mt-2 mx-1 px-2 py-1 rounded-lg bg-orange-500/15 border border-orange-500/40 text-[10px] font-mono text-orange-300 flex justify-between">Target: {target.screen} › {target.component}<button onClick={() => setTarget(null)}>✕</button></div>}
+              <div className="mt-2 flex gap-1"><input data-testid="app-chat-input" value={msg} onChange={e => setMsg(e.target.value)} onKeyDown={e => e.key === "Enter" && refine()} placeholder="Describe a change…" className="flex-1 bg-[var(--bg-2)] border border-[var(--line)] rounded-full px-3 py-2 text-xs outline-none focus:border-[var(--acc)]" /><button data-testid="app-chat-send-btn" onClick={refine} disabled={refining || !msg.trim()} className="btn-primary !py-2 !px-3 text-xs disabled:opacity-50">Send</button></div>
+            </div>
             <div className="card-surface p-3">
               <div className="overline mb-2 px-1 flex items-center gap-2"><Route size={11} /> Screens · {spec.screens?.length}</div>
               {spec.screens?.map((sc, i) => <button key={i} data-testid={`blueprint-screen-${i}`} onClick={() => setScreen(i)} className={`w-full text-left px-3 py-2 rounded-lg text-sm flex items-center justify-between ${screen === i ? "bg-[var(--acc)]/10 border border-[var(--acc)]/30" : "hover:bg-white/5 border border-transparent"}`}><span className="truncate">{sc.name}</span><span className="font-mono text-[10px] text-[var(--dim)]">{sc.route}</span></button>)}
@@ -74,11 +96,11 @@ export default function BlueprintPanel({ appId, apiRoot }) {
                 </div>
                 <div className="flex-1 p-6 space-y-5 max-h-[560px] overflow-y-auto">
                   <div><h2 className="text-xl font-bold">{s?.name}</h2><p className="text-xs text-slate-500 mt-1">{s?.description}</p></div>
-                  {s?.components?.map((c, i) => { const I = COMP_ICON[c.type] || Layout; return <div key={i} className="rounded-2xl border border-slate-200 p-4"><div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-3"><I size={13} className="text-orange-500" /> {c.label || c.type}{c.model && <span className="ml-auto font-mono text-[10px] text-teal-600">{c.model}</span>}</div><Mock c={c} /></div>; })}
+                  {s?.components?.map((c, i) => { const I = COMP_ICON[c.type] || Layout; const hit = target?.screen === s.name && target?.component === (c.label || c.type); return <div key={i} data-testid={`proto-component-${i}`} onClick={() => setTarget({ screen: s.name, component: c.label || c.type })} className={`rounded-2xl border p-4 cursor-pointer transition-colors ${hit ? "border-orange-500 ring-2 ring-orange-500/30 bg-orange-50" : "border-slate-200 hover:border-orange-300"}`}><div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-3"><I size={13} className="text-orange-500" /> {c.label || c.type}{c.model && <span className="ml-auto font-mono text-[10px] text-teal-600">{c.model}</span>}</div><Mock c={c} /></div>; })}
                 </div>
               </div>
             </div>
-            <div className="text-center text-[10px] font-mono text-[var(--dim)] mt-2">Navigable prototype · click screens in the sidebar</div>
+            <div className="text-center text-[10px] font-mono text-[var(--dim)] mt-2">Live prototype · click any element to target it, then describe the change in chat</div>
           </div>
 
           <aside className="space-y-4">

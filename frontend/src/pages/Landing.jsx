@@ -121,6 +121,18 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Image strip */}
+      <section className="relative z-10 px-6 lg:px-14 py-16">
+        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[["photo-1556742049-0cfed4f6a45d", "E-commerce"], ["photo-1551288049-bebda4e38f71", "SaaS dashboards"], ["photo-1544367567-0f2fcb009e0b", "Wellness apps"], ["photo-1601584115197-04ecc0da31d7", "Logistics tools"]].map(([p, l], i) => (
+            <div key={p} data-testid={`landing-image-${i}`} className={`relative rounded-2xl overflow-hidden border border-white/10 ${i % 2 ? "md:mt-8" : ""}`}>
+              <img src={`https://images.unsplash.com/${p}?w=900&q=80`} alt={l} className="w-full aspect-[4/5] object-cover hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-sm font-semibold">{l}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Showcase */}
       <section id="showcase" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32">
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">

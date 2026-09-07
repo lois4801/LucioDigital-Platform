@@ -167,6 +167,9 @@ body {
     border-radius: 2px;
 }
 
+button:active { transform: scale(0.97); }
+.btn-primary:active, .btn-ghost:active, .chip:active { filter: brightness(1.2); box-shadow: 0 0 0 3px var(--acc-glow), 0 0 24px var(--acc-glow); }
+.btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .marquee { animation: marquee 28s linear infinite; width: max-content; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 html { scroll-behavior: smooth; }

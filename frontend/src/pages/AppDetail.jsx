@@ -14,11 +14,13 @@ import BillingPanel from "@/components/BillingPanel";
 import DomainPanel from "@/components/DomainPanel";
 import BlueprintPanel from "@/components/BlueprintPanel";
 import InboxPanel from "@/components/InboxPanel";
+import WorkflowsPanel from "@/components/WorkflowsPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },
   { key: "blueprint", label: "App Mode" },
+  { key: "workflows", label: "Workflows" },
   { key: "inbox", label: "Inbox" },
   { key: "media", label: "AI Media" },
   { key: "billing", label: "Billing" },
@@ -115,6 +117,7 @@ export default function AppDetail() {
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && <Builder appId={appId} appDoc={appDoc} />}
         {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
+        {tab === "workflows" && <WorkflowsPanel appId={appId} />}
         {tab === "inbox" && <InboxPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}

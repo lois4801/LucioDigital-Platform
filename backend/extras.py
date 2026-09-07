@@ -443,6 +443,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if r:
             await db.apps.update_one({"app_id": r["app_id"]}, {"$set": {"plan": r["plan_name"], "plan_lookup_key": r["lookup_key"], "billing_status": "active"}})
             await log_activity(r["app_id"], r["user_id"], "billing.paid", f"Subscribed to {r['plan_name']} plan")
+            wfs = await db.workflows.find({"app_id": r["app_id"], "trigger": "payment_succeeded", "enabled": True}, {"_id": 0}).to_list(20)
+            if wfs:
+                from server import WF_HOOKS
+                await WF_HOOKS["fire_event"](r["app_id"], "payment_succeeded", {"email": "", "plan": r["plan_name"], "amount": r.get("amount"), "tier": r["plan_name"].lower()})
 
     @api.get("/billing/status/{session_id}")
     async def billing_status(session_id: str):
