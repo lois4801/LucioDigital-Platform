@@ -1,0 +1,37 @@
+{
+  "summary": "Iteration 3 (v3 studio): 14/14 new backend pytest cases pass covering multi-page /pages CRUD (home-first ordering, home-delete-400), theme (radius 'lg' -> 16 coerce, invalid hex dropped), Claude prompt-to-site on a NEW test app (>=2 pages, navbar+footer on Home), Claude prompt-to-app blueprint + export/source .zip (site/index.html, site/styles.css, app/backend/server.py, app/frontend/src/App.jsx, app/blueprint.json all present), public /public/site/{token}, public /public/chat/{token} + history (>=4 msgs after 2 turns), /public/chat/studio, /public/tts (returns audio_url; GET returns audio/mpeg 200), and legacy /page endpoint still returns home. Frontend on the pre-generated seeded app app_627d86264eac: pages-bar shows 4 page tabs (Home, About, Pricing, Contact), tab-switching swaps canvas, page-add-btn + page-name-input + page-create-btn creates a new 'QA_Team' tab (verified in public preview too), builder-add-testimonials-block-btn appends block (outline 9->10), inline-edit-brand click+type+blur applies, style-bg-muted/style-align-center/theme-swatch-3/device-mobile-btn all functional, builder-save-btn persists (canvas theme change visible in later public preview). App Blueprint tab renders blueprint-panel with 8 blueprint-screen-* buttons; clicking navigates prototype; blueprint-export-link present. Public /p/<token> multi-page (5 preview-page-* buttons including new QA_Team), chat-widget-fab opens chat-widget-panel, message about dental services returns a contextual dental reply (voice may autoplay-block, non-blocking). Landing '/' chat with token 'studio' returns Starter/Pro/Scale pricing answer.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PagesBar create page", "issue": "When a page slug already exists (e.g. re-running the QA_Team creation on a persistent test app), the frontend shows 'Could not create page' toast — this is correct API behavior (400 slug already exists) but the toast is generic and doesn't tell the user WHY (duplicate slug). Consider surfacing the backend detail message.", "selector": "[data-testid=page-create-btn]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Global", "issues": ["AuthContext still fires /api/auth/me on public /p/<token> and landing routes causing a single 401 console error before login. Cosmetic only, carried from iteration 1/2."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_v3_studio.py",
+    "/app/test_reports/pytest/pytest_v3.xml"
+  ],
+  "action_items": [
+    "OPTIONAL LOW: In PagesBar toast, surface the backend error message (e.g. 'Slug already exists') instead of the generic 'Could not create page'.",
+    "OPTIONAL LOW (carry-over): Gate AuthContext /api/auth/me call on non-public routes to remove the noisy 401 on /p/<token> and landing."
+  ],
+  "critical_code_review_comments": [
+    "studio.py `_clean_theme` silently drops invalid keys — good — but the check 'font in (inter/roboto/arial) resets to default' is odd: those are perfectly valid fonts. Rationale unclear; consider removing this filter or documenting why they are deny-listed.",
+    "public_chat writes 2 messages to db.chat_messages with (session_id, token, role, content) but the /public/chat/{token}/history/{session_id} query filters by BOTH session_id AND token. If a client somehow reuses a session_id across different tokens the history endpoint will silently return an empty list — this is defensive but not obvious. Consider a comment or a compound index (session_id, token, created_at).",
+    "generate_site() deletes ALL pages before inserting new ones (db.pages.delete_many). There is no transaction; if the second insert loop errors out mid-way, the app ends up with a partial site and no rollback. Wrap in a MongoDB transaction or stage into a temp collection.",
+    "OpenAITextToSpeech is instantiated per-request in public_tts even when the cache hits — the cache hit path is fine (it short-circuits before construction) but the client isn't reused across misses. Cache the client at module level.",
+    "public_chat inserts both user+assistant messages via insert_many with two now_iso() calls that may resolve to the same microsecond — since sort key is created_at ASC, the user message may sort after assistant on retrieval. Use a monotonic counter or explicit sequence field.",
+    "studio.py is 362 lines and mixes pages, theme, ai/site, ai/app, public site, public chat, public tts — approaching the split threshold. Consider studio/pages.py, studio/ai.py, studio/public.py."
+  ],
+  "updated_files": ["/app/backend/tests/test_v3_studio.py", "/app/test_reports/iteration_3.json"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026!",
+  "seed_data_creation": "Created & deleted 1 TEST_V3_* app via fixture. Generated 1 site (2 pages) + 1 app blueprint on that throwaway app. On seeded app app_627d86264eac, a persistent 'QA_Team' page (slug /qa-team) was added by the frontend test — safe to leave (harmless UI-only page) or the main agent can DELETE /api/apps/app_627d86264eac/pages/{page_id} to clean up.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Three pytest files now: backend_test.py (22 iter1), test_extras.py (17 iter2), test_v3_studio.py (14 iter3). pytest.ini pins -n 2 --dist loadscope; run test_v3_studio.py with `pytest -n 0` for sequential ordering (some tests inside TestPages depend on prior test order). Each AI generation costs credits — reuse the seeded app app_627d86264eac for any frontend blueprint/site checks. Seeded app has preview_token pv_28690553f67372e5443de5ad currently enabled; the frontend added a persistent 'QA_Team' page to it.",
+  "rca of the issue": "N/A — no blocking bugs."
+}

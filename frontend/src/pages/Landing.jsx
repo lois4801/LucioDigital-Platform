@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import ChatWidget from "@/components/ChatWidget";
 
 const SHOWCASE = [
   { title: "Nexus Commerce", tag: "E-commerce", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
@@ -191,6 +192,7 @@ export default function Landing() {
         <span>© 2026 Lucio/Studio · Agency Multi-Tenant Platform</span>
         <span>Built for Emergent</span>
       </footer>
+      <ChatWidget token="studio" brand="Lucio/Studio" accent="#10B981" />
     </div>
   );
 }

@@ -30,6 +30,13 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Landing redesigned Framer-style (pill nav, centered hero, marquee, bento grid, pricing teaser, motion reveals). Guidelines: `/app/design_guidelines_framer.md`.
 - Testing: iteration_2.json — 17/17 new backend + 22/22 regression pass; frontend flows verified.
 
+### Jun 2026 (v3) — Framer/Lovable studio (`/app/backend/studio.py`, `/app/backend/export_gen.py`)
+- Multi-page website builder: page tabs (create/delete, home protected), 13 block types, per-block style (bg/align/padding, hero variants), per-tenant theme (light default, orange #F97316 + turquoise #14B8A6, fonts, radius, dark mode), inline contentEditable text editing, device toggle, dnd reorder.
+- Prompt-to-site (Claude Sonnet 5) generates full multi-page site + theme; AI block editor retained.
+- App Blueprint tab: prompt-to-app spec (screens, models, API, roles) rendered as navigable prototype; .zip export now has `site/` (multi-page HTML + styles.css) and `app/` (React + FastAPI + Mongo starter with CRUD per model).
+- Public preview `/p/<token>` is multi-page + themed + live AI chat widget (Claude, session history in `db.chat_messages`, OpenAI tts-1 voice via `/api/public/tts`, browser mic). Landing also has the chat widget (token `studio`).
+- Testing: iteration_3.json — 14/14 backend, frontend flows pass.
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.

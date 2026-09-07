@@ -24,6 +24,8 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 # LLM
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from studio import DEFAULT_THEME
+from export_gen import render_page, css, starter_app_files
 
 # ---------- Setup ----------
 JWT_ALGORITHM = "HS256"
@@ -140,8 +142,9 @@ class AppUpdateIn(BaseModel):
 
 class Block(BaseModel):
     id: str = Field(default_factory=lambda: new_id("blk"))
-    type: str  # hero | features | pricing | contact | chart
+    type: str
     props: Dict[str, Any] = {}
+    style: Dict[str, Any] = {"bg": "default", "align": "left", "padding": "md"}
 
 
 class BlockUpsertIn(BaseModel):
@@ -477,7 +480,7 @@ def _default_blocks(name: str) -> List[dict]:
 @api.get("/apps/{app_id}/page")
 async def get_page(app_id: str, user: dict = Depends(get_current_user)):
     await get_user_app(app_id, user)
-    page = await db.pages.find_one({"app_id": app_id}, {"_id": 0})
+    page = await db.pages.find_one({"app_id": app_id, "slug": "/"}, {"_id": 0}) or await db.pages.find_one({"app_id": app_id}, {"_id": 0})
     if not page:
         page_doc = {
             "page_id": new_id("pg"), "app_id": app_id, "name": "Home", "slug": "/",
@@ -495,7 +498,7 @@ async def save_page(app_id: str, body: BlockUpsertIn, user: dict = Depends(get_c
     await get_user_app(app_id, user)
     blocks = [b.model_dump() for b in body.blocks]
     await db.pages.update_one(
-        {"app_id": app_id},
+        {"app_id": app_id, "slug": "/"},
         {"$set": {"blocks": blocks, "updated_at": now_utc().isoformat()}},
         upsert=True,
     )
@@ -625,22 +628,25 @@ def _generate_html(app_doc: dict, blocks: List[dict]) -> str:
 @api.get("/apps/{app_id}/export/source")
 async def export_source(app_id: str, user: dict = Depends(get_current_user)):
     app_doc = await get_user_app(app_id, user)
-    page = await db.pages.find_one({"app_id": app_id}, {"_id": 0})
-    blocks = page["blocks"] if page else []
-    html = _generate_html(app_doc, blocks)
+    pages = await db.pages.find({"app_id": app_id}, {"_id": 0}).to_list(50)
+    pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
+    theme = {**DEFAULT_THEME, **(app_doc.get("theme") or {})}
 
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        z.writestr("index.html", html)
-        z.writestr("README.md", f"# {app_doc['name']}\n\nExported from Agency Multi-Tenant Platform.\n\nDeploy to Vercel / Netlify / any static host.\n")
-        z.writestr("package.json", json.dumps({
-            "name": app_doc["name"].lower().replace(" ", "-"),
-            "version": "1.0.0",
-            "private": True,
-            "scripts": {"start": "npx serve ."},
-        }, indent=2))
-        z.writestr("vercel.json", json.dumps({"cleanUrls": True}, indent=2))
-        z.writestr("blocks.json", json.dumps(blocks, indent=2))
+        for pg in pages:
+            fname = "index.html" if pg.get("slug") == "/" else f"{pg['slug'].strip('/')}.html"
+            z.writestr(f"site/{fname}", render_page(app_doc, theme, pg, pages))
+        z.writestr("site/styles.css", css(theme))
+        z.writestr("site/pages.json", json.dumps(pages, indent=2))
+        z.writestr("site/theme.json", json.dumps(theme, indent=2))
+        z.writestr("site/vercel.json", json.dumps({"cleanUrls": True}, indent=2))
+        readme = f"# {app_doc['name']}\n\nExported from Lucio/Studio.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host.\n"
+        if app_doc.get("app_spec"):
+            for path, content in starter_app_files(app_doc["app_spec"]).items():
+                z.writestr(f"app/{path}", content)
+            readme += "\n## app/\nLovable-style React + FastAPI starter generated from the App Blueprint. See app/README.md.\n"
+        z.writestr("README.md", readme)
     buf.seek(0)
 
     await log_activity(app_id, user["user_id"], "export.source", "Exported source bundle (.zip)")
@@ -898,7 +904,9 @@ async def shutdown():
 
 
 from extras import register as register_extras
+from studio import register as register_studio
 register_extras(api, db, get_current_user, get_user_app, log_activity)
+register_studio(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 

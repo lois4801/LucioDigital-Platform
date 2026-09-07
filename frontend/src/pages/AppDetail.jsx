@@ -12,10 +12,12 @@ import OverviewPanel from "@/components/OverviewPanel";
 import MediaStudio from "@/components/MediaStudio";
 import BillingPanel from "@/components/BillingPanel";
 import DomainPanel from "@/components/DomainPanel";
+import BlueprintPanel from "@/components/BlueprintPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
-  { key: "builder", label: "Visual Builder" },
+  { key: "builder", label: "Website Builder" },
+  { key: "blueprint", label: "App Blueprint" },
   { key: "media", label: "AI Media" },
   { key: "billing", label: "Billing" },
   { key: "domain", label: "Domain" },
@@ -109,6 +111,7 @@ export default function AppDetail() {
       <main className="px-6 lg:px-10 py-8 fade-in">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && <Builder appId={appId} appDoc={appDoc} />}
+        {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
