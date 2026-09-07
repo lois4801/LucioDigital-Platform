@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import * as Icons from "lucide-react";
+import { SwapOverlay } from "@/components/builder/ImageSwap";
 
 // Inline-editable text. `path` is dotted path into block.props
 function T({ as: Tag = "span", value, path, onEdit, className, style }) {
@@ -31,10 +32,11 @@ const Kicker = ({ children }) => <div className="text-xs font-bold uppercase tra
 const isYouTube = (u = "") => /youtube\.com|youtu\.be/.test(u);
 const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u;
 
-export default function BlockPreview({ block, onEdit, onNavigate, onLead, collections = [] }) {
+export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [] }) {
   const p = block.props || {}, s = block.style || {};
   const cls = sectionCls(s), m = mut(s);
   const E = (path, extra = {}) => ({ path, onEdit, ...extra });
+  const Swap = ({ path, current }) => onImage ? <SwapOverlay testid={`image-swap-${path}`} onSwap={() => onImage(path, current)} /> : null;
   const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
   const [openItem, setOpenItem] = useState(null);
   async function submitLead(e) { e.preventDefault(); if (!onLead) return; try { await onLead(lead); setLead({ name: "", email: "", message: "", sent: true }); } catch { } }
@@ -97,11 +99,12 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
         <div className="absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: "var(--tp)" }} />
         <div className="relative">{inner}</div>
+        {onImage && <div className="absolute top-4 right-4 z-20"><button type="button" data-testid="image-swap-image" onClick={(e) => { e.stopPropagation(); onImage("image", p.image); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/30 bg-black/60 backdrop-blur hover:bg-black/80"><Icons.ImagePlus size={12} /> Replace background</button></div>}
       </section>
     );
     return (
       <section className={`${sectionCls({ ...s, padding: s.padding || "lg" })} ${centered ? "text-center" : ""}`}>
-        {split ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<img src={p.image} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /></div> : inner}
+        {split ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<div className="relative"><img src={p.image} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /><Swap path="image" current={p.image} /></div></div> : inner}
       </section>
     );
   }
@@ -112,7 +115,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
   );
   if (block.type === "team") return (
     <section className={cls} data-testid="block-team"><H2 value={p.heading} {...E("heading")} />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left">{(p.members || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <img src={mb.photo} alt="" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)] mb-4" />}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left">{(p.members || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "logos") return (
@@ -138,7 +141,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
   );
   if (block.type === "gallery") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8">{(p.images || []).map((u, i) => <img key={i} src={u} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" />)}</div>
+      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8">{(p.images || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
     </section>
   );
   if (block.type === "video") return (

@@ -59,6 +59,6 @@ def register(api, db, get_current_user):
         if body.marquee is not None:
             cur["marquee"] = [m.strip()[:40] for m in body.marquee if m.strip()][:24]
         if body.texts is not None:
-            cur["texts"] = {**cur["texts"], **{k: v.strip()[:200] for k, v in body.texts.items() if k in DEFAULTS["texts"]}}
+            cur["texts"] = {**cur["texts"], **{k[:60]: v.strip()[:600] for k, v in body.texts.items() if k.strip()}}
         await db.site_settings.update_one({"key": "landing"}, {"$set": {**cur, "key": "landing", "updated_at": datetime.now(timezone.utc).isoformat(), "updated_by": user["email"]}}, upsert=True)
         return cur

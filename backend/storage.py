@@ -71,6 +71,23 @@ def register(api, db, get_current_user, get_user_app, log_activity, now_iso):
         await log_activity(app_id, user["user_id"], "brand.logo", f"Logo uploaded ({file.filename}) and applied to {touched} pages")
         return {"logo": url, "pages_updated": touched, "app": app["name"]}
 
+    @api.post("/apps/{app_id}/media/upload")
+    async def upload_image(app_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
+        if ext not in MIME:
+            raise HTTPException(400, "Image must be PNG, JPG, SVG, WEBP or GIF")
+        data = await file.read()
+        if len(data) > 8 * 1024 * 1024:
+            raise HTTPException(400, "Image must be under 8 MB")
+        path = f"{APP_NAME}/images/{app_id}/{uuid.uuid4().hex}.{ext}"
+        try:
+            res = put_object(path, data, MIME[ext])
+        except Exception as e:
+            raise HTTPException(502, f"Storage upload failed: {str(e)[:120]}")
+        await db.files.insert_one({"file_id": uuid.uuid4().hex, "app_id": app_id, "storage_path": res["path"], "original_filename": file.filename, "content_type": MIME[ext], "size": res.get("size", len(data)), "is_deleted": False, "created_at": now_iso()})
+        return {"url": f"/api/public/files/{res['path']}", "size": res.get("size", len(data))}
+
     @api.delete("/apps/{app_id}/brand/logo")
     async def remove_logo(app_id: str, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)

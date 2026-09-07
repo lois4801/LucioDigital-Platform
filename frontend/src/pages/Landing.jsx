@@ -84,14 +84,15 @@ function DemoVideo({ d, i, big }) {
   return (
     <motion.div variants={fade} custom={i} data-testid={`demo-video-${i}`} className="card-lift group relative rounded-2xl overflow-hidden border border-white/10 bg-[var(--card)]">
       <div className={`${big ? "aspect-video lg:h-full" : "aspect-[21/9]"} relative overflow-hidden`}>
-        <video src={d.video} muted loop playsInline preload="metadata" ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }} className="w-full h-full object-cover" />
+        {/youtube\.com|youtu\.be/.test(d.video) ? <iframe src={d.video} title={d.title} allow="autoplay; encrypted-media" allowFullScreen className="w-full h-full" /> : <video src={d.video} muted loop playsInline preload="metadata" ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }} className="w-full h-full object-cover" />}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/20 to-transparent" />
         <button data-testid={`demo-play-${i}`} onClick={() => setPlaying(!playing)} className={`absolute inset-0 m-auto rounded-full bg-[var(--acc)] text-black flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.45)] transition-transform hover:scale-105 ${big ? "w-16 h-16" : "w-12 h-12"} ${playing ? "opacity-0 group-hover:opacity-100" : ""}`}>
           {playing ? <Pause size={big ? 22 : 16} /> : <Play size={big ? 22 : 16} className="ml-1" />}
         </button>
         <div className="absolute top-3 left-3 chip">{d.tag}</div>
         <span className="absolute top-3 right-3 text-[11px] font-mono bg-black/60 backdrop-blur px-2 py-0.5 rounded-full border border-white/10">{d.len}</span>
-        <div className={`absolute bottom-0 inset-x-0 p-5 font-display ${big ? "text-xl lg:text-2xl" : "text-base"}`}>{d.title}</div>
+        <div className={`absolute bottom-0 inset-x-0 p-5 font-display ${big ? "text-xl lg:text-2xl" : "text-base"}`}>{d.titleNode || d.title}</div>
+        {d.onVideoUrl && <button data-testid={`demo-video-url-${i}`} onClick={(e) => { e.stopPropagation(); d.onVideoUrl(); }} className="absolute bottom-4 right-4 chip chip-active cursor-pointer">Set video URL</button>}
       </div>
     </motion.div>
   );
@@ -112,6 +113,10 @@ export default function Landing() {
   useEffect(() => { api.get("/public/landing").then(r => setCms(r.data)).catch(() => {}); }, []);
   const tx = (k, fallback) => cms.texts?.[k] ?? fallback;
   const saveText = (k) => async (v) => setCms(await saveLanding({ texts: { [k]: v } }));
+  const Tx = ({ k, f, as = "span", className, testid }) => <AdminText admin={admin} value={tx(k, f)} onSave={saveText(k)} as={as} className={className} testid={testid || `text-${k}`} />;
+  const demoAt = (i) => ({ ...DEMOS[i], title: tx(`demo_${i}_title`, DEMOS[i].title), tag: tx(`demo_${i}_tag`, DEMOS[i].tag), len: tx(`demo_${i}_len`, DEMOS[i].len), video: tx(`demo_${i}_video`, DEMOS[i].video),
+    titleNode: <Tx k={`demo_${i}_title`} f={DEMOS[i].title} />,
+    onVideoUrl: admin ? async () => { const u = window.prompt("Paste the video URL (MP4 or YouTube embed link) for this demo", tx(`demo_${i}_video`, DEMOS[i].video)); if (u && u.trim()) { try { await saveText(`demo_${i}_video`)(u.trim()); toast.success("Demo video updated"); } catch { toast.error("Save failed"); } } } : undefined });
   async function saveCard(f) {
     const cards = f.id ? cms.cards.map(c => c.id === f.id ? { ...c, ...f } : c) : [...cms.cards, f];
     try { setCms(await saveLanding({ cards })); setEditCard(null); toast.success("Card saved"); } catch { toast.error("Save failed"); }
@@ -139,7 +144,7 @@ export default function Landing() {
         <nav data-testid="landing-nav-pill" className="flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
           <Link to="/" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10">
             <Layers size={16} className="text-[var(--acc)]" />
-            <span className="font-display font-semibold tracking-tight">OmniStack<span className="text-[var(--acc)]"> AI</span></span>
+            <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="OmniStack" /><span className="text-[var(--acc)]"> <Tx k="brand_suffix" f="AI" /></span></span>
           </Link>
           {[["Showcase", "#showcase"], ["Platform", "#platform"], ["Pricing", "#pricing"]].map(([l, h]) => (
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
@@ -160,16 +165,16 @@ export default function Landing() {
       <section className="relative z-10 px-6 lg:px-14 pt-36 lg:pt-44 pb-20 text-center">
         <motion.div initial="hidden" animate="show" className="max-w-4xl mx-auto">
           <motion.div variants={fade} custom={0} className="shimmer inline-flex items-center gap-2 uppercase tracking-[0.2em] text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            <Sparkles size={11} /> New · AI Media Studio + Stripe billing
+            <Sparkles size={11} /> <Tx k="hero_eyebrow" f="New · AI Media Studio + Stripe billing" />
           </motion.div>
-          <div className="mt-7"><Words as="h1" testid="hero-headline" text="The workspace where agencies build, bill and hand off" className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" delay={0.1} />
-            <Words as="h1" text="every client app." className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--acc)]" delay={0.55} /></div>
+          <div className="mt-7">{admin ? <><Tx k="hero_h1" f="The workspace where agencies build, bill and hand off" as="h1" className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" testid="hero-headline" /><Tx k="hero_h1_accent" f="every client app." as="h1" className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--acc)]" /></> : <><Words as="h1" testid="hero-headline" text={tx("hero_h1", "The workspace where agencies build, bill and hand off")} className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" delay={0.1} />
+            <Words as="h1" text={tx("hero_h1_accent", "every client app.")} className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--acc)]" delay={0.55} /></>}</div>
           <motion.p variants={fade} custom={2} className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            Spin up tenants, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain.
+            <Tx k="hero_sub" f="Spin up tenants, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain." />
           </motion.p>
           <motion.div variants={fade} custom={3} className="mt-9 flex flex-wrap justify-center gap-3">
-            <button data-testid="hero-cta-primary" onClick={go} className="btn-primary btn-glow arrow-slide flex items-center gap-2">{user ? "Open dashboard" : "Start building free"} <ArrowRight size={16} /></button>
-            <button data-testid="hero-cta-demo" onClick={() => nav("/login")} className="btn-ghost btn-glow flex items-center gap-2"><Play size={14} /> Watch the demo</button>
+            <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide flex items-center gap-2">{user ? <Tx k="hero_cta_user" f="Open dashboard" /> : <Tx k="hero_cta" f="Start building free" />} <ArrowRight size={16} /></button>
+            <button data-testid="hero-cta-demo" onClick={admin ? undefined : () => nav("/login")} className="btn-ghost btn-glow flex items-center gap-2"><Play size={14} /> <Tx k="hero_cta2" f="Watch the demo" /></button>
           </motion.div>
         </motion.div>
 
@@ -225,7 +230,7 @@ export default function Landing() {
               <AdminText admin={admin} value={tx("products_overline", "Products we ship")} onSave={saveText("products_overline")} as="div" className="overline mb-3" testid="text-products-overline" />
               <AdminText admin={admin} value={tx("products_heading", "Every tenant, on-brand and always live.")} onSave={saveText("products_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-products-heading" />
             </motion.div>
-            <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start">View all tenants <ArrowRight size={14} /></motion.button>
+            <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start"><Tx k="showcase_view_all" f="View all tenants" /> <ArrowRight size={14} /></motion.button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {showcase.map((s, i) => <ShowcaseCard key={s.title} s={s} i={i} onOpen={openShowcase} />)}
@@ -239,11 +244,11 @@ export default function Landing() {
           <motion.div variants={fade} className="mb-12 max-w-2xl">
             <AdminText admin={admin} value={tx("demos_overline", "See it in action")} onSave={saveText("demos_overline")} as="div" className="overline mb-3" testid="text-demos-overline" />
             <AdminText admin={admin} value={tx("demos_heading", "Watch OmniStack build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
-            <p className="text-[var(--mut)] mt-3">Three short walkthroughs: Site Mode, App Mode with industry templates, and the export &amp; handoff pipeline.</p>
+            <p className="text-[var(--mut)] mt-3"><Tx k="demos_sub" f="Three short walkthroughs: Site Mode, App Mode with industry templates, and the export & handoff pipeline." /></p>
           </motion.div>
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
-            <DemoVideo big d={DEMOS[0]} i={0} />
-            <div className="grid gap-6">{DEMOS.slice(1).map((d, i) => <DemoVideo key={d.title} d={d} i={i + 1} />)}</div>
+            <DemoVideo big d={demoAt(0)} i={0} />
+            <div className="grid gap-6">{[1, 2].map(i => <DemoVideo key={i} d={demoAt(i)} i={i} />)}</div>
           </div>
         </motion.div>
       </section>
@@ -261,8 +266,8 @@ export default function Landing() {
                 className={`${f.span} card-lift relative rounded-2xl border border-slate-800 bg-[var(--card)] p-6 sm:p-8 overflow-hidden`}>
                 <div className="absolute inset-x-0 top-0 h-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
                 <span className="icon-pulse inline-flex"><f.icon size={20} className="text-[var(--acc)]" /></span>
-                <div className="font-display text-xl mt-5">{f.t}</div>
-                <p className="text-[var(--mut)] mt-2 text-sm leading-relaxed">{f.d}</p>
+                <div className="font-display text-xl mt-5"><Tx k={`bento_${i}_title`} f={f.t} /></div>
+                <p className="text-[var(--mut)] mt-2 text-sm leading-relaxed"><Tx k={`bento_${i}_desc`} f={f.d} /></p>
                 {f.icons && <div className="flex gap-2 mt-5">{f.icons.map((I, k) => <span key={k} className="w-9 h-9 rounded-xl bg-[var(--bg-2)] border border-white/10 flex items-center justify-center"><I size={15} className="text-[var(--acc)]" /></span>)}</div>}
               </motion.div>
             ))}
@@ -273,16 +278,16 @@ export default function Landing() {
       {/* Pricing teaser */}
       <section id="pricing" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32 border-t border-white/5">
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-5xl mx-auto text-center">
-          <motion.div variants={fade}><div className="overline mb-3">Pricing</div>
-            <Words as="h2" text="Bill your clients, not your patience." className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" />
-            <p className="text-[var(--mut)] mt-3 max-w-xl mx-auto">Default tiers below — or upload your own Excel/Word price book and we sync it to Stripe.</p></motion.div>
-          <div className="grid md:grid-cols-3 gap-6 mt-12 text-left">
+          <motion.div variants={fade}><Tx k="pricing_overline" f="Pricing" as="div" className="overline mb-3" />
+            {admin ? <Tx k="pricing_heading" f="Bill your clients, not your patience." as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" /> : <Words as="h2" text={tx("pricing_heading", "Bill your clients, not your patience.")} className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" />}
+            <p className="text-[var(--mut)] mt-3 max-w-xl mx-auto"><Tx k="pricing_sub" f="Default tiers below — or upload your own Excel/Word price book and we sync it to Stripe." /></p></motion.div>
+          <div className="grid md:grid-cols-3 gap-6 mt-12 text-left" data-testid="pricing-tiers">
             {[["Starter", "$29", "1 hosted tenant"], ["Pro", "$99", "10 tenants + AI Media"], ["Scale", "$299", "Unlimited + SLA"]].map(([n, p, d], i) => (
               <motion.div key={n} variants={fade} custom={i} className={`card-lift rounded-2xl border p-8 bg-[var(--card)] ${i === 1 ? "border-[var(--acc)]/50 pro-glow" : "border-slate-800"}`}>
-                <div className="overline">{n}</div>
-                <div className="font-display text-4xl font-bold mt-3">{p}<span className="text-sm text-[var(--mut)] font-normal">/mo</span></div>
-                <div className="text-sm text-[var(--mut)] mt-2">{d}</div>
-                <button data-testid={`pricing-cta-${n.toLowerCase()}`} onClick={go} className={`shimmer shimmer-hover btn-glow mt-6 w-full rounded-full py-2.5 text-sm font-semibold ${i === 1 ? "bg-[var(--acc)] text-black" : "border border-white/10 hover:border-white/30"}`}>Get started</button>
+                <Tx k={`pricing_${i}_name`} f={n} as="div" className="overline" />
+                <div className="font-display text-4xl font-bold mt-3"><Tx k={`pricing_${i}_price`} f={p} /><span className="text-sm text-[var(--mut)] font-normal">/<Tx k={`pricing_${i}_period`} f="mo" /></span></div>
+                <div className="text-sm text-[var(--mut)] mt-2"><Tx k={`pricing_${i}_desc`} f={d} /></div>
+                <button data-testid={`pricing-cta-${n.toLowerCase()}`} onClick={admin ? undefined : go} className={`shimmer shimmer-hover btn-glow mt-6 w-full rounded-full py-2.5 text-sm font-semibold ${i === 1 ? "bg-[var(--acc)] text-black" : "border border-white/10 hover:border-white/30"}`}><Tx k={`pricing_${i}_cta`} f="Get started" /></button>
               </motion.div>
             ))}
           </div>
@@ -295,12 +300,12 @@ export default function Landing() {
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/15 via-transparent to-transparent" />
           <span className="icon-shimmer mx-auto relative"><ShieldCheck size={22} className="text-[var(--acc)] relative z-10" /></span>
           <AdminText admin={admin} value={tx("cta_heading", "Launch your agency workspace today.")} onSave={saveText("cta_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-4 relative" testid="text-cta-heading" />
-          <button data-testid="footer-cta" onClick={go} className="btn-primary btn-glow pulse-soft mt-8 relative inline-flex items-center gap-2">Get started <ArrowRight size={16} /></button>
+          <button data-testid="footer-cta" onClick={admin ? undefined : go} className="btn-primary btn-glow pulse-soft mt-8 relative inline-flex items-center gap-2"><Tx k="footer_cta" f="Get started" /> <ArrowRight size={16} /></button>
         </motion.div>
       </section>
 
       <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span>© 2026 OmniStack AI · Agency Multi-Tenant Platform</span>
+        <span><Tx k="footer_copy" f="© 2026 OmniStack AI · Agency Multi-Tenant Platform" /></span>
         <span>Built for Emergent</span>
       </footer>
       <ChatWidget token="studio" brand="OmniStack AI" accent="#10B981" />

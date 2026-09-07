@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 18: Tested inline image swap (Site Mode), landing text/demo-video/bento CMS, and visitor gating. Backend 6/6 pytest passed (media upload PNG 200 with /api/public/files URL, .txt→400, unauth→401, admin PUT /admin/landing persists pricing_1_price/demo_0_video/bento_0_title, unauth PUT→401, restore to defaults). Frontend as admin: 52 contenteditable elements (~50 expected), text-pricing_1_price edit → blur → toast → reload persisted '$129'; demo-video-url-0 chip prompted → YouTube embed URL saved → iframe rendered in demo-video-0. Site Mode /apps/app_bdbf27abe643: image-swap-image hero button opens image-swap-dialog; URL tab applied Unsplash URL and closed dialog; Upload tab uploaded a 1x1 PNG (backend media/upload) and closed dialog; AI tab shows swap-ai-prompt + swap-ai-generate-btn. Visitor (cookies cleared): 0 contenteditables, no demo-video-url-* chips, hero-cta-primary navigates to /register. All landing texts restored to defaults ($99, TearsOfSteel.mp4, 'Drag-and-drop builder') via GET /api/public/landing.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "ImageSwapDialog", "issues": ["Console warning: 'Missing Description or aria-describedby={undefined} for DialogContent' — add DialogDescription for a11y (non-blocking, same warning as iter17 CardEditor)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter18_media_landing.py", "/app/test_reports/pytest/pytest_iter18.xml"],
+  "action_items": [
+    "OPTIONAL: Add DialogDescription to ImageSwapDialog for a11y (silences React warning)."
+  ],
+  "critical_code_review_comments": [
+    "storage.py upload_image correctly gates on get_user_app (authorized app owner) and validates extension/size (8MB). Public path returned is /api/public/files/omnistack/images/{app_id}/{uuid}.{ext} — served with immutable cache-control.",
+    "landing_cms.py PUT /admin/landing merges texts via {**cur, **new}, keys trimmed to 60 chars and values to 600 — safe for demo_i_video URL lengths.",
+    "ImageSwap.jsx uses process.env.REACT_APP_BACKEND_URL to absolutize /api/... URLs — correct. onApply(url) closes dialog by upstream Builder logic (verified: dialog disappears after URL/Upload apply)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "None. Landing texts restored to defaults; media/upload files remain in object store (harmless).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Landing CMS + Site Mode image swap fully functional. Regression tests: /app/backend/tests/test_iter18_media_landing.py (media upload + landing texts), /app/backend/tests/test_landing_cms.py (cards/marquee/texts). Landing state restored: pricing_1_price='$99', demo_0_video=TearsOfSteel.mp4, bento_0_title='Drag-and-drop builder'.",
+  "rca of the issue": "No bugs found this iteration."
+}

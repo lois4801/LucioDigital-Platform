@@ -12,6 +12,7 @@ import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
 import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/builder/NicheSwitcher";
 import { LogoUpload } from "@/components/builder/LogoUpload";
+import { ImageSwapDialog } from "@/components/builder/ImageSwap";
 import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -46,13 +47,13 @@ function OutlineItem({ block, index, selected, onSelect, onRemove }) {
   );
 }
 
-function CanvasItem({ block, selected, onSelect, onEdit, onNavigate, collections, motionOn }) {
+function CanvasItem({ block, selected, onSelect, onEdit, onImage, onNavigate, collections, motionOn }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} onClick={onSelect} className={`relative group ${selected ? "outline outline-2 outline-[var(--tp)]" : "hover:outline hover:outline-1 hover:outline-[var(--tp)]/40"}`}>
       <button {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="absolute left-2 top-2 z-10 w-8 h-8 rounded-lg bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none transition-opacity"><GripVertical size={14} /></button>
       <span className="absolute right-2 top-2 z-10 text-[10px] font-mono uppercase bg-black/70 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">{block.type}</span>
-      <EffectWrap effects={block.style?.effects} motionOn={motionOn}><BlockPreview block={block} onEdit={onEdit} onNavigate={onNavigate} collections={collections} /></EffectWrap>
+      <EffectWrap effects={block.style?.effects} motionOn={motionOn}><BlockPreview block={block} onEdit={onEdit} onImage={onImage} onNavigate={onNavigate} collections={collections} /></EffectWrap>
     </div>
   );
 }
@@ -82,6 +83,7 @@ export default function Builder({ appId, appDoc }) {
   const [previewPage, setPreviewPage] = useState(0);
   const [applyingNiche, setApplyingNiche] = useState(false);
   const [lookVote, setLookVote] = useState(appDoc?.look_vote || null);
+  const [swapTarget, setSwapTarget] = useState(null);
   const [logo, setLogo] = useState(appDoc?.logo || null);
   useEffect(() => { setLogo(appDoc?.logo || null); }, [appDoc?.logo]);
   useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
@@ -193,6 +195,7 @@ export default function Builder({ appId, appDoc }) {
       </div>
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
       <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
+      <ImageSwapDialog appId={appId} target={swapTarget} context={swapTarget?.ctx} onClose={() => setSwapTarget(null)} onApply={(url) => { editProps(swapTarget.blockId, swapTarget.path, url); setSwapTarget(null); }} />
       <NichePreviewBar preview={nichePreview} onApply={applyNiche} onExit={() => setNichePreview(null)} applying={applyingNiche} />
       {nichePreview && (
         <div className="min-h-[600px]" data-testid="niche-preview-canvas">
@@ -230,7 +233,7 @@ export default function Builder({ appId, appDoc }) {
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                  {blocks.map(b => <CanvasItem key={b.id} block={b} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onNavigate={navigateTo} collections={collections} motionOn={theme.motion !== false} />)}
+                  {blocks.map(b => <CanvasItem key={b.id} block={b} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onImage={(path, current) => setSwapTarget({ blockId: b.id, path, current, ctx: b.props.title || b.props.heading || appDoc?.name })} onNavigate={navigateTo} collections={collections} motionOn={theme.motion !== false} />)}
                 </SortableContext>
                 {blocks.length === 0 && <div className="p-24 text-center text-[var(--tmut)]">Empty page. Add blocks from the left, or let AI design the whole site.</div>}
               </div>

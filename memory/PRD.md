@@ -117,6 +117,11 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - `landing_cms.py`: `GET /public/landing` (cards, marquee, texts with defaults) and admin-only `PUT /admin/landing` (partial patch; admin = ADMIN_EMAIL). `/auth/me` now returns `is_admin`. Stored in `site_settings` {key:'landing'}.
 - `LandingAdmin.jsx`: hover edit/delete controls on niche cards (`card-edit-btn`/`card-delete-btn`, confirm on delete), `CardEditor` modal (title/description/cover image), `card-add-btn`; `MarqueeEditor` (`marquee-edit-btn`, add/rename/remove items); `AdminText` click-to-edit headlines (`text-hero-caption-title` "B2B Success Analytics", section overlines/headings, CTA heading). Visitors see plain content only.
 
+### Jun 2026 (v16) — Inline image swap, all-landing-text editing, pricing + demo video editing
+- **Inline Image Swap** (`ImageSwap.jsx`): hover "Replace image" overlay on hero (split/cover), gallery images, team photos in the Site Mode canvas (`image-swap-<path>`); dialog with Upload (`POST /apps/{id}/media/upload` → object storage), Generate with AI (gpt-image-1), Paste URL; applies via editProps → Save.
+- **Landing texts**: `PUT /admin/landing` texts now accept any key; `Tx` helper wraps every landing text (brand name, hero eyebrow/h1/sub/CTAs, showcase, demos sub, bento titles/descs, pricing overline/heading/sub + tier name/price/period/desc/CTA (`text-pricing_i_*`), footer CTA/copyright). Admin click → type → blur saves to DB.
+- **Demo videos**: admin "Set video URL" chip per demo (`demo-video-url-i`, MP4 or YouTube embed) + editable demo titles; stored as `demo_i_video` text keys.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
