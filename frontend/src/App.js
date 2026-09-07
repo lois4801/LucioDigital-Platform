@@ -13,8 +13,7 @@ import AppDetail from "@/pages/AppDetail";
 import PublicPreview from "@/pages/PublicPreview";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
-import CursorTrail from "@/components/CursorTrail";
-import { CursorFXProvider } from "@/components/CursorFX";
+import { CursorFXProvider, CursorTrailThemed } from "@/components/CursorFX";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
@@ -70,7 +69,7 @@ export default function App() {
           <CursorFXProvider>
             <AppRouter />
             <Toaster theme="dark" position="top-right" richColors closeButton />
-            <CursorTrail color="#10B981" />
+            <CursorTrailThemed />
           </CursorFXProvider>
         </AuthProvider>
       </BrowserRouter>

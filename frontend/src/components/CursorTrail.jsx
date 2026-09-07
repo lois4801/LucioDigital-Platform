@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 
 // Custom trailing cursor: lerp loop follows the pointer; disabled on touch devices.
-export default function CursorTrail({ color = "#10B981" }) {
+export default function CursorTrail({ color = "#10B981", ringColor }) {
   const dot = useRef(null), ring = useRef(null);
   useEffect(() => {
     if (window.matchMedia("(pointer: coarse)").matches) return;
@@ -22,8 +22,8 @@ export default function CursorTrail({ color = "#10B981" }) {
   }, []);
   return (
     <>
-      <div ref={dot} data-testid="cursor-dot" className="fixed top-0 left-0 z-[9999] w-2 h-2 rounded-full pointer-events-none" style={{ background: color }} />
-      <div ref={ring} data-testid="cursor-ring" className="fixed top-0 left-0 z-[9999] w-9 h-9 rounded-full pointer-events-none border transition-transform duration-200" style={{ borderColor: color, opacity: 0.7, mixBlendMode: "difference" }} />
+      <div ref={dot} data-testid="cursor-dot" className="fixed top-0 left-0 z-[9999] w-2 h-2 rounded-full pointer-events-none transition-colors duration-300" style={{ background: color }} />
+      <div ref={ring} data-testid="cursor-ring" className="fixed top-0 left-0 z-[9999] w-9 h-9 rounded-full pointer-events-none border transition-transform duration-200" style={{ borderColor: ringColor || color, opacity: 0.7, mixBlendMode: "difference" }} />
     </>
   );
 }

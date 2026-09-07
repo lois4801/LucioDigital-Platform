@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { Sparkles, Check, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
+import CursorTrail from "@/components/CursorTrail";
 import { CURSOR_EFFECTS, isEffect, startCursorFX } from "@/lib/cursorEffects";
 
 const KEY = "os_cursor_effect";
@@ -81,8 +82,15 @@ function CursorFXLayer({ effect, density, speed }) {
     className="fixed inset-0 z-[9998] pointer-events-none" />;
 }
 
-export function CursorFXPicker() {
-  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();
+// Base dot + ring take their colour from the active cursor effect.
+export function CursorTrailThemed() {
+  const { effect } = useCursorFX();
+  const e = CURSOR_EFFECTS.find(x => x.id === effect);
+  const [dot, ring] = e && e.id !== "none" ? e.swatch : ["#10B981", "#10B981"];
+  return <CursorTrail color={dot} ringColor={ring} />;
+}
+
+export function CursorFXPicker() {  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();
   const [open, setOpen] = useState(false);
   const box = useRef(null);
   useEffect(() => {

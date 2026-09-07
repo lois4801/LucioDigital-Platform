@@ -161,3 +161,4 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Attachment Inbox**: `/app/frontend/src/components/Attachments.jsx` parses `[attachment] name — url` (and bare `/api/public/files/...`) out of lead bodies; pill on Inbox/Leads rows, thumbnail grid in both detail panes, click opens the file.
 - Tested: iteration_23.json — backend 9/9 pytest, frontend 100%, no issues.
 - Known nit (not fixed, non-blocking): no endpoint to clear a cursor vote; attachments are parsed from body text rather than a dedicated field.
+- Base cursor dot + ring now recolour automatically from the active effect's swatch (`CursorTrailThemed` in CursorFX.jsx); falls back to green when the effect is None.
