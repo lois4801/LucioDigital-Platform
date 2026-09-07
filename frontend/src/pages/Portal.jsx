@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { LookVoting } from "@/components/LookVoting";
+import { CursorFXVoting } from "@/components/CursorFXVoting";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
 import { ExternalLink, Receipt, Inbox, MessageSquarePlus, Loader2, Layers, LogOut, Globe } from "lucide-react";
@@ -48,6 +49,7 @@ export default function Portal() {
             </div>
           </div>
           <LookVoting appId={app.app_id} />
+          <CursorFXVoting appId={app.app_id} />
           <div className="grid md:grid-cols-3 gap-4">
             <div className="card-surface p-5"><div className="overline flex items-center gap-2 mb-3"><Receipt size={11} /> Invoices</div>
               {app.invoices.length === 0 ? <div className="text-xs text-[var(--mut)]">No invoices yet.</div> : app.invoices.map(i => <div key={i.session_id} data-testid="portal-invoice-row" className="flex justify-between text-xs py-1.5 border-b border-[var(--line)] last:border-0"><span>{i.plan_name}<div className="font-mono text-[10px] text-[var(--dim)]">{new Date(i.created_at).toLocaleDateString()}</div></span><span className="text-right font-mono">${i.amount}<div className={`text-[10px] ${i.payment_status === "paid" ? "text-[var(--acc)]" : "text-amber-300"}`}>{i.payment_status}</div></span></div>)}</div>

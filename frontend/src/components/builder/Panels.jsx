@@ -39,6 +39,13 @@ export function ThemePanel({ theme, onChange }) {
           className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1.5 text-xs outline-none">
           {CURSOR_EFFECTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select></label>
+      {(theme.cursor_effect || "none") !== "none" && [["cursor_density", "Trail thickness"], ["cursor_speed", "Trail speed"]].map(([k, l]) => (
+        <label key={k} className="block text-xs">
+          <span className="flex justify-between text-[var(--mut)]"><span>{l}</span><span className="font-mono">{Number(theme[k] ?? 1).toFixed(1)}×</span></span>
+          <input data-testid={`theme-${k}-input`} type="range" min={0.2} max={3} step={0.1} value={theme[k] ?? 1}
+            onChange={e => set(k, Number(e.target.value))} className="w-full accent-[var(--acc)]" />
+        </label>
+      ))}
     </div>
   );
 }

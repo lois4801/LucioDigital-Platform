@@ -14,7 +14,7 @@ export default function PublicPreview() {
   const [site, setSite] = useState(null);
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
-  useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect);
+  useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
   useEffect(() => {
     api.get(`/public/site/${token}`).then(r => { setSite(r.data); loadFonts(r.data.theme); }).catch(e => setErr(e.response?.data?.detail || "Preview unavailable"));

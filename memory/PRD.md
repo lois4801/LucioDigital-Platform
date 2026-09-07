@@ -153,3 +153,11 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Picker (`cursor-fx-picker-btn`) in the Dashboard and tenant headers with hover-to-try preview; saved per user via `PATCH /api/me/preferences` and cached in localStorage.
 - Per-tenant effect via ThemePanel `theme.cursor_effect` — drives the public preview and is injected into exported sites (`CURSOR_FX_JS` in export_gen).
 - Tested: iteration_20/21/22.json — all backend + frontend cases pass (all 10 effects verified painting).
+
+## 2026-06 — Intensity, client cursor vote, builder undo, attachment inbox (iter 23, DONE)
+- **Effect Intensity**: `startCursorFX(canvas, effect, accent, {density, speed})` scales spawn count, particle size, velocity and decay. Per-user sliders in the header picker (`cursor-fx-density-slider` / `cursor-fx-speed-slider`, debounced `PATCH /api/me/preferences` with 0.2–3.0 clamp + localStorage) and per-tenant sliders in ThemePanel (`theme.cursor_density` / `cursor_speed`) that flow into the public preview and exported ZIP (`data-cursor-density` / `data-cursor-speed`).
+- **Client Effect Choice**: `/app/frontend/src/components/CursorFXVoting.jsx` in the client portal — hover to try, vote via `POST /apps/{id}/cursor-vote`; agency sees `cursor-vote-banner` in Site Mode and applies with `POST /apps/{id}/cursor-vote/apply` (owner/admin only, members get 403). Stored on `apps.cursor_vote`.
+- **Undo History**: `Builder.jsx` keeps a 50-step `{past, future}` stack; every `mutate()` (add/delete/reorder/prop edit/AI edit) is undoable via Ctrl+Z, redo via Ctrl+Shift+Z, plus `builder-undo-btn` / `builder-redo-btn`. Inline text Ctrl+Z stops propagation so typing undo stays local.
+- **Attachment Inbox**: `/app/frontend/src/components/Attachments.jsx` parses `[attachment] name — url` (and bare `/api/public/files/...`) out of lead bodies; pill on Inbox/Leads rows, thumbnail grid in both detail panes, click opens the file.
+- Tested: iteration_23.json — backend 9/9 pytest, frontend 100%, no issues.
+- Known nit (not fixed, non-blocking): no endpoint to clear a cursor vote; attachments are parsed from body text rather than a dedicated field.

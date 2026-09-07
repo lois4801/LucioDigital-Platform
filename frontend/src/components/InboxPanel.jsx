@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Inbox, Star, Archive, Trash2, Reply, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame } from "lucide-react";
+import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 
 const FILTERS = [["all", "Inbox"], ["hot", "Hot leads"], ["unread", "Unread"], ["starred", "Starred"], ["archived", "Archived"]];
 const ScoreBadge = ({ m }) => m.score == null ? <span className="chip" style={{ padding: "1px 6px" }} title="Scoring…">…</span>
@@ -55,7 +56,7 @@ export default function InboxPanel({ appId }) {
               <button onClick={e => { e.stopPropagation(); patch(m, { starred: !m.starred }); }} className={m.starred ? "text-amber-400" : "text-[var(--dim)] hover:text-amber-400"}><Star size={12} fill={m.starred ? "currentColor" : "none"} /></button>
             </div>
             <div className={`text-xs mt-0.5 truncate ${m.status === "unread" ? "text-[var(--fg)]" : "text-[var(--mut)]"}`}>{m.subject}</div>
-            <div className="text-[11px] text-[var(--dim)] mt-0.5 truncate">{m.body}</div>
+            <div className="text-[11px] text-[var(--dim)] mt-0.5 truncate flex items-center gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="truncate">{m.body}</span></div>
           </div>
         ))}
       </div>
@@ -74,6 +75,7 @@ export default function InboxPanel({ appId }) {
               </div>
             </div>
             <div data-testid="inbox-message-body" className="mt-5 text-sm whitespace-pre-wrap leading-relaxed bg-[var(--bg-2)] border border-[var(--line)] rounded-xl p-4 max-h-[36vh] overflow-y-auto scrollbar-thin">{sel.body}</div>
+            <Attachments body={sel.body} testid="inbox-attachments" />
             {sel.replies?.length > 0 && <div className="mt-4 space-y-2">{sel.replies.map(r => <div key={r.reply_id} className="text-sm border-l-2 border-[var(--acc)] pl-3"><div className="text-[10px] font-mono text-[var(--dim)]">{r.by} · {new Date(r.created_at).toLocaleString()} · {r.delivery.replace("_", " ")}</div><div className="mt-1 whitespace-pre-wrap">{r.body}</div></div>)}</div>}
             <div className="mt-auto pt-4">
               <textarea data-testid="inbox-reply-input" value={reply} onChange={e => setReply(e.target.value)} rows={3} placeholder={`Reply to ${sel.from_name || "visitor"}…`} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--acc)] resize-none" />

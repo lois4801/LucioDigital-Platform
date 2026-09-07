@@ -183,7 +183,9 @@ function draw(ctx, effect, p, accent) {
 }
 
 // Attaches a fullscreen canvas trail to the pointer. Returns a cleanup fn.
-export function startCursorFX(canvas, effect, accent = "#10B981") {
+export function startCursorFX(canvas, effect, accent = "#10B981", opts = {}) {
+  const density = Math.max(0.2, Math.min(3, Number(opts.density) || 1));
+  const speed = Math.max(0.2, Math.min(3, Number(opts.speed) || 1));
   const ctx = canvas.getContext("2d");
   let dpr = Math.min(window.devicePixelRatio || 1, 2);
   const resize = () => {
@@ -199,11 +201,14 @@ export function startCursorFX(canvas, effect, accent = "#10B981") {
   const onMove = (e) => {
     const vx = last ? e.clientX - last.x : 0, vy = last ? e.clientY - last.y : 0;
     last = { x: e.clientX, y: e.clientY };
-    const n = SPAWN[effect] || 1;
+    const n = Math.max(1, Math.round((SPAWN[effect] || 1) * density));
     for (let i = 0; i < n; i++) {
       if (parts.length >= MAX) break;
       const p = makeParticle(effect, e.clientX, e.clientY, vx, vy);
-      if (p) parts.push(p);
+      if (!p) continue;
+      p.size *= 0.6 + 0.4 * density;
+      p.vx *= speed; p.vy *= speed; p.decay *= speed;
+      parts.push(p);
     }
   };
 

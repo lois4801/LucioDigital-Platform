@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Flame, Mail, MessageSquare, FileText, Star, Archive, CheckCheck, Inbox, ExternalLink } from "lucide-react";
 import api from "@/lib/api";
 import { LeadReply } from "@/components/LeadReply";
+import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 
 const SRC = { contact: { label: "Contact form", Icon: Mail }, chat: { label: "AI chat", Icon: MessageSquare }, request: { label: "Change request", Icon: FileText } };
 const FILTERS = [["unread", "New"], ["read", "Reviewed"], ["archived", "Archived"], ["all", "All"]];
@@ -64,7 +65,7 @@ export default function Leads() {
                   <tr key={m.message_id} data-testid={`lead-row-${m.message_id}`} onClick={() => view(m)} className={`border-b border-[var(--line)]/60 cursor-pointer hover:bg-white/[0.03] ${open?.message_id === m.message_id ? "bg-[var(--acc)]/10" : ""}`}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">{m.status === "unread" && <span className="w-1.5 h-1.5 rounded-full bg-[var(--acc)] pulse-dot shrink-0" />}<span className={`truncate max-w-[220px] ${m.status === "unread" ? "font-semibold" : ""}`}>{m.from_name || "Website visitor"}</span>{m.hot && <Flame size={13} className="text-orange-400 shrink-0" />}</div>
-                      <div className="text-xs text-[var(--mut)] truncate max-w-[260px] mt-0.5">{m.subject || m.body?.slice(0, 70)}</div>
+                      <div className="text-xs text-[var(--mut)] truncate max-w-[260px] mt-0.5 flex items-center gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="truncate">{m.subject || m.body?.slice(0, 70)}</span></div>
                       <div className="text-[10px] font-mono mt-1" style={{ color: m.app_color || "var(--dim)" }}>{m.app_name}</div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell text-[var(--mut)] text-xs">{m.from_email || "—"}</td>
@@ -94,6 +95,7 @@ export default function Leads() {
               </dl>
               {open.score_reason && <div className="text-xs text-[var(--mut)] bg-white/5 rounded-lg p-3">{open.score_reason}</div>}
               <div className="text-sm whitespace-pre-wrap leading-relaxed max-h-[36vh] overflow-y-auto scrollbar-thin border-t border-[var(--line)] pt-3">{open.body}</div>
+              <Attachments body={open.body} testid="lead-detail-attachments" />
               <div className="flex flex-wrap gap-2 pt-1">
                 {open.status !== "unread" && <button data-testid="lead-mark-new-btn" onClick={() => patch(open, { status: "unread" })} className="btn-ghost text-xs !py-1.5 !px-3">Mark as new</button>}
                 {open.status !== "archived" ? <button data-testid="lead-archive-btn" onClick={() => patch(open, { status: "archived" })} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1"><Archive size={12} /> Archive</button>

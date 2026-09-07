@@ -29,7 +29,7 @@ def uid(prefix):
 DEFAULT_THEME = {
     "mode": "dark", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#0A0A0F", "surface": "#141420",
     "fg": "#F8FAFC", "muted": "#A1A7B8", "border": "#262637",
-    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True, "cursor_effect": "none", "glass": True, "grain": True,
+    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True, "cursor_effect": "none", "cursor_density": 1, "cursor_speed": 1, "glass": True, "grain": True,
 }
 
 BLOCK_SCHEMA = """

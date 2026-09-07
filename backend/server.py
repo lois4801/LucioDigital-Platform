@@ -303,6 +303,13 @@ async def update_preferences(body: dict, user: dict = Depends(get_current_user))
         if body["cursor_effect"] not in CURSOR_EFFECTS:
             raise HTTPException(status_code=400, detail="Unknown cursor effect")
         updates["cursor_effect"] = body["cursor_effect"]
+    for k in ("cursor_density", "cursor_speed"):
+        if k in body:
+            try:
+                v = float(body[k])
+            except (TypeError, ValueError):
+                raise HTTPException(status_code=400, detail=f"{k} must be a number")
+            updates[k] = max(0.2, min(3.0, v))
     if not updates:
         raise HTTPException(status_code=400, detail="No preferences provided")
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": updates})

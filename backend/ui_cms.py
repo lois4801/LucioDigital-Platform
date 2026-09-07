@@ -43,6 +43,15 @@ def _clean_styles(styles: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]
     return out
 
 
+class CursorVoteIn(BaseModel):
+    effect: str
+
+
+CURSOR_FX = {"none": "None", "fairy": "Fairy Dust", "bubbles": "Water Bubbles", "smoke": "Mystic Smoke",
+             "fire": "Fire & Embers", "wind": "Wind & Petals", "frost": "Frost & Snowfall",
+             "plasma": "Neon Plasma", "ink": "Liquid Ink", "comet": "Cosmic Comet", "matrix": "Digital Matrix"}
+
+
 def register(api, db, get_current_user, get_user_app):
     async def _globals() -> dict:
         doc = await db.site_settings.find_one({"key": "ui_labels"}, {"_id": 0}) or {}
@@ -61,6 +70,38 @@ def register(api, db, get_current_user, get_user_app):
             "global_styles": g["styles"],
             "can_edit": can_edit,
         }
+
+    @api.get("/apps/{app_id}/cursor-vote")
+    async def get_cursor_vote(app_id: str, user: dict = Depends(get_current_user)):
+        doc = await get_user_app(app_id, user)
+        return {"vote": doc.get("cursor_vote"), "current": (doc.get("theme") or {}).get("cursor_effect") or "none"}
+
+    @api.post("/apps/{app_id}/cursor-vote")
+    async def set_cursor_vote(app_id: str, body: CursorVoteIn, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        if body.effect not in CURSOR_FX:
+            raise HTTPException(400, "Unknown cursor effect")
+        vote = {
+            "effect": body.effect,
+            "label": CURSOR_FX[body.effect],
+            "by": user.get("name") or user.get("email"),
+            "at": datetime.now(timezone.utc).isoformat(),
+            "applied": False,
+        }
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"cursor_vote": vote}})
+        return {"vote": vote}
+
+    @api.post("/apps/{app_id}/cursor-vote/apply")
+    async def apply_cursor_vote(app_id: str, user: dict = Depends(get_current_user)):
+        doc = await get_user_app(app_id, user)
+        if not (_is_platform_admin(user) or doc["owner_id"] == user["user_id"]):
+            raise HTTPException(403, "Only the platform admin or tenant owner can apply a vote")
+        vote = doc.get("cursor_vote")
+        if not vote:
+            raise HTTPException(404, "No client vote yet")
+        theme = {**(doc.get("theme") or {}), "cursor_effect": vote["effect"]}
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"theme": theme, "cursor_vote.applied": True}})
+        return {"vote": {**vote, "applied": True}, "theme": theme}
 
     @api.get("/apps/{app_id}/ui_labels")
     async def get_ui_labels(app_id: str, user: dict = Depends(get_current_user)):

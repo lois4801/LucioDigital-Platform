@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -84,6 +84,8 @@ export default function Builder({ appId, appDoc }) {
   const [applyingNiche, setApplyingNiche] = useState(false);
   const [lookVote, setLookVote] = useState(appDoc?.look_vote || null);
   const [swapTarget, setSwapTarget] = useState(null);
+  const [history, setHistory] = useState({ past: [], future: [] });
+  const [cursorVote, setCursorVote] = useState(null);
   const [logo, setLogo] = useState(appDoc?.logo || null);
   useEffect(() => { setLogo(appDoc?.logo || null); }, [appDoc?.logo]);
   useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
@@ -117,7 +119,30 @@ export default function Builder({ appId, appDoc }) {
     if (dirty && !confirm("Discard unsaved changes on this page?")) return;
     const pg = pages.find(p => p.page_id === id); setPageId(id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); setDirty(false);
   }
-  const mutate = (next) => { setBlocks(next); setDirty(true); };
+  const mutate = (next) => { setHistory(h => ({ past: [...h.past.slice(-49), blocks], future: [] })); setBlocks(next); setDirty(true); };
+  const undo = () => setHistory(h => {
+    if (!h.past.length) return h;
+    const prev = h.past[h.past.length - 1];
+    setBlocks(prev); setDirty(true);
+    return { past: h.past.slice(0, -1), future: [blocks, ...h.future].slice(0, 50) };
+  });
+  const redo = () => setHistory(h => {
+    if (!h.future.length) return h;
+    const next = h.future[0];
+    setBlocks(next); setDirty(true);
+    return { past: [...h.past, blocks], future: h.future.slice(1) };
+  });
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== "z") return;
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
   function addBlock(tpl) {
     const id = `blk_${Math.random().toString(36).slice(2, 12)}`;
     const b = { id, type: tpl.type, props: JSON.parse(JSON.stringify(tpl.defaults)), style: { bg: "default", align: tpl.type === "hero" || tpl.type === "cta" ? "center" : "left", padding: tpl.type === "hero" || tpl.type === "cta" ? "lg" : "md", effects: { reveal: true, hover: ["features", "gallery", "testimonials", "pricing", "collection_list", "logos", "stats", "team"].includes(tpl.type) } } };
@@ -161,6 +186,14 @@ export default function Builder({ appId, appDoc }) {
   const [imgBusy, setImgBusy] = useState(false);
   const [collections, setCollections] = useState([]);
   useEffect(() => { api.get(`/apps/${appId}/cms`).then(r => setCollections(r.data)).catch(() => {}); }, [appId]);
+  useEffect(() => { api.get(`/apps/${appId}/cursor-vote`).then(r => setCursorVote(r.data.vote || null)).catch(() => {}); }, [appId]);
+  async function applyCursorVote() {
+    try {
+      const { data } = await api.post(`/apps/${appId}/cursor-vote/apply`);
+      setCursorVote(data.vote); setTheme(data.theme);
+      toast.success(`${data.vote.label} cursor applied to this site`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not apply the vote"); }
+  }
   async function genImage(block, key) {
     const ctx = block.props.title || block.props.heading || appDoc?.name || "brand";
     const desc = window.prompt("Describe the image", `${ctx} — ${appDoc?.industry || ""} marketing visual, premium, natural light`);
@@ -183,6 +216,12 @@ export default function Builder({ appId, appDoc }) {
         <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage} />
         <div className="ml-auto flex items-center gap-2">
           <div className="flex card-surface !p-0.5 rounded-full">
+            <button data-testid="builder-undo-btn" title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.past.length}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Undo2 size={14} /></button>
+            <button data-testid="builder-redo-btn" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!history.future.length}
+              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Redo2 size={14} /></button>
+          </div>
+          <div className="flex card-surface !p-0.5 rounded-full">
             {[["desktop", Monitor], ["tablet", Tablet], ["mobile", Smartphone]].map(([d, I]) => <button key={d} data-testid={`device-${d}-btn`} onClick={() => setDevice(d)} className={`w-8 h-8 rounded-full flex items-center justify-center ${device === d ? "bg-white/10 text-white" : "text-[var(--mut)]"}`}><I size={14} /></button>)}
           </div>
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
@@ -195,6 +234,14 @@ export default function Builder({ appId, appDoc }) {
       </div>
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
       <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
+      {cursorVote && !cursorVote.applied && (
+        <div data-testid="cursor-vote-banner" className="mb-4 card-surface p-4 flex flex-wrap items-center gap-3 !border-[var(--acc)]/40">
+          <MousePointer2 size={15} className="text-[var(--acc)]" />
+          <div className="flex-1 text-sm">Your client voted for the <span className="font-semibold text-[var(--acc)]">{cursorVote.label}</span> cursor effect
+            <div className="text-[11px] text-[var(--mut)] mt-0.5">{cursorVote.by} · {new Date(cursorVote.at).toLocaleString()}</div></div>
+          <button data-testid="cursor-vote-apply-btn" onClick={applyCursorVote} className="btn-primary text-sm !py-2 !px-4">Apply to this site</button>
+        </div>
+      )}
       <ImageSwapDialog appId={appId} target={swapTarget} context={swapTarget?.ctx} onClose={() => setSwapTarget(null)} onApply={(url) => { editProps(swapTarget.blockId, swapTarget.path, url); setSwapTarget(null); }} />
       <NichePreviewBar preview={nichePreview} onApply={applyNiche} onExit={() => setNichePreview(null)} applying={applyingNiche} />
       {nichePreview && (

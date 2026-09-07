@@ -135,6 +135,7 @@ var t={x:innerWidth/2,y:innerHeight/2},p={x:t.x,y:t.y},q={x:t.x,y:t.y},h=false;a
 
 CURSOR_FX_JS = """<script>(function(){var fx=document.body.dataset.cursorFx||'none';if(fx==='none')return;if(matchMedia('(pointer: coarse)').matches||matchMedia('(prefers-reduced-motion: reduce)').matches)return;
 var cv=document.createElement('canvas');cv.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:99998';document.body.appendChild(cv);var cx=cv.getContext('2d'),dpr=Math.min(devicePixelRatio||1,2);
+var DN=Math.max(.2,Math.min(3,parseFloat(document.body.dataset.cursorDensity||'1')||1)),SPD=Math.max(.2,Math.min(3,parseFloat(document.body.dataset.cursorSpeed||'1')||1));
 function rz(){dpr=Math.min(devicePixelRatio||1,2);cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';cx.setTransform(dpr,0,0,dpr,0,0)}rz();addEventListener('resize',rz);
 var P=[],T=Math.PI*2,last=null;function r(a,b){return a+Math.random()*(b-a)}
 var SP={fairy:2,bubbles:1,smoke:2,fire:3,wind:1,frost:1,plasma:1,ink:1,comet:3,matrix:1};
@@ -164,7 +165,7 @@ else if(fx==='ink'){cx.globalAlpha=a*.5;cx.fillStyle='hsla('+p.h+',85%,58%,1)';c
 else if(fx==='comet'){cx.globalAlpha=a;cx.shadowBlur=8;cx.shadowColor='hsla('+p.h+',100%,75%,1)';cx.fillStyle='hsla('+p.h+',100%,75%,1)';cx.beginPath();cx.arc(p.x,p.y,p.s,0,T);cx.fill()}
 else if(fx==='matrix'){cx.globalAlpha=a;cx.font='700 13px ui-monospace,monospace';cx.shadowBlur=10;cx.shadowColor='rgba(34,197,94,.9)';cx.fillStyle=a>.85?'#DCFCE7':'#22C55E';cx.fillText(p.gl,p.x,p.y)}
 cx.restore()}
-addEventListener('mousemove',function(e){var vx=last?e.clientX-last.x:0,vy=last?e.clientY-last.y:0;last={x:e.clientX,y:e.clientY};var n=SP[fx]||1;for(var i=0;i<n;i++){if(P.length>=260)break;var p=mk(e.clientX,e.clientY,vx,vy);if(p)P.push(p)}},{passive:true});
+addEventListener('mousemove',function(e){var vx=last?e.clientX-last.x:0,vy=last?e.clientY-last.y:0;last={x:e.clientX,y:e.clientY};var n=Math.max(1,Math.round((SP[fx]||1)*DN));for(var i=0;i<n;i++){if(P.length>=260)break;var p=mk(e.clientX,e.clientY,vx,vy);if(p){p.s*=(.6+.4*DN);p.vx*=SPD;p.vy*=SPD;p.d*=SPD;P.push(p)}}},{passive:true});
 (function loop(){cx.clearRect(0,0,innerWidth,innerHeight);cx.globalCompositeOperation=(fx==='ink'||fx==='smoke')?'source-over':'lighter';for(var i=P.length-1;i>=0;i--){var p=P[i];st(p);if(p.l<=0||p.y<-80||p.y>innerHeight+120){P.splice(i,1);continue}dr(p)}cx.globalCompositeOperation='source-over';requestAnimationFrame(loop)})()})();</script>"""
 
 
@@ -182,7 +183,7 @@ def fx_class(b: dict, theme: dict) -> str:
 def _doc(app_doc, theme, title, body, css_path="styles.css"):
     return (f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{esc(title)} · {esc(app_doc['name'])}</title><link rel='stylesheet' href='{FONT_URL.format(h=theme['font_heading'].replace(' ', '+'), b=theme['font_body'].replace(' ', '+'))}'>"
-            f"<link rel='stylesheet' href='{css_path}'></head><body data-cursor='{'off' if theme.get('cursor') is False else 'on'}' data-cursor-fx='{theme.get('cursor_effect') or 'none'}'>{body}{'' if (theme.get('motion') is False and theme.get('cursor') is False) else FX_JS}{'' if (theme.get('cursor_effect') or 'none') == 'none' else CURSOR_FX_JS}</body></html>")
+            f"<link rel='stylesheet' href='{css_path}'></head><body data-cursor='{'off' if theme.get('cursor') is False else 'on'}' data-cursor-fx='{theme.get('cursor_effect') or 'none'}' data-cursor-density='{theme.get('cursor_density') or 1}' data-cursor-speed='{theme.get('cursor_speed') or 1}'>{body}{'' if (theme.get('motion') is False and theme.get('cursor') is False) else FX_JS}{'' if (theme.get('cursor_effect') or 'none') == 'none' else CURSOR_FX_JS}</body></html>")
 
 
 def render_page(app_doc: dict, theme: dict, page: dict, pages: List[dict], cols: List[dict] = None) -> str:

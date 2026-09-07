@@ -78,6 +78,7 @@ export function EditableText({ as: Tag = "span", value, className, style, editab
         onKeyDown={e => {
           if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z" && !e.shiftKey) {
             e.preventDefault();
+            e.stopPropagation();
             const st = undo.current;
             if (st.length > 1) st.pop();
             ref.current.innerText = st[st.length - 1] ?? value;
