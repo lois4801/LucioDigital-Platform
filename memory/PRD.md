@@ -93,6 +93,11 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Showcase cards** on Landing open the live demo (`GET /public/showcase` → `/p/<token>`) with a transition overlay, or a NicheModal with description + Get started / Request a demo when no demo exists.
 - Testing: iteration_10.json (templates 21/21), iteration_11.json (12/12 backend, all frontend flows pass).
 
+### Jun 2026 (v11) — Niche Switcher + 5 more niche packs
+- 16 niche packs total: added legal (Whitfield & Grant LLP), education (Brightwater Academy), real_estate (Harbour & Vale Realty), restaurant (Ember & Oak), events (Lumen Events Co.); INDUSTRY_MAP routes those industries directly.
+- **Niche Switcher** in Site Mode (`NicheSwitcher.jsx`, "Try another look" `niche-switcher-btn`): `POST /apps/{id}/site/niche-preview {niche}` returns a non-destructive 4-page preview + theme; Builder shows `niche-preview-bar` + `niche-preview-canvas` with page pills; "Apply this look" calls premium-rebuild; "Back to my site" restores.
+- Testing: iteration_12.json — 16/16 backend, frontend flows pass.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

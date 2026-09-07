@@ -1,0 +1,26 @@
+{
+  "summary": "iteration_12 fully green. Backend (16/16 pytest cases pass): GET /api/site-niches returns exactly 16 niches with all required fields (key/brand/industry/mood/primary/secondary/hero/title/sections) including the 5 new packs (legal, education, real_estate, restaurant, events). POST /api/apps/{id}/site/niche-preview returns {niche, brand, theme(mode=dark), pages(4)} with expected brands (Whitfield & Grant LLP, Brightwater Academy, Harbour & Vale Realty, Ember & Oak, Lumen Events Co.), each Home containing hero(variant=cover)+stats+testimonials+video+cta blocks, and does NOT mutate /pages (before==after). Unknown niche → 404. Legal Home contains 'Practice Areas' features + 'Case Results' chart; restaurant Home contains 'Private Dining & Events' pricing; events Home contains 'Planning Packages' pricing. POST /api/apps/{id}/site/premium-rebuild with niche='restaurant' on a fresh non-demo app rebuilds pages. Industry auto-mapping: Legal→legal, Education→education, Real Estate→real_estate, Restaurants→restaurant, Events→events all confirmed via premium-rebuild with empty body. Frontend: logged in with jaybernabe@luciodigital.com, opened Nexus Commerce → Site Mode → clicked niche-switcher-btn ('Try another look'); niche-switcher-grid shows 16 niche-option-<key> cards. Clicking niche-option-legal closed the dialog, showed niche-preview-bar ('Previewing Whitfield & Grant LLP (legal) — 4 pages. Your saved site is untouched.'), niche-preview-canvas rendered dark legal site with hero cover image (Lady Justice photo, 'Serious counsel for the moments that decide everything.'), page pills niche-preview-page-0..3 switched pages, visual-builder hidden while previewing. niche-preview-exit returned to normal builder (visual-builder visible, no 'Whitfield' text in Nexus canvas → non-destructive confirmed). On non-demo app QA_v4_App_1788805736: opened switcher → restaurant → clicked niche-preview-apply → accepted confirm → pages reloaded, builder now contains 'Ember' (Ember & Oak brand). Regression: /leads still loads (leads-page testid present).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter12_niches.py",
+    "/app/test_reports/pytest/pytest_iter12.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "site_content.py: NICHES catalog now 350+ lines but well-organized as a data table. Consider splitting each niche into its own module file if it grows past 500 lines for readability. INDUSTRY_MAP and APP_MAP are declarative and easy to extend.",
+    "Builder.jsx: `applyNiche` uses window.confirm which is not ideal UX (native browser modal) but is acceptable for MVP. On error path (line 87) the catch is silent — should surface a toast.error so failures are visible.",
+    "NicheSwitcher.jsx: niche-option cards correctly disable during in-flight preview via `busy` state. Preview call is stateless (server-side) — good.",
+    "niche_preview endpoint is idempotent and non-destructive; response omits _id via projection implicitly since pages are freshly constructed dicts. Nice.",
+    "Frontend niche-preview-canvas re-uses BlockPreview & EffectWrap for parity with the real builder — DRY is respected."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter12_niches.py"
+  ],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% (switcher, preview, exit, apply on non-demo, /leads regression all verified)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (JWT cookie session)",
+  "seed_data_creation": "Created ephemeral non-demo apps (TEST_iter12_rebuild_*, TEST_iter12_map_*) during pytest for premium-rebuild and industry-mapping tests; deleted at end of each test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iter12 test file at /app/backend/tests/test_iter12_niches.py (16 tests, ~4s). Niche switcher flow works end-to-end. NicheSwitcher grid renders all 16 niches; preview is non-destructive and only writes to DB via /site/premium-rebuild. QA_v4_App_1788805736 was mutated during apply test (now has restaurant/Ember & Oak content) — future iterations should re-seed or create fresh test apps if they need a specific state. Silent error swallow in Builder.jsx applyNiche catch block is a minor UX gap worth flagging."
+}

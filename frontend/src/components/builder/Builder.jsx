@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -10,6 +10,7 @@ import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
+import { NicheSwitcher, NichePreviewBar } from "@/components/builder/NicheSwitcher";
 import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -75,6 +76,16 @@ export default function Builder({ appId, appDoc }) {
   const [genOpen, setGenOpen] = useState(false);
   const [device, setDevice] = useState("desktop");
   const [dirty, setDirty] = useState(false);
+  const [nicheOpen, setNicheOpen] = useState(false);
+  const [nichePreview, setNichePreview] = useState(null);
+  const [previewPage, setPreviewPage] = useState(0);
+  const [applyingNiche, setApplyingNiche] = useState(false);
+  async function applyNiche() {
+    if (!nichePreview || !window.confirm(`Apply the ${nichePreview.brand} look? Current pages will be replaced with this ${nichePreview.pages.length}-page site.`)) return;
+    setApplyingNiche(true);
+    try { await api.post(`/apps/${appId}/site/premium-rebuild`, { niche: nichePreview.niche }); toast.success(`Applied ${nichePreview.niche.replace(/_/g, " ")} look`); setNichePreview(null); await load(); }
+    catch (e) { toast.error(e.response?.data?.detail || "Apply failed"); } finally { setApplyingNiche(false); }
+  }
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => { load(); }, [appId]);
@@ -165,11 +176,23 @@ export default function Builder({ appId, appDoc }) {
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
           <button data-testid="premium-redesign-btn" onClick={premiumRedesign} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Sparkles size={14} /> Premium redesign</button>
+          <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
           <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
         </div>
       </div>
+      <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
+      <NichePreviewBar preview={nichePreview} onApply={applyNiche} onExit={() => setNichePreview(null)} applying={applyingNiche} />
+      {nichePreview && (
+        <div className="min-h-[600px]" data-testid="niche-preview-canvas">
+          <div className="flex gap-1 mb-3">{nichePreview.pages.map((p, i) => <button key={p.slug} data-testid={`niche-preview-page-${i}`} onClick={() => setPreviewPage(i)} className={`px-3 py-1.5 rounded-full text-xs ${previewPage === i ? "bg-[var(--acc)] text-black font-semibold" : "text-[var(--mut)] hover:text-white"}`}>{p.name}</button>)}</div>
+          <div className={`rounded-2xl border border-[var(--acc)]/40 overflow-hidden shadow-2xl ${nichePreview.theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(nichePreview.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
+            <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">preview · {nichePreview.brand.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com{nichePreview.pages[previewPage]?.slug}</span></div>
+            <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">{(nichePreview.pages[previewPage]?.blocks || []).map(b => <EffectWrap key={b.id} effects={b.style?.effects} motionOn={true}><BlockPreview block={b} onNavigate={(href) => { const i = nichePreview.pages.findIndex(p => p.slug === href); if (i >= 0) setPreviewPage(i); }} /></EffectWrap>)}</div>
+          </div>
+        </div>
+      )}
 
-      <div className="grid lg:grid-cols-[230px_1fr_300px] gap-4" data-testid="visual-builder">
+      <div className={`grid lg:grid-cols-[230px_1fr_300px] gap-4 ${nichePreview ? "hidden" : ""}`} data-testid="visual-builder">
         <aside className="space-y-4">
           <div className="card-surface p-3">
             <div className="overline mb-2 px-1">Blocks</div>

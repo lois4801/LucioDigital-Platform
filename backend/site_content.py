@@ -225,11 +225,96 @@ NICHES = {
   about=("Built by CS leaders who were tired of spreadsheets.", "Orbit's founders ran customer success at two high-growth SaaS companies and spent Sunday nights in spreadsheets guessing who might churn. In 2020 they built the tool they wished they'd had. Today 1,200 CS teams use Orbit to protect $4B in recurring revenue."),
   team=[("Maya Lindqvist", "Co-founder & CEO"), ("Arjun Mehta", "Co-founder & CTO"), ("Sofia Reyes", "VP Customer Success"), ("Tom Becker", "Head of Product")],
   email="sales@orbitportal.ai", phone="+1 (415) 555-0199", address="500 Howard St, San Francisco, CA"),
+
+ "legal": dict(brand="Whitfield & Grant LLP", industry="Legal", mood="corporate", primary="#B45309", secondary="#94A3B8",
+  badge="Est. 1992 · 40+ attorneys · Free case evaluation", title="Serious counsel for the moments that decide everything.", sub="A litigation and corporate law firm representing businesses, executives and families across commercial disputes, employment, real estate and estate planning.",
+  cta="Request a consultation", cta2="Our practice areas", hero=img("photo-1589829545856-d10d557cf95f"), video=YT.format("law+firm+overview+attorneys"),
+  gallery=["photo-1505664194779-8beaceb93744", "photo-1450101499163-c8848c66ca85", "photo-1521791136064-7986c2920216", "photo-1507679799987-c73779587ccf", "photo-1479142506502-19b3a3b7ff33", "photo-1556761175-4b46a572b786"],
+  sections=["services", "team", "results", "certs", "stats", "video", "testimonials", "consult", "faq"],
+  services=("Practice Areas", "Focused expertise, coordinated under one roof.", [("Commercial litigation", "Contract disputes, shareholder actions and injunctions in state and federal court, with a 78% pre-trial resolution rate.", "Shield"), ("Employment law", "Executive agreements, wrongful dismissal, non-competes and workplace investigations for employers and senior employees.", "Users"), ("Corporate & M&A", "Formation, financing rounds, acquisitions and governance for companies from seed to $500M exit.", "Star"), ("Real estate", "Commercial leasing, acquisitions, zoning and construction disputes.", "Globe"), ("Estate planning", "Wills, trusts, powers of attorney and probate administration for families and business owners.", "Heart"), ("Intellectual property", "Trademark registration, licensing and enforcement.", "Sparkles")]),
+  team_heading="Our Attorneys",
+  team=[("Margaret Whitfield, QC", "Managing Partner · Litigation"), ("David Grant", "Partner · Corporate & M&A"), ("Olivia Chen", "Partner · Employment"), ("Samuel Adeyemi", "Senior Associate · Real Estate")],
+  results=("Case Results", [("m", "2021", "v", 38), ("m", "2022", "v", 51), ("m", "2023", "v", 64), ("m", "2024", "v", 82), ("m", "2025", "v", 97)], "Client recoveries and savings secured, in $ millions, per year."),
+  certs=("Recognition", ["Chambers & Partners", "Best Lawyers 2025", "Super Lawyers", "Lexpert Ranked", "Martindale AV Preeminent", "Law Society Certified Specialists"]),
+  stats=[("$340M", "Recovered for clients"), ("78%", "Disputes resolved before trial"), ("33 yrs", "Serving the region"), ("4.9★", "Client rating, 410 reviews")],
+  quotes=[("Whitfield & Grant took over a shareholder dispute two firms had stalled for 18 months and settled it in four, on terms better than we'd hoped for.", "Andrew Kessler", "CEO, Kessler Manufacturing"), ("Olivia rewrote our executive agreements and handled a difficult termination without a single claim being filed.", "Priya Raman", "VP People, Halcyon Software"), ("David closed our $42M acquisition on schedule despite a hostile seller. Calm, precise, relentless.", "Michael Torres", "Founder, Torres Logistics Group")],
+  consult=("Free Case Evaluation", "Tell us what happened. An attorney — not an intake clerk — will review your matter and respond within one business day.", "Request a consultation"),
+  faq=[("How do you bill?", "Hourly, flat-fee and contingency arrangements depending on the matter. Every engagement starts with a written estimate."), ("Do you handle matters outside the region?", "Yes — we're admitted in three jurisdictions and work with a national network of co-counsel."), ("Is my consultation confidential?", "Absolutely. Everything you share is protected by attorney-client privilege from the first call.")],
+  about=("Founded on the belief that clients deserve partners, not associates.", "Margaret Whitfield and David Grant left a national firm in 1992 because their clients rarely saw the lawyer they'd hired. At Whitfield & Grant, every matter is led by a partner, every phone call is returned the same day, and every invoice is explained line by line. Thirty-three years and $340M in client recoveries later, that hasn't changed."),
+  email="intake@whitfieldgrant.law", phone="+1 (416) 555-0190", address="181 Bay St, Suite 4400, Toronto, ON"),
+
+ "education": dict(brand="Brightwater Academy", industry="Education", mood="clinical", primary="#0EA5E9", secondary="#FBBF24",
+  badge="JK–Grade 12 · Now enrolling for September", title="Small classes. Big futures.", sub="An independent day school where 14-student classes, a project-based curriculum and dedicated learning specialists prepare every student for university and for life.",
+  cta="Book a campus tour", cta2="Apply now", hero=img("photo-1523050854058-8df90110c9f1"), video=YT.format("independent+school+campus+tour"),
+  gallery=["photo-1509062522246-3755977927d7", "photo-1427504494785-3a9ca7044f45", "photo-1503676260728-1c00da094a0b", "photo-1524178232363-1fb2b075b655", "photo-1571260899304-425eee4c7efc", "photo-1580582932707-520aed937b7b"],
+  sections=["services", "team", "stats", "plans", "video", "testimonials", "certs", "tour", "faq"],
+  services=("Programs", "A curriculum built around how children actually learn.", [("Lower School (JK–5)", "Literacy and numeracy foundations, daily outdoor learning and French from JK.", "Heart"), ("Middle School (6–8)", "Advisory groups, interdisciplinary projects and a 1:1 laptop program.", "Star"), ("Upper School (9–12)", "AP courses, university counselling from Grade 9 and a capstone research project.", "Sparkles"), ("Learning support", "Certified learning specialists and individualized education plans at no extra cost.", "Shield"), ("Arts & athletics", "Orchestra, theatre, robotics and 22 competitive teams.", "Zap"), ("Before & after care", "7:15 AM to 6:00 PM with homework club and enrichment clubs.", "Clock")]),
+  team_heading="Faculty & Leadership",
+  team=[("Dr. Helen Marsh", "Head of School"), ("Jonathan Reyes", "Head of Upper School"), ("Amina Yusuf", "Director of Learning Support"), ("Claire Dubois", "Director of Admissions")],
+  stats=[("14", "Average class size"), ("100%", "University acceptance, 5 yrs running"), ("$2.1M", "Scholarships awarded last year"), ("9:1", "Student-to-teacher ratio")],
+  plans=("Tuition & Fees", [("Lower School", "$21,400", ["JK–Grade 5", "Includes lunch & materials", "Before/after care available"]), ("Middle School", "$24,900", ["Grades 6–8", "1:1 laptop included", "Outdoor education trip"]), ("Upper School", "$27,800", ["Grades 9–12", "AP courses", "University counselling"])]),
+  quotes=[("Our daughter went from dreading school to leading the robotics team. The learning specialists identified her dyslexia in Grade 3 and built a plan that actually worked.", "Karen & Tom Mitchell", "Parents, Grade 7 student"), ("Brightwater's university counselling started in Grade 9. My son had offers from four of his five choices, two with scholarships.", "Deepa Nair", "Parent, Class of 2025"), ("I've taught in three schools. This is the first where the class size lets me know every student's strengths by October.", "Ms. Laura Benson", "Grade 4 teacher, 8 years")],
+  certs=("Accreditation", ["CAIS Accredited", "Ontario Ministry Inspected", "AP Authorized School", "IB Candidate School", "Round Square Member", "Green School Certified"]),
+  tour=("Book a Campus Tour", "Spend a morning with us: meet teachers, sit in on a class and talk to current students. Tours run Tuesdays and Thursdays.", "Book a campus tour"),
+  faq=[("What is the admissions process?", "Application, a classroom visit day for the student, a family interview and a report card review. Decisions within three weeks."), ("Is financial aid available?", "Yes — 22% of families receive need-based assistance ranging from 10% to 80% of tuition."), ("Do you offer bus transportation?", "Six routes across the city with door-to-door service for Lower School students.")],
+  about=("Founded by teachers who wanted to teach children, not manage crowds.", "Brightwater opened in 1998 with 46 students in a converted church hall and a promise to parents: your child will be known. Today 620 students learn on a 12-acre campus, but the class cap of 14 has never moved — because knowing every student is still the whole point."),
+  email="admissions@brightwateracademy.ca", phone="+1 (905) 555-0136", address="880 Lakeshore Rd E, Oakville, ON"),
+
+ "real_estate": dict(brand="Harbour & Vale Realty", industry="Real Estate", mood="luxury", primary="#10B981", secondary="#D4A574",
+  badge="$480M sold in 2025 · Top 1% brokerage", title="Homes worth coming home to.", sub="A boutique brokerage of 24 agents selling luxury residential and investment property across the city and the lake district — with data-driven pricing and white-glove marketing.",
+  cta="Get a free home valuation", cta2="Browse listings", hero=img("photo-1600596542815-ffad4c1539a9"), video=YT.format("luxury+real+estate+home+tour"),
+  gallery=["photo-1600585154340-be6161a56a0c", "photo-1600607687939-ce8a6c25118c", "photo-1613490493576-7fde63acd811", "photo-1512917774080-9991f1c4c750", "photo-1568605114967-8130f3a36994", "photo-1600047509807-ba8f99d2cdde"],
+  sections=["featured", "services", "team", "stats", "video", "testimonials", "areas", "valuation", "faq"],
+  featured=("Featured Listings", "A selection of homes currently represented by Harbour & Vale."),
+  services=("Services", "Whether you're selling, buying or investing, one dedicated agent leads your file end to end.", [("Selling", "Pre-listing staging, professional photography, 3D tours and a 21-day launch plan. Our listings sell 9 days faster than market.", "Star"), ("Buying", "Off-market access, comparative pricing analysis and negotiation that saved buyers an average of 3.2% last year.", "Heart"), ("Investment", "Cap-rate analysis, multi-unit sourcing and property management referrals.", "Zap"), ("Relocation", "Neighbourhood tours, school guidance and move coordination for families arriving from out of town.", "Globe"), ("Luxury & waterfront", "Discreet marketing and private showings for properties above $2M.", "Sparkles"), ("Commercial", "Retail, office and mixed-use leasing and sales.", "Shield")]),
+  team_heading="Our Agents",
+  team=[("Victoria Hale", "Broker of Record"), ("Marcus Obi", "Luxury & Waterfront Specialist"), ("Sienna Park", "Buyer Representation Lead"), ("Ravi Menon", "Investment Advisor")],
+  stats=[("$480M", "Sold in 2025"), ("9 days", "Faster than market average"), ("102%", "Avg. sale-to-list price"), ("640", "Families moved last year")],
+  quotes=[("Victoria priced our home $60K above what two other agents suggested — and it sold in six days with three offers, over asking.", "The Okafor Family", "Sellers, Lakeview"), ("Marcus found us a waterfront property that never hit the market. Closed in 30 days, no bidding war.", "James & Elise Hartmann", "Buyers, Harbour District"), ("Ravi's cap-rate analysis steered us away from a bad triplex and into a fourplex that cash-flows from day one.", "Daniel Wu", "Investor")],
+  areas=("Neighbourhoods We Serve", ["Harbour District", "Lakeview", "Old Town", "The Annex", "Riverside", "Vale Heights", "Forest Hill", "The Beaches"]),
+  valuation=("Free Home Valuation", "Get a data-backed estimate of your home's value within 24 hours, based on 90 days of comparable sales — no obligation.", "Get my valuation"),
+  faq=[("What are your commission rates?", "Competitive and negotiable based on the property and services required. Every agreement is transparent and in writing."), ("How long does it take to sell?", "Our listings average 17 days on market versus 26 for the wider market."), ("Do you work with first-time buyers?", "Absolutely — about a third of our buyers are purchasing their first home.")],
+  about=("Twenty-four agents. One standard of care.", "Victoria Hale founded Harbour & Vale in 2011 after a decade at a national franchise where volume mattered more than clients. She capped the brokerage at 24 agents so every file gets a senior, full-time professional. The result: 102% average sale-to-list and a referral rate above 70%."),
+  email="hello@harbourvale.com", phone="+1 (647) 555-0182", address="1 Yorkville Ave, Toronto, ON"),
+
+ "restaurant": dict(brand="Ember & Oak", industry="Restaurants", mood="moody", primary="#EF4444", secondary="#F59E0B",
+  badge="Wood-fired · Farm-to-table · Reservations recommended", title="Fire, smoke and the season's best ingredients.", sub="A neighbourhood restaurant built around a live-fire hearth, a daily-changing menu from farms within 100 km and a wine list of 140 natural and old-world bottles.",
+  cta="Reserve a table", cta2="View tonight's menu", hero=img("photo-1517248135467-4c7edcad34c4"), video=YT.format("wood+fired+restaurant+kitchen+chef"),
+  gallery=["photo-1414235077428-338989a2e8c0", "photo-1555396273-367ea4eb4db5", "photo-1559339352-11d035aa65de", "photo-1550966871-3ed3cdb51f8b", "photo-1544025162-d76694265947", "photo-1424847651672-bf20a4b0982b"],
+  sections=["services", "gallery", "team", "stats", "video", "testimonials", "plans", "reserve", "faq"],
+  services=("The Menu", "Everything touches the fire.", [("From the hearth", "Dry-aged ribeye, whole branzino and heritage pork chops over oak and applewood.", "Zap"), ("Garden", "Ember-roasted vegetables, house ferments and salads picked that morning.", "Heart"), ("Handmade pasta", "Rolled daily: tagliatelle with wild mushroom, agnolotti with brown butter.", "Star"), ("Wood-fired pizza", "72-hour dough, San Marzano tomatoes, 90 seconds at 900°F.", "Sparkles"), ("Dessert", "Burnt honey panna cotta, hearth-baked apple tart, house gelato.", "Globe"), ("Wine & cocktails", "140 natural and old-world wines, smoked cocktails and zero-proof pairings.", "Shield")]),
+  gallery_heading="From the kitchen",
+  team_heading="The Kitchen",
+  team=[("Chef Mateo Rinaldi", "Executive Chef & Owner"), ("Ana Lucía Ferrer", "Chef de Cuisine"), ("Owen Blake", "Sommelier"), ("Jess Morgan", "General Manager")],
+  stats=[("100 km", "Max distance for our produce"), ("140", "Wines on the list"), ("4.8★", "Google rating, 2,900 reviews"), ("11", "Partner farms")],
+  quotes=[("The ribeye off the hearth is the best steak I've had in the city, and I've had most of them.", "Laura Chen", "Food critic, City Eats"), ("We held our rehearsal dinner in the private room. Mateo built a menu around my grandmother's recipes. People cried.", "Sofia & Marcus Bell", "Private dining guests"), ("A wine list this thoughtful at these prices shouldn't exist. Owen steered us to a $58 bottle that outperformed the $140 one.", "David Park", "Regular since 2020")],
+  plans=("Private Dining & Events", [("The Hearth Table", "$95", ["Up to 10 guests", "5-course tasting", "Wine pairing optional"]), ("The Cellar Room", "$120", ["Up to 24 guests", "Family-style menu", "Dedicated server", "AV available"]), ("Full Buyout", "Custom", ["Up to 90 guests", "Custom menu", "Sommelier-led pairing", "Live-fire station"])]),
+  reserve=("Reserve a Table", "Book online for parties up to 8. Larger groups and private dining — call us or email events@emberandoak.ca.", "Reserve a table"),
+  faq=[("Do you accommodate dietary restrictions?", "Yes — vegan, gluten-free and allergy-aware menus available; tell us when you book."), ("Is there a dress code?", "Smart casual. Come as you are, but maybe not straight from the gym."), ("Do you take walk-ins?", "The bar and hearth counter are always walk-in; the dining room fills 2–3 weeks ahead on weekends.")],
+  about=("One hearth, eleven farms, no freezers.", "Mateo Rinaldi grew up cooking over his grandfather's wood fire in Umbria. Ember & Oak opened in 2019 with a single 4-ton oak-fired hearth and a rule: if it can't be sourced within 100 km this week, it isn't on the menu. The kitchen has no freezer. The menu changes every day."),
+  email="hello@emberandoak.ca", phone="+1 (416) 555-0147", address="622 Queen St W, Toronto, ON"),
+
+ "events": dict(brand="Lumen Events Co.", industry="Events", mood="moody", primary="#A855F7", secondary="#F472B6",
+  badge="Weddings · Corporate · Galas · 400+ events produced", title="Events people talk about for years.", sub="Full-service event design and production — from 40-guest dinners to 2,000-person conferences — with one producer, one budget and zero surprises.",
+  cta="Start planning", cta2="See our work", hero=img("photo-1511578314322-379afb476865"), video=YT.format("event+production+gala+wedding+highlights"),
+  gallery=["photo-1519167758481-83f550bb49b3", "photo-1464366400600-7168b8af9bc3", "photo-1505236858219-8359eb29e329", "photo-1540575467063-178a50c2df87", "photo-1478147427282-58a87a120781", "photo-1492684223066-81342ee5ff30"],
+  sections=["services", "portfolio", "team", "stats", "video", "testimonials", "plans", "certs", "planning", "faq"],
+  services=("Services", "Every detail, one accountable team.", [("Weddings", "Design, vendor curation, day-of production and a planner who answers texts at 11 PM.", "Heart"), ("Corporate events", "Product launches, summits and off-sites with AV, staging and registration handled in-house.", "Star"), ("Galas & fundraising", "Auction tech, sponsor activations and run-of-show that keeps 800 guests on schedule.", "Sparkles"), ("Design & décor", "Floral, lighting, furniture and custom builds from our own warehouse.", "Zap"), ("AV & production", "Sound, lighting, LED walls and livestream with our in-house crew.", "Globe"), ("Venue sourcing", "Access to 120 venues, including 14 private estates not listed anywhere.", "Shield")]),
+  portfolio=("Recent Work", "A few of the 400+ events we've produced."),
+  team=[("Camille Laurent", "Founder & Creative Director"), ("Theo Nakamura", "Head of Production"), ("Bianca Rossi", "Senior Wedding Planner"), ("Andre Mitchell", "Technical Director")],
+  stats=[("400+", "Events produced"), ("2,000", "Largest guest count"), ("98%", "Delivered on budget"), ("120", "Venue partners")],
+  quotes=[("Our 600-person product launch had a 40-minute run-of-show with zero dead air. Theo's crew made it look effortless.", "Rachel Kim", "VP Marketing, Nimbus Tech"), ("Camille designed a wedding that felt like us, not like Pinterest. Guests are still talking about the lighting a year later.", "Emma & Julian Reyes", "Married June 2025"), ("Our gala raised 38% more than the previous year. The auction tech and sponsor activations paid for the whole production.", "Dr. Nadia Hussain", "Executive Director, Hope Foundation")],
+  plans=("Planning Packages", [("Day-of Coordination", "$3,200", ["Timeline & vendor confirmation", "12 hours on site", "Lead + assistant"]), ("Partial Planning", "$8,500", ["From 4 months out", "Design direction", "Vendor sourcing", "Day-of production"]), ("Full Production", "From $18,000", ["Concept to teardown", "Custom design & builds", "In-house AV", "Dedicated producer"])]),
+  certs=("Trusted By", ["Nimbus Tech", "Hope Foundation", "Four Seasons", "Shopify", "Royal Ontario Museum", "TIFF"]),
+  planning=("Start Planning", "Tell us the date, the guest count and the feeling you want in the room. A producer will reply within one business day with ideas and a budget range.", "Start planning"),
+  faq=[("How far in advance should we book?", "Weddings 10–14 months; corporate events 3–6 months. We hold two rush slots per month."), ("Do you work with our own vendors?", "Yes — we're happy to coordinate vendors you already love, and we vet anyone new."), ("What does full production cost?", "Most full-production events run 12–18% of total event budget. We publish every line item.")],
+  about=("Started with a wedding for 40 in a friend's backyard.", "Camille Laurent produced her first event in 2014 with string lights, borrowed tables and a run-of-show on a napkin. The couple's guests booked three more events. Lumen now has a 14-person team, a 6,000 sq ft décor warehouse and in-house AV — and still writes the run-of-show first."),
+  email="hello@lumenevents.co", phone="+1 (416) 555-0171", address="99 Sudbury St, Toronto, ON"),
 }
 
 # Map every known industry label / template key / demo app to a niche
 INDUSTRY_MAP = {"hvac": "hvac", "healthcare": "healthcare", "construction": "construction", "fitness": "fitness", "e-commerce": "retail", "retail": "retail", "hospitality": "hospitality", "finance": "finance", "it services": "it_services", "creative studio": "creative_studio", "service booking": "creative_studio",
-                "internal tools": "logistics", "logistics": "logistics", "saas portals": "saas", "saas": "saas", "plumbing": "hvac", "electrical": "hvac", "carpentry": "construction", "health & safety": "construction", "real estate": "hospitality", "education": "healthcare", "legal": "finance", "restaurants": "hospitality", "events": "creative_studio", "agency": "saas"}
+                "internal tools": "logistics", "logistics": "logistics", "saas portals": "saas", "saas": "saas", "plumbing": "hvac", "electrical": "hvac", "carpentry": "construction", "health & safety": "construction", "real estate": "real_estate", "education": "education", "legal": "legal", "restaurants": "restaurant", "restaurant": "restaurant", "events": "events", "agency": "saas"}
 APP_MAP = {"Nexus Commerce": "retail", "Orbit SaaS Portal": "saas", "Fleet Command": "logistics", "Aura Wellness": "fitness", "Ledger AI Portfolio": "finance", "Studio Booking": "creative_studio"}
 
 
@@ -255,7 +340,7 @@ def _sec(n, key, i, brand):
     if key in ("areas", "certs", "insurance", "technologies", "attractions", "compliance", "logos"):
         h, names = g(key)
         return _blk("logos", {"heading": h, "names": names}, bg, "center", "sm")
-    if key in ("emergency", "portal", "trial", "sla", "audit", "booking", "quote", "start", "loyalty", "cta"):
+    if key in ("emergency", "portal", "trial", "sla", "audit", "booking", "quote", "start", "loyalty", "cta", "consult", "tour", "valuation", "reserve", "planning"):
         if key == "cta":
             return _blk("cta", {"title": f"Ready to work with {brand}?", "subtitle": "Talk to a real person today.", "cta": n["cta"]}, "accent", "center", "lg")
         h, sub, cta = g(key)
@@ -341,7 +426,15 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.get("/site-niches")
     async def list_niches(user: dict = Depends(get_current_user)):
-        return [{"key": k, "brand": v["brand"], "industry": v["industry"], "mood": v["mood"], "primary": v["primary"], "sections": v["sections"]} for k, v in NICHES.items()]
+        return [{"key": k, "brand": v["brand"], "industry": v["industry"], "mood": v["mood"], "primary": v["primary"], "secondary": v["secondary"], "hero": v["hero"], "title": v["title"], "sections": v["sections"]} for k, v in NICHES.items()]
+
+    @api.post("/apps/{app_id}/site/niche-preview")
+    async def niche_preview(app_id: str, body: RebuildIn, user: dict = Depends(get_current_user)):
+        app = await get_user_app(app_id, user)
+        if body.niche not in NICHES:
+            raise HTTPException(404, "Unknown niche")
+        pages, theme, n = build_premium_site(app, body.niche)
+        return {"niche": body.niche, "brand": n["brand"], "theme": theme, "pages": [{"name": a, "slug": b, "blocks": c} for a, b, c in pages]}
 
     @api.post("/apps/{app_id}/site/premium-rebuild")
     async def premium_rebuild(app_id: str, body: RebuildIn, user: dict = Depends(get_current_user)):
