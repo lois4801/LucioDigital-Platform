@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Words, Spotlight, fast } from "@/components/motion";
 import ChatWidget from "@/components/ChatWidget";
+import api from "@/lib/api";
 
 const SHOWCASE = [
-  { title: "Nexus Commerce", tag: "E-commerce", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4" },
-  { title: "Orbit SaaS Portal", tag: "SaaS Portals", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4" },
-  { title: "Fleet Command", tag: "Internal Tools", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4" },
-  { title: "Aura Wellness", tag: "Service Booking", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4" },
+  { title: "Nexus Commerce", tag: "E-commerce", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", blurb: "Featured products, categories, offers, loyalty program and a store locator — built for independent retailers and DTC brands.", sections: ["Featured Products", "Categories", "Offers", "Loyalty Program", "Store Locator"] },
+  { title: "Orbit SaaS Portal", tag: "SaaS Portals", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", blurb: "Dark, product-led SaaS marketing site with platform features, logo cloud, pricing tiers and customer proof.", sections: ["Platform", "Trusted by", "Stats", "Pricing", "Testimonials", "FAQ"] },
+  { title: "Fleet Command", tag: "Internal Tools", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4", blurb: "Logistics and operations sites with service areas, safety record charts, certifications and instant quote requests.", sections: ["Services", "Service Areas", "Safety Record", "Certifications", "Request a Quote"] },
+  { title: "Aura Wellness", tag: "Service Booking", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4", blurb: "Fitness and wellness studios: class schedule, trainers, membership plans, transformation stories and a free-trial CTA.", sections: ["Class Schedule", "Trainers", "Membership Plans", "Transformation Stories", "Free Trial"] },
 ];
 const LOGOS = ["Nexus", "Orbit", "Fleet", "Aura", "Ledger", "Studio", "Vanta", "Halo"];
 const BENTO = [
@@ -23,24 +24,71 @@ const BENTO = [
 
 const fade = { hidden: { opacity: 0, y: 18 }, show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.08, duration: 0.55, ease: [0.22, 1, 0.36, 1] } }) };
 
-function ShowcaseCard({ s, i }) {
+function ShowcaseCard({ s, i, onOpen }) {
   const [playing, setPlaying] = useState(true);
   return (
-    <motion.div variants={fade} custom={i} data-testid={`showcase-card-${i}`}
-      className="card-lift group relative rounded-2xl overflow-hidden border border-white/10 bg-[var(--card)]">
+    <motion.div variants={fade} custom={i} data-testid={`showcase-card-${i}`} layoutId={`showcase-${i}`} onClick={() => onOpen(s, i)} whileHover={{ y: -6 }} whileTap={{ scale: 0.98 }}
+      className="card-lift group relative rounded-2xl overflow-hidden border border-white/10 bg-[var(--card)] cursor-pointer">
       <div className="aspect-[4/3] relative overflow-hidden">
-        <video src={s.video} autoPlay muted loop playsInline ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+        {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" /> :
+          <video src={s.video} autoPlay muted loop playsInline ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent" />
-        <button data-testid={`showcase-toggle-${i}`} onClick={() => setPlaying(!playing)}
+        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="rounded-full bg-[var(--acc)] text-black text-xs font-semibold px-4 py-2 flex items-center gap-1.5 shadow-[0_0_30px_rgba(16,185,129,0.5)]">{s.token ? "Open live demo" : "See what's included"} <ArrowRight size={12} /></span></div>
+        {!s.thumbnail && <button data-testid={`showcase-toggle-${i}`} onClick={(e) => { e.stopPropagation(); setPlaying(!playing); }}
           className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
           {playing ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
-        </button>
+        </button>}
         <div className="absolute top-3 left-3 chip">{s.tag}</div>
       </div>
       <div className="p-4 flex items-center justify-between">
-        <div className="font-display text-lg">{s.title}</div>
-        <span className="chip chip-active badge-glow" style={{ padding: "2px 8px" }}><span className="pulse-dot" />Live</span>
+        <div className="font-display text-lg">{s.brand || s.title}</div>
+        <span className="chip chip-active badge-glow" style={{ padding: "2px 8px" }}><span className="pulse-dot" />{s.token ? "Live" : "Template"}</span>
+      </div>
+    </motion.div>
+  );
+}
+
+function NicheModal({ s, i, onClose, onStart }) {
+  return (
+    <motion.div data-testid="niche-modal" className="fixed inset-0 z-[80] flex items-center justify-center p-6 bg-black/70 backdrop-blur-md" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+      <motion.div layoutId={`showcase-${i}`} onClick={e => e.stopPropagation()} className="relative w-full max-w-2xl rounded-3xl border border-white/10 bg-[var(--card)] overflow-hidden shadow-2xl">
+        <div className="aspect-[21/9] relative">{s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <video src={s.video} autoPlay muted loop playsInline className="w-full h-full object-cover" />}<div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] to-transparent" /><div className="absolute top-4 left-4 chip">{s.tag}</div>
+          <button data-testid="niche-modal-close" onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-black/80"><X size={14} /></button></div>
+        <div className="p-7">
+          <div className="overline mb-2">{s.tag} template</div>
+          <h3 className="font-display text-2xl font-bold tracking-tight">{s.brand || s.title}</h3>
+          <p className="text-[var(--mut)] mt-3">{s.summary || s.blurb}</p>
+          <div className="mt-5 flex flex-wrap gap-2">{(s.sections || []).map(x => <span key={x} className="chip normal-case tracking-normal">{typeof x === "string" ? x.replace(/_/g, " ") : x}</span>)}</div>
+          <p className="text-xs text-[var(--dim)] mt-4">Includes: dark premium design system, glass cards, niche hero imagery, AI chat widget, lead inbox, workflows, CMS and one-click export.</p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button data-testid="niche-modal-cta" onClick={onStart} className="btn-primary btn-glow arrow-slide inline-flex items-center gap-2">Get started with this template <ArrowRight size={14} /></button>
+            <a data-testid="niche-modal-demo" href="mailto:jaybernabe@luciodigital.com?subject=Demo request" className="btn-ghost">Request a demo</a>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+const DEMOS = [
+  { title: "Site Mode — prompt to a multi-page site in 60 seconds", tag: "Framer-style builder", len: "1:24", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
+  { title: "App Mode — 18 industry templates with live prototypes", tag: "Lovable-style app builder", len: "0:58", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
+  { title: "Export & handoff — GitHub, .zip, custom domains", tag: "Handoff pipeline", len: "0:46", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
+];
+
+function DemoVideo({ d, i, big }) {
+  const [playing, setPlaying] = useState(false);
+  return (
+    <motion.div variants={fade} custom={i} data-testid={`demo-video-${i}`} className="card-lift group relative rounded-2xl overflow-hidden border border-white/10 bg-[var(--card)]">
+      <div className={`${big ? "aspect-video lg:h-full" : "aspect-[21/9]"} relative overflow-hidden`}>
+        <video src={d.video} muted loop playsInline preload="metadata" ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-[var(--bg)]/20 to-transparent" />
+        <button data-testid={`demo-play-${i}`} onClick={() => setPlaying(!playing)} className={`absolute inset-0 m-auto rounded-full bg-[var(--acc)] text-black flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.45)] transition-transform hover:scale-105 ${big ? "w-16 h-16" : "w-12 h-12"} ${playing ? "opacity-0 group-hover:opacity-100" : ""}`}>
+          {playing ? <Pause size={big ? 22 : 16} /> : <Play size={big ? 22 : 16} className="ml-1" />}
+        </button>
+        <div className="absolute top-3 left-3 chip">{d.tag}</div>
+        <span className="absolute top-3 right-3 text-[11px] font-mono bg-black/60 backdrop-blur px-2 py-0.5 rounded-full border border-white/10">{d.len}</span>
+        <div className={`absolute bottom-0 inset-x-0 p-5 font-display ${big ? "text-xl lg:text-2xl" : "text-base"}`}>{d.title}</div>
       </div>
     </motion.div>
   );
@@ -51,9 +99,18 @@ export default function Landing() {
   const { user } = useAuth();
   const go = () => nav(user ? "/dashboard" : "/register");
   const [activeNav, setActiveNav] = useState("Showcase");
+  const [showcase, setShowcase] = useState(SHOWCASE);
+  const [modal, setModal] = useState(null);
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => { api.get("/public/showcase").then(r => setShowcase(SHOWCASE.map(s => ({ ...s, ...(r.data.find(d => d.name === s.title) || {}) })))).catch(() => {}); }, []);
+  function openShowcase(s, i) {
+    if (s.token) { setLeaving(true); setTimeout(() => nav(`/p/${s.token}`), 380); } else setModal({ s, i });
+  }
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
+      <AnimatePresence>{leaving && <motion.div data-testid="demo-transition" className="fixed inset-0 z-[90] bg-[var(--bg)] flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="flex items-center gap-3 text-sm text-[var(--mut)]"><span className="w-2 h-2 rounded-full bg-[var(--acc)] pulse-dot" /> Opening live demo…</div></motion.div>}</AnimatePresence>
+      <AnimatePresence>{modal && <NicheModal s={modal.s} i={modal.i} onClose={() => setModal(null)} onStart={go} />}</AnimatePresence>
       <div className="absolute inset-0 grid-bg pointer-events-none" />
       <div className="hero-glow pointer-events-none absolute -top-40 left-1/2 w-[900px] h-[500px] rounded-full bg-[var(--acc)]/12 blur-[140px]" />
       <Spotlight />
@@ -147,7 +204,22 @@ export default function Landing() {
             <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start">View all tenants <ArrowRight size={14} /></motion.button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {SHOWCASE.map((s, i) => <ShowcaseCard key={s.title} s={s} i={i} />)}
+            {showcase.map((s, i) => <ShowcaseCard key={s.title} s={s} i={i} onOpen={openShowcase} />)}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* See it in action */}
+      <section id="demos" data-testid="demos-section" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32 border-t border-white/5">
+        <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
+          <motion.div variants={fade} className="mb-12 max-w-2xl">
+            <div className="overline mb-3">See it in action</div>
+            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Watch OmniStack build, brand and ship a product.</h2>
+            <p className="text-[var(--mut)] mt-3">Three short walkthroughs: Site Mode, App Mode with industry templates, and the export &amp; handoff pipeline.</p>
+          </motion.div>
+          <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
+            <DemoVideo big d={DEMOS[0]} i={0} />
+            <div className="grid gap-6">{DEMOS.slice(1).map((d, i) => <DemoVideo key={d.title} d={d} i={i + 1} />)}</div>
           </div>
         </motion.div>
       </section>

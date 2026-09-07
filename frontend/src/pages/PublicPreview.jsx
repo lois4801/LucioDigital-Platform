@@ -35,7 +35,7 @@ export default function PublicPreview() {
   const navigate = (href) => { if (href?.startsWith("/")) { setSlug(href); window.scrollTo(0, 0); } };
 
   return (
-    <div className="min-h-screen" data-testid="public-preview-page" style={{ ...themeVars(site.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
+    <div className={`min-h-screen ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" style={{ ...themeVars(site.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
       <div className="sticky top-0 z-40 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-5 py-2 flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
           <span className="w-2 h-2 rounded-full" style={{ background: site.app.color }} />

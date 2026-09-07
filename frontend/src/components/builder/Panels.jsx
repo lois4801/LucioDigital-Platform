@@ -54,7 +54,7 @@ export function StylePanel({ block, onChange }) {
         <div><div className="text-[10px] text-[var(--dim)] mb-1">Padding</div><Seg k="padding" opts={["sm", "md", "lg"]} /></div>
       </div>
       {block.type === "hero" && <div><div className="text-[10px] text-[var(--dim)] mb-1">Hero variant</div>
-        <div className="flex rounded-lg border border-[var(--line)] overflow-hidden text-[11px]">{["left", "centered", "split"].map(o => <button key={o} data-testid={`hero-variant-${o}`} onClick={() => onChange(s, { variant: o })} className={`flex-1 py-1.5 capitalize ${block.props.variant === o ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>{o}</button>)}</div></div>}
+        <div className="flex rounded-lg border border-[var(--line)] overflow-hidden text-[11px]">{["cover", "left", "centered", "split"].map(o => <button key={o} data-testid={`hero-variant-${o}`} onClick={() => onChange(s, { variant: o })} className={`flex-1 py-1.5 capitalize ${block.props.variant === o ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>{o}</button>)}</div></div>}
       <div><div className="text-[10px] text-[var(--dim)] mb-1">Effects (one toggle each)</div>
         <div className="grid grid-cols-2 gap-1">{[["reveal", "Scroll reveal"], ["parallax", "Parallax"], ["hover", "Hover lift"], ["float", "Floating"]].map(([k, l]) => {
           const on = k === "reveal" ? (s.effects?.reveal !== false) : !!s.effects?.[k];

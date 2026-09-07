@@ -171,6 +171,15 @@ button:active { transform: scale(0.97); }
 .btn-primary:active, .btn-ghost:active, .chip:active { filter: brightness(1.2); box-shadow: 0 0 0 3px var(--acc-glow), 0 0 24px var(--acc-glow); }
 .btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .has-cursor-trail, .has-cursor-trail a, .has-cursor-trail button { cursor: none; }
+/* ===== Tenant premium design system (glass, grain, glow) ===== */
+.tglass{background:var(--tglass, rgba(255,255,255,.04));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 0 0 1px transparent, 0 20px 60px -40px var(--tglow, transparent)}
+.tglass:hover{border-color:color-mix(in srgb, var(--tp) 45%, var(--tbd));box-shadow:0 0 0 1px color-mix(in srgb, var(--tp) 25%, transparent), 0 30px 80px -40px var(--tp)}
+.tsec-accent .tglass{background:rgba(255,255,255,.12)}
+.tgrain{position:relative;isolation:isolate}
+.tgrain::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:50;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.tsec-muted{background-image:radial-gradient(900px 300px at 85% 0%, color-mix(in srgb, var(--tp) 9%, transparent), transparent)}
+
+
 /* ===== Premium motion system ===== */
 .spotlight { background: radial-gradient(600px circle at var(--spot-x, 50%) var(--spot-y, 30%), rgba(16,185,129,0.10), transparent 60%); transition: background 80ms linear; }
 @keyframes glowPulse { 0%,100% { opacity: .55; transform: translate(-50%,0) scale(1); } 50% { opacity: .9; transform: translate(-50%,0) scale(1.08); } }

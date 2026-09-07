@@ -12,28 +12,39 @@ def esc(s) -> str:
 
 def css(theme: dict) -> str:
     dark = theme.get("mode") == "dark"
+    def darkish(h):
+        try:
+            return int(h[1:3], 16) * .299 + int(h[3:5], 16) * .587 + int(h[5:7], 16) * .114 < 128
+        except Exception:
+            return False
+    bg = theme.get("bg", "#0A0A0F") if darkish(theme.get("bg", "")) else "#0A0A0F"
+    sf = theme.get("surface", "#141420") if darkish(theme.get("surface", "")) else "#141420"
+    bd = theme.get("border", "#262637") if darkish(theme.get("border", "")) else "#262637"
+    grain = "" if theme.get("grain") is False else "body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9998;opacity:.07;mix-blend-mode:overlay;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")}"
     return f"""
-:root{{--p:{theme['primary']};--s:{theme['secondary']};--bg:{'#0B0F17' if dark else theme['bg']};--sf:{'#111827' if dark else theme['surface']};--fg:{'#F8FAFC' if dark else theme['fg']};--mut:{'#94A3B8' if dark else theme['muted']};--bd:{'#1F2937' if dark else theme['border']};--r:{theme['radius']}px}}
-*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--fg);font-family:'{theme['font_body']}',system-ui,sans-serif;-webkit-font-smoothing:antialiased}}
+:root{{--p:{theme['primary']};--s:{theme['secondary']};--bg:{bg if dark else theme['bg']};--sf:{sf if dark else theme['surface']};--fg:{'#F8FAFC' if dark else theme['fg']};--mut:{'#A1A7B8' if dark else theme['muted']};--bd:{bd if dark else theme['border']};--glass:{'rgba(255,255,255,.04)' if dark else 'rgba(255,255,255,.6)'};--r:{theme['radius']}px}}
+*{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--fg);font-family:'{theme['font_body']}',system-ui,sans-serif;-webkit-font-smoothing:antialiased}}{grain}
 h1,h2,h3,h4{{font-family:'{theme['font_heading']}',sans-serif;letter-spacing:-0.02em;margin:0;line-height:1.1}}
 a{{color:inherit;text-decoration:none}}.wrap{{max-width:1120px;margin:0 auto;padding:0 24px}}
-section{{padding:72px 0}}section.sm{{padding:40px 0}}section.lg{{padding:112px 0}}section.muted{{background:var(--sf)}}section.accent{{background:var(--p);color:#fff}}section.dark{{background:#0F172A;color:#fff}}
-section.accent .mut,section.dark .mut{{color:rgba(255,255,255,.8)}}.center{{text-align:center}}.mut{{color:var(--mut)}}
-.btn{{display:inline-block;background:var(--p);color:#fff;padding:14px 26px;border-radius:999px;font-weight:600;transition:transform .15s}}.btn:hover{{transform:translateY(-1px)}}
-.btn2{{display:inline-block;border:1px solid var(--bd);padding:13px 26px;border-radius:999px;font-weight:600;margin-left:10px}}
+section{{padding:80px 0;position:relative}}section.sm{{padding:44px 0}}section.lg{{padding:120px 0}}section.muted{{background:var(--sf) radial-gradient(900px 300px at 85% 0%,color-mix(in srgb,var(--p) 9%,transparent),transparent)}}section.accent{{background:var(--p);color:#fff}}section.dark{{background:#0F172A;color:#fff}}
+section.accent .mut,section.dark .mut{{color:rgba(255,255,255,.8)}}.center{{text-align:center}}.mut{{color:var(--mut)}}.kicker{{color:var(--p);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px}}
+.btn{{display:inline-block;background:var(--p);color:#fff;padding:14px 26px;border-radius:999px;font-weight:600;transition:transform .15s;box-shadow:0 10px 30px -12px var(--p)}}.btn:hover{{transform:translateY(-2px)}}
+.btn2{{display:inline-block;border:1px solid var(--bd);background:var(--glass);backdrop-filter:blur(12px);padding:13px 26px;border-radius:999px;font-weight:600;margin-left:10px}}
 .grid{{display:grid;gap:24px}}.g2{{grid-template-columns:repeat(2,1fr)}}.g3{{grid-template-columns:repeat(3,1fr)}}.g4{{grid-template-columns:repeat(4,1fr)}}
 @media(max-width:860px){{.g2,.g3,.g4{{grid-template-columns:1fr}}}}
-.card{{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:28px}}
+.card{{background:var(--glass);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--bd);border-radius:var(--r);padding:28px;transition:transform .3s,border-color .3s,box-shadow .3s}}.card:hover{{transform:translateY(-4px);border-color:color-mix(in srgb,var(--p) 45%,var(--bd));box-shadow:0 0 0 1px color-mix(in srgb,var(--p) 25%,transparent),0 30px 80px -40px var(--p)}}
 nav{{display:flex;align-items:center;justify-content:space-between;padding:18px 0}}nav .links a{{margin:0 14px;color:var(--mut);font-weight:500}}
 .brand{{font-family:'{theme['font_heading']}';font-weight:800;font-size:20px}}
 .hero h1{{font-size:clamp(40px,6vw,68px);font-weight:800}}.hero p{{font-size:20px;max-width:640px;margin:20px auto 0}}.hero .center p{{margin-left:auto;margin-right:auto}}
-.badge{{display:inline-block;background:color-mix(in srgb,var(--s) 15%,transparent);color:var(--s);padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}}
-.ico{{width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--p) 12%,transparent);color:var(--p);display:flex;align-items:center;justify-content:center;margin-bottom:16px}}
-.price{{font-size:44px;font-weight:800}}.hl{{border-color:var(--p);box-shadow:0 20px 60px -30px var(--p)}}
+.hero.cover{{padding:150px 0 120px;color:#fff;overflow:hidden;isolation:isolate}}.hero.cover>img{{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2}}.hero.cover::before{{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(105deg,var(--bg) 0%,color-mix(in srgb,var(--bg) 82%,transparent) 45%,color-mix(in srgb,var(--bg) 30%,transparent) 100%),linear-gradient(180deg,transparent 40%,var(--bg) 100%)}}.hero.cover .mut{{color:rgba(255,255,255,.8)}}
+.badge{{display:inline-block;background:color-mix(in srgb,var(--s) 15%,transparent);border:1px solid color-mix(in srgb,var(--s) 35%,transparent);color:var(--s);padding:6px 14px;border-radius:999px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}}
+.ico{{width:44px;height:44px;border-radius:12px;background:color-mix(in srgb,var(--p) 15%,transparent);color:var(--p);display:flex;align-items:center;justify-content:center;margin-bottom:16px;box-shadow:0 0 24px -6px var(--p)}}
+.price{{font-size:44px;font-weight:800}}.hl{{border-color:var(--p);box-shadow:0 20px 60px -30px var(--p)}}.stat{{font-size:40px;font-weight:800;color:var(--p);font-family:'{theme['font_heading']}'}}
 ul{{list-style:none;padding:0;margin:0}}li{{padding:6px 0;color:var(--mut)}}
 .faq details{{border-bottom:1px solid var(--bd);padding:18px 0}}.faq summary{{font-weight:600;cursor:pointer;font-size:18px}}
 .bar{{height:180px;display:flex;align-items:flex-end;gap:10px}}.bar span{{flex:1;background:linear-gradient(180deg,var(--p),var(--s));border-radius:8px 8px 0 0}}
-img.g{{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r)}}
+img.g{{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);border:1px solid var(--bd);transition:transform .5s}}img.g:hover{{transform:scale(1.02)}}img.tm{{width:100%;aspect-ratio:1;object-fit:cover;border-radius:calc(var(--r) - 6px);margin-bottom:14px}}
+.yt{{width:100%;aspect-ratio:16/9;border:1px solid var(--bd);border-radius:var(--r);margin-top:28px;background:#000}}
 footer{{padding:56px 0;border-top:1px solid var(--bd)}}footer h4{{font-size:14px;margin-bottom:12px}}
 .logos{{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;font-weight:700;color:var(--mut);font-size:20px}}
 .chat-fab{{position:fixed;right:24px;bottom:24px;background:var(--p);color:#fff;border-radius:999px;padding:14px 20px;font-weight:600;box-shadow:0 12px 40px -10px var(--p)}}
@@ -60,9 +71,17 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
         inner = (f"<span class='badge'>{esc(p['badge'])}</span><br><br>" if p.get("badge") else "") + \
                 f"<h1>{esc(p.get('title'))}</h1><p class='mut'>{esc(p.get('subtitle'))}</p><div style='margin-top:28px'><a class='btn' href='#'>{esc(p.get('cta','Get started'))}</a>" + \
                 (f"<a class='btn2' href='#'>{esc(p['cta2'])}</a>" if p.get("cta2") else "") + "</div>"
+        if p.get("variant") == "cover" and p.get("image"):
+            return f"<section class='hero cover {'center' if centered else ''}'><img src='{esc(p['image'])}' alt=''><div class='wrap'>{inner}</div></section>"
         if split:
             return f"<section class='hero lg {cls}'><div class='wrap grid g2' style='align-items:center'><div>{inner}</div><img class='g' src='{esc(p['image'])}' alt=''></div></section>"
         return f"<section class='hero lg {cls} {'center' if centered else ''}'><div class='wrap'>{inner}</div></section>"
+    if t == "stats":
+        items = "".join(f"<div class='card'><div class='stat'>{esc(i.get('value'))}</div><p class='mut' style='margin-top:8px'>{esc(i.get('label'))}</p></div>" for i in p.get("items", []))
+        return f"<section class='{cls}'><div class='wrap'><p class='kicker'>{esc(p.get('heading'))}</p><div class='grid g4'>{items}</div></div></section>"
+    if t == "team":
+        items = "".join(f"<div class='card' style='padding:16px'>" + (f"<img class='tm' src='{esc(m.get('photo'))}' alt=''>" if m.get("photo") else "") + f"<h3 style='font-size:18px'>{esc(m.get('name'))}</h3><p class='kicker' style='margin:6px 0 0'>{esc(m.get('role'))}</p></div>" for m in p.get("members", []))
+        return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='grid g4' style='margin-top:40px'>{items}</div></div></section>"
     if t == "logos":
         return f"<section class='sm {cls}'><div class='wrap center'><p class='mut' style='font-size:13px;letter-spacing:.1em;text-transform:uppercase'>{esc(p.get('heading'))}</p><div class='logos' style='margin-top:20px'>{''.join(f'<span>{esc(n)}</span>' for n in p.get('names', []))}</div></div></section>"
     if t == "features":
@@ -72,7 +91,9 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
         imgs = "".join(f"<img class='g' src='{esc(u)}' alt=''>" for u in p.get("images", []))
         return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='grid g3' style='margin-top:32px'>{imgs}</div></div></section>"
     if t == "video":
-        return f"<section class='{cls}'><div class='wrap center'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><video src='{esc(p.get('url'))}' controls style='width:100%;margin-top:28px;border-radius:var(--r)'></video><p class='mut'>{esc(p.get('caption'))}</p></div></section>"
+        u = p.get("url") or ""
+        media = f"<iframe class='yt' src='{esc(u)}' allow='autoplay; encrypted-media; picture-in-picture' allowfullscreen></iframe>" if ("youtube.com" in u or "youtu.be" in u) else f"<video src='{esc(u)}' controls style='width:100%;margin-top:28px;border-radius:var(--r);border:1px solid var(--bd)'></video>"
+        return f"<section class='{cls}'><div class='wrap center'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2>{media}<p class='mut'>{esc(p.get('caption'))}</p></div></section>"
     if t == "testimonials":
         items = "".join(f"<div class='card'><p style='font-size:18px'>“{esc(i.get('quote'))}”</p><p style='margin-top:18px;font-weight:600'>{esc(i.get('name'))}</p><p class='mut' style='font-size:14px'>{esc(i.get('role'))}</p></div>" for i in p.get("items", []))
         return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='grid g3' style='margin-top:40px'>{items}</div></div></section>"
@@ -85,7 +106,7 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
     if t == "chart":
         mx = max([x.get("v", 1) for x in p.get("series", [])] + [1])
         bars = "".join(f"<span title='{esc(x.get('m'))}' style='height:{(x.get('v', 0) / mx) * 100}%'></span>" for x in p.get("series", []))
-        return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='bar' style='margin-top:32px'>{bars}</div></div></section>"
+        return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='bar' style='margin-top:32px'>{bars}</div>" + (f"<p class='mut' style='margin-top:16px'>{esc(p['caption'])}</p>" if p.get("caption") else "") + "</div></section>"
     if t == "cta":
         return f"<section class='accent center {s.get('padding','') if s.get('padding') in ('sm','lg') else ''}'><div class='wrap'><h2 style='font-size:44px'>{esc(p.get('title'))}</h2><p class='mut' style='font-size:18px;margin-top:12px'>{esc(p.get('subtitle'))}</p><a class='btn' style='background:#fff;color:var(--p);margin-top:28px' href='#'>{esc(p.get('cta','Get started'))}</a></div></section>"
     if t == "contact":
@@ -226,7 +247,8 @@ export default function {name}() {{
 """
 
 
-def starter_frontend_files(spec: dict) -> Dict[str, str]:
+def starter_frontend_files(spec: dict, theme: dict = None) -> Dict[str, str]:
+    theme = theme or {}
     screens = spec.get("screens") or []
     files = {}
     imports, routes, nav = [], [], []
@@ -237,18 +259,31 @@ def starter_frontend_files(spec: dict) -> Dict[str, str]:
         imports.append(f'import {n} from "./pages/{n}";')
         routes.append(f'        <Route path="{route}" element={{<{n} />}} />')
         if s.get("nav", True):
-            nav.append(f'<Link to="{route}">{esc(s.get("name"))}</Link>')
-    files["frontend/src/App.jsx"] = f"""import {{ BrowserRouter, Routes, Route, Link }} from "react-router-dom";
+            nav.append(f'<NavLink to="{route}" end>{esc(s.get("name"))}</NavLink>')
+    files["frontend/src/App.jsx"] = f"""import {{ BrowserRouter, Routes, Route, NavLink, useLocation }} from "react-router-dom";
 {chr(10).join(imports)}
 import "./styles.css";
+
+const SCREENS = {json.dumps([{"name": s.get("name"), "route": s.get("route")} for s in screens])};
+
+function Breadcrumbs() {{
+  const {{ pathname }} = useLocation();
+  const cur = SCREENS.find(s => s.route === pathname) || SCREENS[0];
+  return <header className="topbar"><span>{esc(spec.get('name', 'App'))}</span><span className="sep">›</span><strong>{{cur?.name}}</strong></header>;
+}}
 
 export default function App() {{
   return (
     <BrowserRouter>
-      <nav className="nav"><strong>{esc(spec.get('name', 'App'))}</strong>{''.join(nav)}</nav>
-      <Routes>
+      <div className="shell">
+        <aside className="sidebar"><div className="brand"><span className="dot" />{esc(spec.get('name', 'App'))}</div><nav>{''.join(nav)}</nav></aside>
+        <div className="content">
+          <Breadcrumbs />
+          <Routes>
 {chr(10).join(routes)}
-      </Routes>
+          </Routes>
+        </div>
+      </div>
     </BrowserRouter>
   );
 }}
@@ -280,7 +315,18 @@ export function DataForm({ collection, fields }) {
   );
 }
 """
-    files["frontend/src/styles.css"] = ":root{--p:#F97316;--s:#14B8A6;--bd:#E2E8F0;--mut:#64748B}body{margin:0;font-family:Manrope,system-ui,sans-serif;color:#0F172A}.nav{display:flex;gap:18px;padding:16px 24px;border-bottom:1px solid var(--bd)}.nav a{color:var(--mut);text-decoration:none}.page{max-width:1080px;margin:0 auto;padding:40px 24px}.muted{color:var(--mut)}.card{border:1px solid var(--bd);border-radius:16px;padding:24px;margin-top:20px}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px}.stat{border:1px solid var(--bd);border-radius:16px;padding:20px}.stat strong{display:block;font-size:28px}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:10px;border-bottom:1px solid var(--bd)}.form{display:grid;gap:10px}.form input{padding:12px;border:1px solid var(--bd);border-radius:10px}.form button{background:var(--p);color:#fff;border:0;padding:12px;border-radius:999px;font-weight:600}"
+    dark = theme.get("mode") == "dark"
+    p, s2 = theme.get("primary", "#F97316"), theme.get("secondary", "#14B8A6")
+    bg, sf, fg, mut, bd = ("#0B0F17", "#111827", "#F8FAFC", "#94A3B8", "#1F2937") if dark else (theme.get("bg", "#F8FAFC"), theme.get("surface", "#FFFFFF"), theme.get("fg", "#0F172A"), theme.get("muted", "#64748B"), theme.get("border", "#E2E8F0"))
+    files["frontend/src/styles.css"] = (f":root{{--p:{p};--s:{s2};--bg:{bg};--sf:{sf};--fg:{fg};--bd:{bd};--mut:{mut};--r:{theme.get('radius', 14)}px}}"
+        f"body{{margin:0;font-family:'{theme.get('font_body', 'Manrope')}',system-ui,sans-serif;color:var(--fg);background:var(--bg)}}h1,h2{{font-family:'{theme.get('font_heading', 'Plus Jakarta Sans')}',sans-serif;letter-spacing:-0.02em}}"
+        ".shell{display:flex;min-height:100vh}.sidebar{position:fixed;inset:0 auto 0 0;width:240px;background:var(--sf);border-right:1px solid var(--bd);padding:20px 14px;display:flex;flex-direction:column;gap:18px}.brand{font-weight:800;font-size:17px;display:flex;align-items:center;gap:10px;padding:6px 10px}.dot{width:12px;height:12px;border-radius:4px;background:var(--p)}"
+        ".sidebar nav{display:flex;flex-direction:column;gap:4px}.sidebar a{color:var(--mut);text-decoration:none;padding:10px 12px;border-radius:10px;font-size:14px;font-weight:500;transition:background .15s,color .15s}.sidebar a:hover{background:color-mix(in srgb,var(--p) 10%,transparent);color:var(--fg)}.sidebar a.active{background:var(--p);color:#fff}"
+        ".content{margin-left:240px;flex:1;display:flex;flex-direction:column}.topbar{display:flex;align-items:center;gap:10px;padding:14px 32px;border-bottom:1px solid var(--bd);background:var(--sf);font-size:13px;color:var(--mut);position:sticky;top:0}.topbar strong{color:var(--p)}.sep{opacity:.5}"
+        ".page{max-width:1120px;padding:36px 32px}.muted{color:var(--mut)}.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:24px;margin-top:20px}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-top:20px}.stat{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:20px}.stat span{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut)}.stat strong{display:block;font-size:28px;margin-top:6px}"
+        ".table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:10px;border-bottom:1px solid var(--bd)}.table th{color:var(--mut);font-size:12px;font-weight:600}.form{display:grid;gap:10px}.form input{padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--fg)}.form button{background:var(--p);color:#fff;border:0;padding:12px;border-radius:999px;font-weight:600;cursor:pointer}"
+        "@media(max-width:860px){.sidebar{position:static;width:auto;inset:auto;border-right:0;border-bottom:1px solid var(--bd)}.sidebar nav{flex-direction:row;flex-wrap:wrap}.shell{flex-direction:column}.content{margin-left:0}}")
+    files["frontend/src/theme.json"] = json.dumps({"mode": theme.get("mode", "light"), "primary": p, "secondary": s2, "layout": "fixed-left-sidebar"}, indent=2)
     files["frontend/package.json"] = json.dumps({"name": _snake(spec.get("name", "app")), "private": True, "dependencies": {"react": "^19.0.0", "react-dom": "^19.0.0", "react-router-dom": "^7.0.0", "react-scripts": "5.0.1"}, "scripts": {"start": "react-scripts start", "build": "react-scripts build"}}, indent=2)
     files["frontend/src/index.js"] = 'import React from "react";\nimport ReactDOM from "react-dom/client";\nimport App from "./App";\nReactDOM.createRoot(document.getElementById("root")).render(<App />);\n'
     files["frontend/public/index.html"] = "<!doctype html><html><head><meta charset='utf-8'><title>App</title></head><body><div id='root'></div></body></html>"
@@ -304,8 +350,8 @@ def supabase_schema(spec: dict) -> str:
     return "\n".join(out)
 
 
-def starter_app_files(spec: dict) -> Dict[str, str]:
-    files = starter_frontend_files(spec)
+def starter_app_files(spec: dict, theme: dict = None) -> Dict[str, str]:
+    files = starter_frontend_files(spec, theme)
     files["backend/server.py"] = starter_backend(spec)
     files["backend/schema.sql"] = supabase_schema(spec)
     files["backend/requirements.txt"] = "fastapi\nuvicorn\nmotor\npydantic[email]\npython-dotenv\n"

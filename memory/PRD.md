@@ -85,7 +85,16 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Lead scoring (`inbox.py` `score_message`): every new contact/chat/request lead is auto-scored by Claude in the background (score 0–100, intent, reason, hot ≥70); inbox sorted hot → score → recency; "Hot leads" filter + count, "Score N leads" batch button, score badge + reason in detail; `POST /apps/{id}/inbox/score`, `POST /apps/{id}/inbox/{mid}/score`.
 - Testing: iteration_9.json — 5/5 backend, frontend pass.
 
+### Jun 2026 (v10) — Industry templates, premium dark redesign, Leads page, showcase demos
+- **18 industry templates** (`templates.py`): App Mode prototype uses industry accent for Save/chart/chat/kanban/calendar mocks; exported React starter has fixed left sidebar + breadcrumbs + industry theme (`starter_app_files(spec, theme)`, `theme.json`).
+- **Landing "See it in action"** demos section (demo-video-0..2, placeholder clips); Members remove button testid.
+- **Premium site design system** (`site_content.py`): dark default theme (bg #0A0A0F, glass cards `.tglass`, grain `.tgrain`, glow borders), hero variant `cover` (full-width image + cinematic gradient), new blocks `stats` + `team`, YouTube iframe support in video blocks, alternating section bgs. 11 hand-written niche content packs (hvac, healthcare, construction, fitness, retail, hospitality, finance, it_services, creative_studio, logistics, saas) with brand, team, stats, testimonials w/ results, pricing, FAQ, about story, contact, industry-correct section order. Applied retroactively on startup (`premium_site_v=3`) to every tenant; `POST /apps/{id}/site/premium-rebuild {niche?}`, `GET /site-niches`; "Premium redesign" button in Site Mode. AI generate-site prompt enforces dark premium + Layer 1–3 content + industry section structure. Export CSS/HTML updated (glass, grain, cover hero, team/stats, YouTube).
+- **Leads page** `/leads` (`Leads.jsx`): dashboard chip `dashboard-inbox-badge` is clickable; table (name/contact/source/date/status/score), detail aside, filters, mark reviewed/new/archive/star, mark-all; count updates live and on dashboard return.
+- **Showcase cards** on Landing open the live demo (`GET /public/showcase` → `/p/<token>`) with a transition overlay, or a NicheModal with description + Get started / Request a demo when no demo exists.
+- Testing: iteration_10.json (templates 21/21), iteration_11.json (12/12 backend, all frontend flows pass).
+
 ## Backlog (P1/P2)
+- P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.
 - P2: Real CI/CD for mobile builds (currently MOCKED).

@@ -24,6 +24,8 @@ const BLOCK_TEMPLATES = [
   { type: "pricing", icon: DollarSign, label: "Pricing", defaults: { heading: "Simple pricing", plans: [{ name: "Starter", price: "$29", period: "mo", features: ["1 project", "Email support"] }, { name: "Pro", price: "$99", period: "mo", features: ["10 projects", "Priority support"], highlight: true }, { name: "Scale", price: "$299", period: "mo", features: ["Unlimited", "SLA"] }] } },
   { type: "faq", icon: HelpCircle, label: "FAQ", defaults: { heading: "Questions & answers", items: [{ q: "How do I get started?", a: "Sign up and follow the 2-minute setup." }, { q: "Can I cancel anytime?", a: "Yes, no lock-in." }] } },
   { type: "chart", icon: BarChart3, label: "Chart", defaults: { heading: "Growth", series: [{ m: "Jan", v: 12 }, { m: "Feb", v: 24 }, { m: "Mar", v: 48 }, { m: "Apr", v: 66 }] } },
+  { type: "stats", icon: BarChart3, label: "Stats", defaults: { heading: "By the numbers", items: [{ value: "12K+", label: "Customers served" }, { value: "98%", label: "Satisfaction" }, { value: "15 yrs", label: "In business" }, { value: "4.9★", label: "Average rating" }] } },
+  { type: "team", icon: Award, label: "Team", defaults: { heading: "Meet the team", members: [{ name: "Alex Morgan", role: "Founder & CEO", photo: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=600&q=80" }, { name: "Priya Shah", role: "Head of Operations", photo: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&q=80" }, { name: "Daniel Kim", role: "Lead Engineer", photo: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&q=80" }] } },
   { type: "cta", icon: Megaphone, label: "Call to action", defaults: { title: "Ready to get started?", subtitle: "Join thousands of happy customers.", cta: "Start free" } },
   { type: "contact", icon: Mail, label: "Contact", defaults: { heading: "Contact us", subtitle: "We reply within a day.", email: "hello@example.com", phone: "+1 (555) 010-2030", address: "100 King St W, Toronto" } },
   { type: "collection_list", icon: Database, label: "Collection list", defaults: { heading: "Latest from the blog", collection: "blog", limit: 6 } },
@@ -95,7 +97,7 @@ export default function Builder({ appId, appDoc }) {
   const mutate = (next) => { setBlocks(next); setDirty(true); };
   function addBlock(tpl) {
     const id = `blk_${Math.random().toString(36).slice(2, 12)}`;
-    const b = { id, type: tpl.type, props: JSON.parse(JSON.stringify(tpl.defaults)), style: { bg: "default", align: tpl.type === "hero" || tpl.type === "cta" ? "center" : "left", padding: tpl.type === "hero" || tpl.type === "cta" ? "lg" : "md", effects: { reveal: true, hover: ["features", "gallery", "testimonials", "pricing", "collection_list", "logos"].includes(tpl.type) } } };
+    const b = { id, type: tpl.type, props: JSON.parse(JSON.stringify(tpl.defaults)), style: { bg: "default", align: tpl.type === "hero" || tpl.type === "cta" ? "center" : "left", padding: tpl.type === "hero" || tpl.type === "cta" ? "lg" : "md", effects: { reveal: true, hover: ["features", "gallery", "testimonials", "pricing", "collection_list", "logos", "stats", "team"].includes(tpl.type) } } };
     const next = tpl.type === "navbar" ? [b, ...blocks] : [...blocks, b];
     mutate(next); setSelected(id);
   }
@@ -106,6 +108,11 @@ export default function Builder({ appId, appDoc }) {
   }
   const editProps = (id, path, value) => mutate(blocks.map(b => b.id === id ? { ...b, props: setPath(b.props, path, value) } : b));
   const editStyle = (id, style, propsPatch) => mutate(blocks.map(b => b.id === id ? { ...b, style, props: { ...b.props, ...(propsPatch || {}) } } : b));
+  async function premiumRedesign() {
+    if (!window.confirm("Rebuild this site with the premium dark design system and full niche content? Current pages will be replaced.")) return;
+    try { const { data } = await api.post(`/apps/${appId}/site/premium-rebuild`, {}); toast.success(`Premium site built (${data.niche}, ${data.pages} pages)`); await load(); }
+    catch (e) { toast.error(e.response?.data?.detail || "Redesign failed"); }
+  }
   async function save() {
     setSaving(true);
     try {
@@ -157,6 +164,7 @@ export default function Builder({ appId, appDoc }) {
           </div>
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
+          <button data-testid="premium-redesign-btn" onClick={premiumRedesign} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Sparkles size={14} /> Premium redesign</button>
           <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
         </div>
       </div>
@@ -183,7 +191,7 @@ export default function Builder({ appId, appDoc }) {
 
         <div className="min-h-[600px]">
           <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : device === "tablet" ? "max-w-[820px]" : "max-w-full"}`}>
-            <div className="rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl" style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
+            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>

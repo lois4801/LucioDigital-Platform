@@ -7,15 +7,16 @@ import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Tab
 const COMP_ICON = { table: Table, list: Table, form: FormInput, stats: BarChart3, chart: BarChart3, cards: LayoutGrid, chat: MessageSquare, settings: Settings, kanban: KanbanSquare, calendar: Calendar, auth: LogIn, detail: Layout, hero: Layout, navbar: Layout };
 const EXAMPLES = ["Patient booking app for a dental clinic: appointments, patients, treatments, invoices, SMS reminders", "Field-service CRM for HVAC technicians with jobs, dispatch board, quotes and customer portal", "Internal tool for tracking influencer campaigns, budgets and content approvals"];
 
-function Mock({ c }) {
+function Mock({ c, accent = "#F97316" }) {
   const fields = c.fields?.length ? c.fields : ["Name", "Status", "Updated"];
   const t = c.type;
   if (t === "stats") return <div className="grid grid-cols-3 gap-3">{fields.slice(0, 3).map(f => <div key={f} className="rounded-xl border border-slate-200 p-4"><div className="text-[10px] uppercase text-slate-500">{f}</div><div className="text-2xl font-bold mt-1 text-slate-900">{Math.floor(Math.random() * 900 + 100)}</div></div>)}</div>;
-  if (t === "table" || t === "list") return <table className="w-full text-xs"><thead><tr className="text-left text-slate-500 border-b border-slate-200">{fields.slice(0, 5).map(f => <th key={f} className="py-2 font-medium">{f}</th>)}</tr></thead><tbody>{[1, 2, 3].map(r => <tr key={r} className="border-b border-slate-100">{fields.slice(0, 5).map((f, i) => <td key={f} className="py-2.5 text-slate-700">{i === 0 ? `Sample ${r}` : i === 1 ? <span className="px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 text-[10px]">Active</span> : "—"}</td>)}</tr>)}</tbody></table>;
-  if (t === "form" || t === "settings" || t === "auth") return <div className="grid sm:grid-cols-2 gap-3">{fields.slice(0, 6).map(f => <div key={f}><div className="text-[10px] text-slate-500 mb-1">{f}</div><div className="h-9 rounded-lg border border-slate-200 bg-white" /></div>)}<div className="sm:col-span-2"><span className="inline-block px-5 py-2 rounded-full bg-orange-500 text-white text-xs font-semibold">Save</span></div></div>;
-  if (t === "chart") return <div className="h-28 flex items-end gap-2">{[40, 70, 55, 90, 65, 100, 80].map((h, i) => <div key={i} className="flex-1 rounded-t-md" style={{ height: `${h}%`, background: "linear-gradient(180deg,#F97316,#14B8A6)" }} />)}</div>;
-  if (t === "kanban") return <div className="grid grid-cols-3 gap-3">{["Todo", "In progress", "Done"].map(col => <div key={col} className="rounded-xl bg-slate-50 p-3"><div className="text-[10px] uppercase text-slate-500 mb-2">{col}</div>{[1, 2].map(i => <div key={i} className="rounded-lg bg-white border border-slate-200 p-2 text-xs mb-2 text-slate-700">Card {i}</div>)}</div>)}</div>;
-  if (t === "chat") return <div className="space-y-2 text-xs"><div className="bg-slate-100 rounded-2xl px-3 py-2 w-2/3 text-slate-700">Hi, how can I help?</div><div className="bg-orange-500 text-white rounded-2xl px-3 py-2 w-1/2 ml-auto">Book an appointment</div></div>;
+  if (t === "table" || t === "list") return <table className="w-full text-xs"><thead><tr className="text-left text-slate-500 border-b border-slate-200">{fields.slice(0, 5).map(f => <th key={f} className="py-2 font-medium">{f}</th>)}</tr></thead><tbody>{[1, 2, 3].map(r => <tr key={r} className="border-b border-slate-100">{fields.slice(0, 5).map((f, i) => <td key={f} className="py-2.5 text-slate-700">{i === 0 ? `Sample ${r}` : i === 1 ? <span className="px-2 py-0.5 rounded-full text-[10px]" style={{ background: `${accent}1A`, color: accent }}>Active</span> : "—"}</td>)}</tr>)}</tbody></table>;
+  if (t === "form" || t === "settings" || t === "auth") return <div className="grid sm:grid-cols-2 gap-3">{fields.slice(0, 6).map(f => <div key={f}><div className="text-[10px] text-slate-500 mb-1">{f}</div><div className="h-9 rounded-lg border border-slate-200 bg-white" /></div>)}<div className="sm:col-span-2"><span data-testid="proto-save-btn" className="inline-block px-5 py-2 rounded-full text-white text-xs font-semibold" style={{ background: accent }}>Save</span></div></div>;
+  if (t === "chart") return <div className="h-28 flex items-end gap-2">{[40, 70, 55, 90, 65, 100, 80].map((h, i) => <div key={i} className="flex-1 rounded-t-md" style={{ height: `${h}%`, background: `linear-gradient(180deg,${accent},${accent}66)` }} />)}</div>;
+  if (t === "kanban") { const cols = c.fields?.length >= 2 ? c.fields.slice(0, 5) : ["Todo", "In progress", "Done"]; return <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${cols.length},1fr)` }}>{cols.map(col => <div key={col} className="rounded-xl bg-slate-50 p-3"><div className="text-[10px] uppercase text-slate-500 mb-2 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full" style={{ background: accent }} />{col}</div>{[1, 2].map(i => <div key={i} className="rounded-lg bg-white border border-slate-200 p-2 text-xs mb-2 text-slate-700">Card {i}</div>)}</div>)}</div>; }
+  if (t === "calendar") return <div className="grid grid-cols-7 gap-1 text-[10px]">{["M", "T", "W", "T", "F", "S", "S"].map((d, i) => <div key={i} className="text-center text-slate-400 py-1">{d}</div>)}{Array.from({ length: 28 }).map((_, i) => <div key={i} className="h-8 rounded-md border border-slate-100 p-1 text-slate-500 relative">{i + 1}{[3, 9, 14, 22].includes(i) && <span className="absolute bottom-1 left-1 right-1 h-1 rounded-full" style={{ background: accent }} />}</div>)}</div>;
+  if (t === "chat") return <div className="space-y-2 text-xs"><div className="bg-slate-100 rounded-2xl px-3 py-2 w-2/3 text-slate-700">Hi, how can I help?</div><div className="text-white rounded-2xl px-3 py-2 w-1/2 ml-auto" style={{ background: accent }}>Book an appointment</div></div>;
   return <div className="grid sm:grid-cols-3 gap-3">{[1, 2, 3].map(i => <div key={i} className="rounded-xl border border-slate-200 p-4"><div className="h-16 rounded-lg bg-slate-100 mb-3" /><div className="text-sm font-semibold text-slate-900">{fields[0]} {i}</div><div className="text-xs text-slate-500 mt-1">{fields[1] || "Detail"}</div></div>)}</div>;
 }
 
@@ -66,6 +67,15 @@ export default function BlueprintPanel({ appId, apiRoot }) {
     try { const { data } = await api.post(`/apps/${appId}/ai/refine-app`, { message: text, target }, { timeout: 300000 }); setSpec(data.spec); setChat(c => [...c, { role: "assistant", content: data.summary }]); setTarget(null); toast.success("Blueprint updated"); }
     catch (e) { toast.error(e.response?.data?.detail || "Refinement failed"); } finally { setRefining(false); }
   }
+  const [templates, setTemplates] = useState([]);
+  const [tplOpen, setTplOpen] = useState(false);
+  const [dark, setDark] = useState(false);
+  useEffect(() => { api.get("/templates").then(r => setTemplates(r.data)).catch(() => {}); }, []);
+  async function applyTemplate(key) {
+    try { const { data } = await api.post(`/apps/${appId}/templates/${key}/apply`); setSpec(data.spec); setScreen(0); setTplOpen(false); toast.success(`Template applied: ${data.spec.name}`); }
+    catch (e) { toast.error(e.response?.data?.detail || "Failed"); }
+  }
+  const accent = spec?.palette ? ({ amber: "#F59E0B", orange: "#F97316", teal: "#0D9488", navy: "#1E3A8A", violet: "#7C3AED", terracotta: "#C2410C", red: "#DC2626", blue: "#2563EB", indigo: "#4F46E5", emerald: "#059669", rose: "#E11D48", slate: "#334155", green: "#16A34A", cyan: "#0891B2", purple: "#9333EA", sky: "#0284C7", lime: "#65A30D", brown: "#92400E" }[spec.palette] || "#F97316") : "#F97316";
   const s = spec?.screens?.[screen];
   return (
     <div data-testid="blueprint-panel" className="space-y-6">
@@ -90,12 +100,21 @@ export default function BlueprintPanel({ appId, apiRoot }) {
           <div className="flex flex-col gap-2 shrink-0">
             <button data-testid="app-generate-btn" onClick={generate} disabled={busy || brief.trim().length < 10} className="btn-primary flex items-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {busy ? "Architecting (30–60s)…" : spec ? "Regenerate blueprint" : "Generate blueprint"}</button>
             <button data-testid="app-long-brief-btn" onClick={() => setBriefOpen(true)} className="btn-ghost flex items-center gap-2 text-sm"><FileUp size={14} /> Upload doc / long brief</button>
+            <button data-testid="app-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--acc)]/50 text-[var(--acc)]"><LayoutGrid size={14} /> Industry templates ({templates.length})</button>
           </div>
+        </div>
+        {tplOpen && <div data-testid="template-library" className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {templates.map(t => <button key={t.key} data-testid={`template-${t.key}`} onClick={() => applyTemplate(t.key)} className="card-lift text-left p-4 rounded-2xl border border-[var(--line)] bg-[var(--bg-2)] relative overflow-hidden">
+            <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${t.primary}, ${t.secondary})` }} />
+            <div className="flex items-center gap-2 mt-1"><span className="w-3 h-3 rounded-full" style={{ background: t.primary }} /><div className="font-display font-semibold text-sm">{t.name}</div></div>
+            <div className="text-[10px] font-mono text-[var(--mut)] mt-1">{t.suite} suite · {t.screens} screens · {t.models} models</div></button>)}
+        </div>}
+        <div className="hidden">
         </div>
       </div>
 
       {loading ? null : !spec ? (
-        <div className="card-surface p-12 text-center text-[var(--mut)] text-sm">No blueprint yet. Describe your app above — the result becomes a navigable prototype here and React + FastAPI starter code in the .zip export.</div>
+        <div className="card-surface p-12 text-center text-[var(--mut)] text-sm">No blueprint yet. Pick an <button onClick={() => setTplOpen(true)} className="text-[var(--acc)] underline">industry template</button> or describe your app above — the result becomes a navigable prototype here and React + FastAPI starter code in the .zip export.</div>
       ) : (
         <div className="grid lg:grid-cols-[300px_1fr_280px] gap-5">
           <aside className="space-y-4">
@@ -121,16 +140,18 @@ export default function BlueprintPanel({ appId, apiRoot }) {
           </aside>
 
           <div>
-            <div className="rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl bg-white text-slate-900" data-testid="blueprint-prototype">
-              <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{spec.name?.toLowerCase().replace(/\s+/g, "")}.app{s?.route}</span></div>
+            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${dark ? "bg-slate-900 text-slate-100" : "bg-white text-slate-900"}`} data-testid="blueprint-prototype" style={{ "--tp": accent }}>
+              <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{spec.name?.toLowerCase().replace(/\s+/g, "")}.app{s?.route}</span>
+                <button data-testid="proto-theme-toggle" onClick={() => setDark(!dark)} className="ml-auto text-[10px] font-mono text-white/60 hover:text-white px-2 py-0.5 rounded border border-white/10">{dark ? "☾ dark" : "☀ light"}</button></div>
+              <div className={`px-4 py-2 text-[11px] font-mono border-b flex items-center gap-2 ${dark ? "border-slate-800 text-slate-400" : "border-slate-200 text-slate-500"}`} data-testid="proto-breadcrumbs"><span>{spec.name}</span><span>›</span><span style={{ color: accent }}>{s?.name}</span><span className="ml-auto flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> live · {spec.roles?.[0] || "admin"}</span></div>
               <div className="flex">
-                <div className="w-44 border-r border-slate-200 p-3 space-y-1 bg-slate-50 min-h-[520px]">
-                  <div className="font-bold text-sm px-2 py-2 text-slate-900">{spec.name}</div>
-                  {spec.screens?.filter(x => x.nav !== false).map((sc, i) => { const idx = spec.screens.indexOf(sc); return <button key={i} onClick={() => setScreen(idx)} className={`w-full text-left text-xs px-2 py-1.5 rounded-lg ${idx === screen ? "bg-orange-500 text-white" : "text-slate-600 hover:bg-slate-200"}`}>{sc.name}</button>; })}
+                <div className={`w-44 border-r p-3 space-y-1 min-h-[520px] ${dark ? "border-slate-800 bg-slate-950" : "border-slate-200 bg-slate-50"}`}>
+                  <div className="font-bold text-sm px-2 py-2 flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: accent }} />{spec.name}</div>
+                  {spec.screens?.filter(x => x.nav !== false).map((sc, i) => { const idx = spec.screens.indexOf(sc); return <button key={i} data-testid={`proto-nav-${idx}`} onClick={() => setScreen(idx)} className={`w-full text-left text-xs px-2 py-1.5 rounded-lg transition-colors ${idx === screen ? "text-white" : dark ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-200"}`} style={idx === screen ? { background: accent } : {}}>{sc.name}</button>; })}
                 </div>
-                <div className="flex-1 p-6 space-y-5 max-h-[560px] overflow-y-auto" style={{ background: "radial-gradient(1200px 400px at 80% -10%, rgba(249,115,22,0.10), transparent), radial-gradient(800px 300px at 0% 100%, rgba(20,184,166,0.10), transparent), #FAFAFA" }}>
+                <div className="flex-1 p-6 space-y-5 max-h-[560px] overflow-y-auto" style={{ background: dark ? "#0F172A" : `radial-gradient(1200px 400px at 80% -10%, ${accent}14, transparent), #F8FAFC` }}>
                   <div><h2 className="text-xl font-bold">{s?.name}</h2><p className="text-xs text-slate-500 mt-1">{s?.description}</p></div>
-                  {s?.components?.map((c, i) => { const I = COMP_ICON[c.type] || Layout; const hit = target?.screen === s.name && target?.component === (c.label || c.type); return <div key={i} data-testid={`proto-component-${i}`} onClick={() => setTarget({ screen: s.name, component: c.label || c.type })} className={`rounded-2xl border p-4 cursor-pointer transition-colors ${hit ? "border-orange-500 ring-2 ring-orange-500/30 bg-orange-50" : "border-slate-200 hover:border-orange-300"}`}><div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-3"><I size={13} className="text-orange-500" /> {c.label || c.type}{c.model && <span className="ml-auto font-mono text-[10px] text-teal-600">{c.model}</span>}</div><Mock c={c} /></div>; })}
+                  {s?.components?.map((c, i) => { const I = COMP_ICON[c.type] || Layout; const hit = target?.screen === s.name && target?.component === (c.label || c.type); return <div key={i} data-testid={`proto-component-${i}`} onClick={() => setTarget({ screen: s.name, component: c.label || c.type })} style={hit ? { borderColor: accent, boxShadow: `0 0 0 3px ${accent}33` } : {}} className={`card-lift rounded-2xl border p-4 cursor-pointer ${dark ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}><div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-3"><I size={13} style={{ color: accent }} /> {c.label || c.type}{c.model && <span className="ml-auto font-mono text-[10px] text-teal-600">{c.model}</span>}</div><Mock c={c} accent={accent} /></div>; })}
                 </div>
               </div>
             </div>

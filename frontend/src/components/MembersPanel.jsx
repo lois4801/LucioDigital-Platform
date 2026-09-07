@@ -67,7 +67,7 @@ export default function MembersPanel({ appId, currentUser }) {
               {m.role}
             </span>
             {m.role !== "owner" && (
-              <button onClick={() => remove(m.membership_id)}
+              <button data-testid={`member-remove-${m.membership_id}`} onClick={() => remove(m.membership_id)}
                 className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-400">
                 <X size={13} />
               </button>

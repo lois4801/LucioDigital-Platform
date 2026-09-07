@@ -18,6 +18,7 @@ import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
 import Portal from "@/pages/Portal";
+import Leads from "@/pages/Leads";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ function AppRouter() {
       <Route path="/dashboard" element={<ProtectedRoute><PageTransition testid="page-dashboard"><Dashboard /></PageTransition></ProtectedRoute>} />
       <Route path="/apps/:appId" element={<ProtectedRoute><PageTransition testid="page-app"><AppDetail /></PageTransition></ProtectedRoute>} />
       <Route path="/deploy" element={<ProtectedRoute><PageTransition testid="page-deploy"><DeployHub /></PageTransition></ProtectedRoute>} />
+      <Route path="/leads" element={<ProtectedRoute><PageTransition testid="page-leads"><Leads /></PageTransition></ProtectedRoute>} />
       <Route path="/portal" element={<ProtectedRoute><PageTransition testid="page-portal"><Portal /></PageTransition></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />
       <Route path="/embed/chat/:token" element={<ChatEmbed />} />

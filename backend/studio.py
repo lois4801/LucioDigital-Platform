@@ -27,29 +27,36 @@ def uid(prefix):
 
 
 DEFAULT_THEME = {
-    "mode": "light", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#FFFFFF", "surface": "#F8FAFC",
-    "fg": "#0F172A", "muted": "#64748B", "border": "#E2E8F0",
-    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True,
+    "mode": "dark", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#0A0A0F", "surface": "#141420",
+    "fg": "#F8FAFC", "muted": "#A1A7B8", "border": "#262637",
+    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True, "glass": True, "grain": True,
 }
 
 BLOCK_SCHEMA = """
 Block types and props (every block: {"id": string, "type": string, "props": {...}, "style": {"bg": "default|muted|accent|dark", "align": "left|center", "padding": "sm|md|lg"}}):
 - navbar: {brand, links:[{label, href}], cta}
-- hero: {variant: "centered|split|left", badge, title, subtitle, cta, cta2, image (unsplash url or "")}
-- logos: {heading, names:[string]}
+- hero: {variant: "cover|centered|split|left", badge, title, subtitle, cta, cta2, image (unsplash url; "cover" renders it full-width behind a cinematic gradient)}
+- logos: {heading, names:[string]}  (also used for certifications, insurers, service areas, technologies)
 - features: {heading, subheading, items:[{title, desc, icon (lucide name: Zap|Shield|Rocket|Heart|Star|Globe|Sparkles|Clock|Users|Check)}]}
+- stats: {heading, items:[{value, label}]}
+- team: {heading, members:[{name, role, photo (unsplash portrait url)}]}
 - gallery: {heading, images:[unsplash urls]}
-- video: {heading, url (mp4 url or ""), caption}
+- video: {heading, url (mp4 url or YouTube embed url), caption}
 - testimonials: {heading, items:[{quote, name, role}]}
 - pricing: {heading, plans:[{name, price, period, features:[string], highlight: bool}]}
 - faq: {heading, items:[{q, a}]}
-- chart: {heading, series:[{m, v}]}
+- chart: {heading, caption, series:[{m, v}]}
 - cta: {title, subtitle, cta}
 - contact: {heading, subtitle, email, phone, address}
 - footer: {brand, tagline, columns:[{title, links:[string]}]}
 - collection_list: {heading, collection: "blog|case-studies", limit: 6}  (auto-fills from the CMS)
 Hrefs for links must be page slugs like "/", "/about", "/pricing" or "#section".
 """
+
+INDUSTRY_SECTIONS = ("Industry section structure (use the matching one, adapt for other niches): HVAC → Services, Emergency Call, Maintenance Plans, Service Areas, Certifications. "
+                     "Healthcare → Specialties, Meet the Doctors, Insurance Accepted, Patient Portal, Appointment Booking. Construction → Projects Portfolio, Services, Safety Record, Certifications, Request a Quote. "
+                     "Fitness → Class Schedule, Trainers, Membership Plans, Transformation Stories, Free Trial. Retail → Featured Products, Categories, Offers, Loyalty Program, Store Locator. "
+                     "Hospitality → Rooms, Amenities, Dining, Local Attractions, Booking. Finance → Services, Why Us, Client Results, Compliance & Security, Get Started. IT services → Solutions, Technologies, Case Studies, SLA Guarantee, Free Audit.")
 
 
 def _clean_theme(t: dict) -> dict:
@@ -128,7 +135,8 @@ def _ensure_ids(blocks: List[dict]) -> List[dict]:
         b.setdefault("id", uid("blk"))
         b.setdefault("props", {})
         b.setdefault("style", {"bg": "default", "align": "left", "padding": "md"})
-        b["style"].setdefault("effects", {"reveal": True, "hover": b["type"] in ("features", "gallery", "testimonials", "pricing", "collection_list", "logos")})
+        b["style"].setdefault("effects", {"reveal": True, "hover": b["type"] in ("features", "gallery", "testimonials", "pricing", "collection_list", "logos", "team", "stats")})
+        b["style"].setdefault("glass", True)
         out.append(b)
     return out
 
@@ -230,13 +238,14 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         wanted = body.pages or ["Home", "About", "Pricing", "Contact"]
-        system = ("You are a senior product designer producing Figma-quality, light, minimalistic marketing websites. "
-                  "Return ONLY valid JSON, no markdown. Shape: {\"theme\": {primary, secondary, font_heading, font_body, radius}, "
-                  "\"pages\": [{\"name\", \"slug\", \"blocks\": [...]}]}. " + BLOCK_SCHEMA +
-                  " Design rules: premium high-end SaaS aesthetic — bold high-contrast hero (variant split or centered with a badge), strong typographic hierarchy, generous padding (lg on hero/cta, md elsewhere), alternate bg default/muted between sections, feature cards with icons. Rules: Home page has 7-9 blocks starting with navbar and ending with footer; other pages 4-6 blocks (navbar first, footer last). "
-                  "Navbar links must reference the generated page slugs. Copy must be specific, persuasive and concise. "
-                  "Use tasteful orange (#F97316) + turquoise (#14B8A6) unless the brief demands otherwise. "
-                  "For images use real Unsplash URLs like https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80. Omit ids.")
+        system = ("You are the creative director of a premium digital agency producing dark, cinematic, high-end marketing websites. "
+                  "Return ONLY valid JSON, no markdown. Shape: {\"theme\": {mode, primary, secondary, bg, surface, border, font_heading, font_body, radius}, "
+                  "\"pages\": [{\"name\", \"slug\", \"blocks\": [...]}]}. " + BLOCK_SCHEMA + INDUSTRY_SECTIONS +
+                  " Design rules: theme.mode is ALWAYS 'dark' with a rich dark bg (#0a0a0f or a deep navy like #070B16), surface slightly lighter, white typography, ONE accent colour chosen for the niche (dark & moody for creative studios, clean teal/blue for healthcare, bold safety-orange/amber for construction & trades, gold for hospitality, lime/pink for fitness, indigo for tech). "
+                  "Home starts with navbar then a hero with variant 'cover' and a full-width niche-relevant Unsplash image; alternate style.bg between 'default' and 'muted' on every following section; include stats, team, testimonials, a video block (YouTube embed url like https://www.youtube.com/embed?listType=search&list=<niche+keywords>) and a cta block; padding lg on hero/cta, md elsewhere. "
+                  "Content rules (Layer 1–3): invent a realistic business name, tagline, address, phone and email; team members with names and roles; niche-specific metrics; hero headlines that sound like a real business in that industry wrote them; services in real industry terminology; testimonials with full names, company and a specific measurable result; realistic pricing tiers; a convincing About story. Every word must be handcrafted for this niche — never generic. "
+                  "Home has 9-12 blocks (navbar first, footer last); other pages 4-7 blocks. Navbar links must reference the generated page slugs. "
+                  "Images: real Unsplash URLs like https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1600&q=80 matching the industry. Omit ids.")
         prompt = f"Business brief: {body.brief}\nTenant name: {doc['name']} ({doc.get('industry','')}).\nPages to create: {', '.join(wanted)}."
         try:
             data = _parse_json(await _claude(system, prompt, f"site-{app_id}-{uid('s')}"))
@@ -246,7 +255,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         pages = data.get("pages") or []
         if not pages:
             raise HTTPException(500, "AI returned no pages. Try a more specific brief.")
-        theme = {**DEFAULT_THEME, **_clean_theme(doc.get("theme")), **_clean_theme(data.get("theme"))}
+        theme = {**DEFAULT_THEME, **_clean_theme(doc.get("theme")), **_clean_theme(data.get("theme")), "mode": "dark", "glass": True, "grain": True, "motion": True, "cursor": True}
         await db.pages.delete_many({"app_id": app_id})
         out = []
         for i, pg in enumerate(pages):

@@ -1,0 +1,30 @@
+{
+  "summary": "Verified iteration 11: (1) Dashboard 'N new leads' chip is clickable, opens /leads (leads-page). Leads table lists lead-row-<id> with contact/source/date/status chips; clicking a New row opens lead-detail and marks Reviewed — leads-unread-count decreased 9→8. Filters unread/read/archived/all all present. lead-archive-btn archives, lead-mark-new-btn restores (count 8→9). Back on /dashboard the badge reflects '9 new leads'. (2) Landing shows 4 showcase-card-* clickable cards. Clicking card 0 triggers demo-transition overlay then navigates to /p/<preview_token>. Public preview renders dark (bg rgb(11,10,10)), hero-cover testid present, block-stats present, YouTube iframe / video present, and nav Home/About/Services/Contact works. NicheModal component defined in Landing.jsx but not exercised because all showcase cards had tokens (per spec: skip if all have tokens). (3) Backend: all apps have premium_site_v==3, /theme returns dark/glass/grain/bg dark hex; /pages returns 4 pages with Home containing navbar/hero(variant=cover with image)/footer and alternating bg. /site/premium-rebuild with hvac rebuilds Summit Air brand & returns {pages:4, niche:'hvac'}; unknown niche → 404. /site-niches returns 11. /public/showcase returns 4 demos with tokens. Export zip site/styles.css contains .hero.cover + backdrop-filter + --bg; site/index.html contains 'hero cover' class. All 12 pytest test cases pass. Auth: JWT cookie-based (access_token, refresh_token); Bearer tokens rejected (401).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter11_leads_showcase_premium.py",
+    "/app/test_reports/pytest/pytest_iter11.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "site_content.py: clean, single-responsibility. NICHES catalog is verbose but readable; the module is 350 lines which is fine. build_premium_site & apply_premium correctly deletes and re-inserts pages, sets premium_site_v=3, generates preview_token if missing.",
+    "Leads.jsx: state sync from PATCH response is derived correctly (unread recomputed from messages list). Optimistic UI updates work as expected. Minor: markAllRead uses Promise.all and then reload — no rollback on partial failure, acceptable for MVP.",
+    "Landing.jsx openShowcase: uses layoutId shared-element transition for modal; 380ms delay before nav is smooth. If /public/showcase returns fewer than 4 demos (e.g., some previews disabled), SHOWCASE array is merged with backend data — fallback to template blurb works.",
+    "PublicPreview.jsx: adds session id to localStorage and tracks visit; no CSRF concern as tracking is public. Good use of testid preview-page-<slug>.",
+    "inbox.py: /inbox aggregates messages across memberships correctly; excludes MongoDB _id via projection. PATCH validates status enum. Ok."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter11_leads_showcase_premium.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100% (leads flow + showcase→preview flow verified end-to-end)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (JWT cookie session)",
+  "seed_data_creation": "Created TEST_iter11_App via POST /api/apps (SaaS Portals) for destructive premium-rebuild test; deleted at fixture teardown.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "iter11 test file is at /app/backend/tests/test_iter11_leads_showcase_premium.py. Frontend leads/showcase/preview all fully green. NicheModal (niche-modal/niche-modal-cta/niche-modal-close) path was not exercised end-to-end because all 4 showcase apps returned by /public/showcase currently have preview tokens, so openShowcase() always takes the /p/<token> branch. The modal component is defined and testids are correct; if a future demo app has no token, modal will appear."
+}

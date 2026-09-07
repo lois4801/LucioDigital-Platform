@@ -83,7 +83,7 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {inboxUnread > 0 && <span data-testid="dashboard-inbox-badge" className="chip chip-active">{inboxUnread} new leads</span>}
+            <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
             <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
             <DropdownMenu>

@@ -649,7 +649,7 @@ async def build_export_files(app_doc: dict) -> dict:
     files["site/vercel.json"] = json.dumps({"cleanUrls": True}, indent=2)
     readme = f"# {app_doc['name']}\n\nExported from OmniStack AI.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
     if app_doc.get("app_spec"):
-        for path, content in starter_app_files(app_doc["app_spec"]).items():
+        for path, content in starter_app_files(app_doc["app_spec"], theme).items():
             files[f"app/{path}"] = content
         readme += "\n## app/\nLovable-style React + FastAPI starter generated from the App Blueprint (see app/README.md, app/schema.sql for Postgres/Supabase).\n"
     slug = re.sub(r"[^a-z0-9]+", "", app_doc["name"].lower()) or "app"
@@ -921,6 +921,7 @@ async def startup():
                 })
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
     await reseed_demo_sites(db, admin_id)
+    logger.info(f"Premium site redesign applied to {await migrate_premium_sites(db)} tenant(s)")
 
 
 @app.on_event("shutdown")
@@ -944,6 +945,10 @@ GROWTH = register_growth(api, db, get_current_user, get_user_app, log_activity, 
 import studio as _studio, extras as _extras
 _studio.require_ai_access = GROWTH["require_ai_access"]
 _extras.require_ai_access = GROWTH["require_ai_access"]
+from templates import register as register_templates
+register_templates(api, db, get_current_user, get_user_app, log_activity)
+from site_content import register as register_site_content, migrate_all as migrate_premium_sites
+register_site_content(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 
