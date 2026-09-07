@@ -216,7 +216,7 @@ export default function Dashboard() {
         {loading ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="card-surface aspect-[4/3.4] animate-pulse" />
+              <div key={i} data-testid="dashboard-skeleton-card" className="card-surface aspect-[4/3.4] overflow-hidden"><div className="skeleton h-1/2 w-full rounded-none" /><div className="p-4 space-y-3"><div className="skeleton h-4 w-2/3" /><div className="skeleton h-3 w-full" /><div className="skeleton h-3 w-1/2" /></div></div>
             ))}
           </div>
         ) : filtered.length === 0 ? (

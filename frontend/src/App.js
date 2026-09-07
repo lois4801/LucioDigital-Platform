@@ -14,6 +14,8 @@ import PublicPreview from "@/pages/PublicPreview";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
 import CursorTrail from "@/components/CursorTrail";
+import { AnimatePresence } from "framer-motion";
+import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
 import Portal from "@/pages/Portal";
 
@@ -38,20 +40,22 @@ function AppRouter() {
     return <AuthCallback />;
   }
   return (
-    <Routes>
+    <AnimatePresence mode="wait" initial={false}>
+    <Routes location={location} key={location.pathname}>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-      <Route path="/apps/:appId" element={<ProtectedRoute><AppDetail /></ProtectedRoute>} />
-      <Route path="/deploy" element={<ProtectedRoute><DeployHub /></ProtectedRoute>} />
-      <Route path="/portal" element={<ProtectedRoute><Portal /></ProtectedRoute>} />
+      <Route path="/dashboard" element={<ProtectedRoute><PageTransition testid="page-dashboard"><Dashboard /></PageTransition></ProtectedRoute>} />
+      <Route path="/apps/:appId" element={<ProtectedRoute><PageTransition testid="page-app"><AppDetail /></PageTransition></ProtectedRoute>} />
+      <Route path="/deploy" element={<ProtectedRoute><PageTransition testid="page-deploy"><DeployHub /></PageTransition></ProtectedRoute>} />
+      <Route path="/portal" element={<ProtectedRoute><PageTransition testid="page-portal"><Portal /></PageTransition></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />
       <Route path="/embed/chat/:token" element={<ChatEmbed />} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </AnimatePresence>
   );
 }
 

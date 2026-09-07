@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/PageTransition";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
@@ -20,7 +21,7 @@ export default function Portal() {
     try { await api.post(`/portal/${sel}/request`, req); setReq({ title: "", details: "" }); toast.success("Request sent to your agency"); load(); }
     catch (e) { toast.error(e.response?.data?.detail || "Failed"); } finally { setBusy(false); }
   }
-  if (!data) return <div className="min-h-screen flex items-center justify-center"><div className="overline">Loading portal…</div></div>;
+  if (!data) return <PageSkeleton testid="portal-skeleton" />;
   const inp = "w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--acc)]";
 
   return (

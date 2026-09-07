@@ -201,6 +201,9 @@ button:active { transform: scale(0.97); }
 .pro-glow { box-shadow: 0 0 0 1px rgba(16,185,129,.5), 0 0 70px -20px rgba(16,185,129,.7); transform: scale(1.03); }
 .chip { transition: background-color .15s, color .15s, border-color .15s, transform .15s; }
 
+.skeleton { position: relative; overflow: hidden; border-radius: 10px; background: rgba(255,255,255,0.05); }
+.skeleton::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(16,185,129,0.10) 50%, transparent 100%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; }
+
 .marquee { animation: marquee 28s linear infinite; width: max-content; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 html { scroll-behavior: smooth; }

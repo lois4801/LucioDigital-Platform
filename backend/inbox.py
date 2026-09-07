@@ -67,10 +67,48 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     async def _new_message(app_id: str, source: str, name: str, email: str, subject: str, body: str, session_id: str = None):
         doc = {"message_id": uid("msg"), "app_id": app_id, "source": source, "from_name": name, "from_email": email,
                "subject": subject, "body": body, "status": "unread", "starred": False, "replies": [],
-               "session_id": session_id, "created_at": now_iso(), "updated_at": now_iso()}
+               "session_id": session_id, "score": None, "score_reason": None, "hot": False, "created_at": now_iso(), "updated_at": now_iso()}
         await db.messages.insert_one(dict(doc))
         await log_activity(app_id, "public", "lead.new", f"New {source} lead from {name or email}", "info")
+        asyncio.create_task(score_message(doc["message_id"]))
         return doc
+
+    async def score_message(message_id: str) -> Optional[dict]:
+        """AI lead scoring 0-100 (intent, budget signals, urgency, fit)."""
+        msg = await db.messages.find_one({"message_id": message_id}, {"_id": 0})
+        if not msg or not os.environ.get("EMERGENT_LLM_KEY"):
+            return None
+        try:
+            from studio import _claude, _parse_json
+            app_doc = await db.apps.find_one({"app_id": msg["app_id"]}, {"_id": 0, "name": 1, "industry": 1, "description": 1}) or {}
+            system = ("You score inbound leads for an agency's client business. Return ONLY JSON {\"score\": 0-100 integer, \"intent\": \"buy|evaluate|support|spam|other\", \"reason\": \"<=18 words\"}. "
+                      "High scores: clear buying intent, budget/timeline mentioned, specific service asked, business email. Low: spam, vague, support-only.")
+            prompt = f"Business: {app_doc.get('name')} ({app_doc.get('industry', '')}). {app_doc.get('description', '')}\nSource: {msg['source']}\nFrom: {msg.get('from_name')} <{msg.get('from_email')}>\nSubject: {msg.get('subject')}\nMessage:\n{msg.get('body', '')[:2500]}"
+            data = _parse_json(await _claude(system, prompt, f"score-{message_id}"))
+            score = max(0, min(100, int(data.get("score", 0))))
+            upd = {"score": score, "score_reason": str(data.get("reason", ""))[:160], "intent": data.get("intent", "other"), "hot": score >= 70, "scored_at": now_iso()}
+            await db.messages.update_one({"message_id": message_id}, {"$set": upd})
+            if score >= 70:
+                await log_activity(msg["app_id"], "ai", "lead.hot", f"Hot lead ({score}): {msg.get('from_name') or msg.get('from_email')}", "info")
+            return upd
+        except Exception:
+            logger.exception("lead scoring failed")
+            return None
+
+    @api.post("/apps/{app_id}/inbox/score")
+    async def score_inbox(app_id: str, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        pending = await db.messages.find({"app_id": app_id, "score": None}, {"_id": 0, "message_id": 1}).limit(15).to_list(15)
+        results = await asyncio.gather(*[score_message(m["message_id"]) for m in pending])
+        return {"scored": sum(1 for r in results if r), "remaining": max(0, await db.messages.count_documents({"app_id": app_id, "score": None}))}
+
+    @api.post("/apps/{app_id}/inbox/{message_id}/score")
+    async def score_one(app_id: str, message_id: str, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        r = await score_message(message_id)
+        if not r:
+            raise HTTPException(500, "Scoring unavailable")
+        return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
 
     @api.post("/public/contact/{token}")
     async def public_contact(token: str, body: ContactIn):
@@ -114,9 +152,10 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         q = {"app_id": app_id}
         if status:
             q["status"] = status
-        msgs = await db.messages.find(q, {"_id": 0}).sort("updated_at", -1).limit(200).to_list(200)
+        msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(200).to_list(200)
         unread = await db.messages.count_documents({"app_id": app_id, "status": "unread"})
-        return {"messages": msgs, "unread": unread}
+        hot = await db.messages.count_documents({"app_id": app_id, "hot": True, "status": {"$ne": "archived"}})
+        return {"messages": msgs, "unread": unread, "hot": hot}
 
     @api.patch("/apps/{app_id}/inbox/{message_id}")
     async def patch_message(app_id: str, message_id: str, body: InboxPatch, user: dict = Depends(get_current_user)):

@@ -1,3 +1,4 @@
+import { PageSkeleton } from "@/components/PageTransition";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { API } from "@/lib/api";
@@ -67,7 +68,7 @@ export default function AppDetail() {
   }
 
   if (loading || !appDoc) {
-    return <div className="min-h-screen flex items-center justify-center"><div className="overline">Loading…</div></div>;
+    return <PageSkeleton testid="app-skeleton" />;
   }
 
   return (

@@ -80,6 +80,11 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Builder/AI/seed defaults: every new/generated/seeded block gets `effects {reveal:true, hover:true for card-type blocks}`; DEFAULT_THEME radius 20; generate-site prompt enforces premium SaaS aesthetic; demo sites regenerated.
 - Testing: iteration_8.json — 4/4 backend, frontend pass, no issues.
 
+### Jun 2026 (v9) — Page transitions + AI lead scoring
+- Route transitions via AnimatePresence (`PageTransition.jsx`, testids page-dashboard/app/deploy/portal) and skeleton shimmers (`.skeleton`, `PageSkeleton`, dashboard skeleton cards).
+- Lead scoring (`inbox.py` `score_message`): every new contact/chat/request lead is auto-scored by Claude in the background (score 0–100, intent, reason, hot ≥70); inbox sorted hot → score → recency; "Hot leads" filter + count, "Score N leads" batch button, score badge + reason in detail; `POST /apps/{id}/inbox/score`, `POST /apps/{id}/inbox/{mid}/score`.
+- Testing: iteration_9.json — 5/5 backend, frontend pass.
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.
