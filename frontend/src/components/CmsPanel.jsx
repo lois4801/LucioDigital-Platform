@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Database, Plus, Trash2, Pencil, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Database, Plus, Trash2, Pencil, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const EMPTY = { title: "", slug: "", excerpt: "", body: "", cover: "", date: "", tags: [], published: true };
@@ -12,6 +12,13 @@ export default function CmsPanel({ appId }) {
   const [edit, setEdit] = useState(null);
   const [newCol, setNewCol] = useState("");
   const [busy, setBusy] = useState(false);
+  const [topic, setTopic] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  async function aiWrite() {
+    setAiBusy(true);
+    try { const { data } = await api.post(`/apps/${appId}/cms/${cur}/ai-write`, { topic }, { timeout: 300000 }); setCols(cs => cs.map(c => c.collection_id !== cur ? c : { ...c, items: [data, ...c.items] })); setTopic(""); toast.success("Draft ready — review and publish"); }
+    catch (e) { toast.error(e.response?.data?.detail || "AI writer failed"); } finally { setAiBusy(false); }
+  }
   useEffect(() => { load(); }, [appId]);
   async function load() { const { data } = await api.get(`/apps/${appId}/cms`); setCols(data); setCur(c => c || data[0]?.collection_id); }
   const col = cols.find(c => c.collection_id === cur);
@@ -43,6 +50,11 @@ export default function CmsPanel({ appId }) {
         {col && <>
           <div className="flex items-center justify-between mb-4"><div><div className="overline">{col.name}</div><div className="text-xs text-[var(--mut)] font-mono">block collection key: <span className="text-[var(--fg)]">{col.slug}</span></div></div>
             <button data-testid="cms-new-item-btn" onClick={() => setEdit({ ...EMPTY })} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Plus size={14} /> New item</button></div>
+          <div className="mb-4 p-3 rounded-xl border border-[var(--acc)]/30 bg-[var(--acc)]/5 flex flex-wrap gap-2 items-center">
+            <Sparkles size={13} className="text-[var(--acc)]" /><span className="text-xs font-semibold">AI writer</span>
+            <input data-testid="cms-ai-topic-input" value={topic} onChange={e => setTopic(e.target.value)} placeholder="One-line topic, e.g. 5 ways headless commerce cuts costs" className="flex-1 min-w-[220px] bg-[var(--bg-2)] border border-[var(--line)] rounded-full px-4 py-2 text-sm outline-none focus:border-[var(--acc)]" />
+            <button data-testid="cms-ai-write-btn" onClick={aiWrite} disabled={aiBusy || topic.trim().length < 5} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2 disabled:opacity-50">{aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} {aiBusy ? "Writing + cover (1–3 min)…" : "Draft post + cover"}</button>
+          </div>
           {col.items.length === 0 ? <div className="p-12 text-center text-sm text-[var(--mut)]">No items yet.</div> : (
             <div className="divide-y divide-[var(--line)]">{col.items.map(it => (
               <div key={it.item_id} data-testid="cms-item-row" className="py-3 flex items-center gap-3">

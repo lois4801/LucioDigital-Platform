@@ -1,3 +1,4 @@
+import AnalyticsCard from "@/components/AnalyticsCard";
 import { Activity, Cpu, HardDrive, Timer, Users } from "lucide-react";
 
 const STATUS_OPTIONS = [
@@ -9,6 +10,8 @@ const STATUS_OPTIONS = [
 export default function OverviewPanel({ appDoc, patch }) {
   const m = appDoc.metrics || {};
   return (
+    <div className="space-y-6">
+    <AnalyticsCard appId={appDoc.app_id} />
     <div className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
       <div className="space-y-6">
         <div className="card-surface overflow-hidden">
@@ -77,6 +80,7 @@ export default function OverviewPanel({ appDoc, patch }) {
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }

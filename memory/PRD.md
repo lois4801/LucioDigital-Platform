@@ -66,6 +66,14 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - App Mode: upload .docx/.pdf/.txt/.md or paste a long narrative (`POST /apps/{id}/ai/brief-upload`) → used as brief or applied as a refine request; prototype pane has a themed gradient background.
 - Testing: iteration_6.json — 14/14 backend, frontend pass.
 
+### Jun 2026 (v7) — Growth & effects (`/app/backend/growth.py`, `EffectWrap.jsx`, `CursorTrail.jsx`)
+- **AI credit protection**: clients (viewer/editor members) get 403 on all AI/media endpoints (`require_ai_access`); only owner/admin can spend credits.
+- **Built-in effects**: per-block toggles (scroll reveal, parallax, hover lift, floating) via framer-motion EffectWrap; theme toggles `motion` / `cursor`; **custom lerp cursor trail** on OmniStack + public sites; exported HTML ships fx CSS/JS + cursor script (omitted when both off).
+- **Site analytics**: `POST /public/track/{token}` beacon from public sites → `GET /apps/{id}/analytics` (views, visitors, top pages, daily, chat convos, leads, conversion) shown as AnalyticsCard in Overview.
+- **AI Blog Writer**: `POST /apps/{id}/cms/{col}/ai-write` (Claude post + GPT-Image cover) → draft CMS item; UI in CMS tab. `_parse_json` now strict=False.
+- **Portal invites**: `POST /apps/{id}/portal/invite` emails a one-time 7-day magic link (`GET /api/auth/magic/{token}` → cookies → /portal); fallback copy-link when email fails; UI in Members tab.
+- Testing: iteration_7.json — 8/9 backend then ai-write fixed & verified; frontend pass.
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.

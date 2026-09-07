@@ -37,7 +37,7 @@ img.g{{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r)}}
 footer{{padding:56px 0;border-top:1px solid var(--bd)}}footer h4{{font-size:14px;margin-bottom:12px}}
 .logos{{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;font-weight:700;color:var(--mut);font-size:20px}}
 .chat-fab{{position:fixed;right:24px;bottom:24px;background:var(--p);color:#fff;border-radius:999px;padding:14px 20px;font-weight:600;box-shadow:0 12px 40px -10px var(--p)}}
-"""
+""" + FX_CSS
 
 
 def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
@@ -96,14 +96,39 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
     return ""
 
 
+FX_CSS = """
+.fx-reveal{opacity:0;transform:translateY(24px);transition:opacity .6s cubic-bezier(.22,1,.36,1),transform .6s cubic-bezier(.22,1,.36,1)}.fx-reveal.in{opacity:1;transform:none}
+.fx-hover{transition:transform .25s}.fx-hover:hover{transform:scale(1.01)}.fx-hover img{transition:transform .5s}.fx-hover:hover img{transform:scale(1.03)}
+@keyframes fxfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}.fx-float{animation:fxfloat 4s ease-in-out infinite}
+.fx-parallax{will-change:transform}
+.os-cur{position:fixed;top:0;left:0;pointer-events:none;z-index:99999;border-radius:50%}
+"""
+FX_JS = """<script>(function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'-60px'});document.querySelectorAll('.fx-reveal').forEach(function(el){io.observe(el)});
+var px=document.querySelectorAll('.fx-parallax');if(px.length){addEventListener('scroll',function(){px.forEach(function(el){var r=el.getBoundingClientRect();var p=(r.top+r.height/2-innerHeight/2)/innerHeight;el.style.transform='translateY('+(-p*40)+'px)'})},{passive:true})}
+if(!matchMedia('(pointer: coarse)').matches&&document.body.dataset.cursor!=='off'){var c=getComputedStyle(document.documentElement).getPropertyValue('--p')||'#F97316';var d=document.createElement('div'),g=document.createElement('div');d.className='os-cur';g.className='os-cur';d.style.cssText+='width:8px;height:8px;background:'+c;g.style.cssText+='width:36px;height:36px;border:1px solid '+c+';opacity:.7;transition:transform .2s';document.body.append(d,g);document.documentElement.style.cursor='none';
+var t={x:innerWidth/2,y:innerHeight/2},p={x:t.x,y:t.y},q={x:t.x,y:t.y},h=false;addEventListener('mousemove',function(e){t.x=e.clientX;t.y=e.clientY;h=!!e.target.closest('a,button,input,textarea')},{passive:true});
+(function loop(){p.x+=(t.x-p.x)*.35;p.y+=(t.y-p.y)*.35;q.x+=(t.x-q.x)*.12;q.y+=(t.y-q.y)*.12;d.style.transform='translate3d('+(p.x-4)+'px,'+(p.y-4)+'px,0)';g.style.transform='translate3d('+(q.x-18)+'px,'+(q.y-18)+'px,0) scale('+(h?1.6:1)+')';requestAnimationFrame(loop)})()}})();</script>"""
+
+
+def fx_class(b: dict, theme: dict) -> str:
+    if theme.get("motion") is False:
+        return ""
+    fx = (b.get("style") or {}).get("effects") or {}
+    out = [] if fx.get("reveal") is False else ["fx-reveal"]
+    for k in ("hover", "float", "parallax"):
+        if fx.get(k):
+            out.append(f"fx-{k}")
+    return " ".join(out)
+
+
 def _doc(app_doc, theme, title, body, css_path="styles.css"):
     return (f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
             f"<title>{esc(title)} · {esc(app_doc['name'])}</title><link rel='stylesheet' href='{FONT_URL.format(h=theme['font_heading'].replace(' ', '+'), b=theme['font_body'].replace(' ', '+'))}'>"
-            f"<link rel='stylesheet' href='{css_path}'></head><body>{body}</body></html>")
+            f"<link rel='stylesheet' href='{css_path}'></head><body data-cursor='{'off' if theme.get('cursor') is False else 'on'}'>{body}{'' if (theme.get('motion') is False and theme.get('cursor') is False) else FX_JS}</body></html>")
 
 
 def render_page(app_doc: dict, theme: dict, page: dict, pages: List[dict], cols: List[dict] = None) -> str:
-    body = "".join(render_block(b, "", cols) for b in page.get("blocks", []))
+    body = "".join(f"<div class='{fx_class(b, theme)}'>{render_block(b, '', cols)}</div>" for b in page.get("blocks", []))
     body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
     return _doc(app_doc, theme, page["name"], body)
 

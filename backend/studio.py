@@ -29,7 +29,7 @@ def uid(prefix):
 DEFAULT_THEME = {
     "mode": "light", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#FFFFFF", "surface": "#F8FAFC",
     "fg": "#0F172A", "muted": "#64748B", "border": "#E2E8F0",
-    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 16,
+    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 16, "motion": True, "cursor": True,
 }
 
 BLOCK_SCHEMA = """
@@ -106,11 +106,11 @@ def _parse_json(text: str) -> Any:
         text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
         text = re.sub(r"\n?```$", "", text).strip()
     try:
-        return json.loads(text)
+        return json.loads(text, strict=False)
     except json.JSONDecodeError:
         s, e = text.find("{"), text.rfind("}")
         if s >= 0 and e > s:
-            return json.loads(text[s:e + 1])
+            return json.loads(text[s:e + 1], strict=False)
         raise
 
 
@@ -148,6 +148,9 @@ def _blocks_text(blocks: List[dict]) -> str:
         if b.get("type") == "contact":
             lines.append(f"Contact: {p.get('email','')} {p.get('phone','')} {p.get('address','')}")
     return "\n".join(lines)[:6000]
+
+
+require_ai_access = None
 
 
 def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
@@ -222,7 +225,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
     # ===== AI: PROMPT-TO-SITE =====
     @api.post("/apps/{app_id}/ai/generate-site")
     async def generate_site(app_id: str, body: BriefIn, user: dict = Depends(get_current_user)):
-        doc = await get_user_app(app_id, user)
+        doc = await require_ai_access(app_id, user)
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         wanted = body.pages or ["Home", "About", "Pricing", "Contact"]
@@ -263,7 +266,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
 
     @api.post("/apps/{app_id}/ai/generate-app")
     async def generate_app(app_id: str, body: BriefIn, user: dict = Depends(get_current_user)):
-        doc = await get_user_app(app_id, user)
+        doc = await require_ai_access(app_id, user)
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         system = ("You are a principal product architect (Lovable-style). Given an app idea, return ONLY valid JSON (no markdown) with shape: "
@@ -296,7 +299,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
 
     @api.post("/apps/{app_id}/ai/refine-app")
     async def refine_app(app_id: str, body: RefineIn, user: dict = Depends(get_current_user)):
-        doc = await get_user_app(app_id, user)
+        doc = await require_ai_access(app_id, user)
         spec = doc.get("app_spec")
         if not spec:
             raise HTTPException(400, "Generate a blueprint first")

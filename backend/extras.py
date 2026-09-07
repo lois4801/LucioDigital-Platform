@@ -234,6 +234,9 @@ def sync_plans_to_stripe(owner_id: str, plans: List[dict]) -> List[dict]:
 
 
 # ---------- Registration ----------
+require_ai_access = None
+
+
 def register(api, db, get_current_user, get_user_app, log_activity):
 
     # ===== AI MEDIA STUDIO =====
@@ -289,7 +292,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/media/image")
     async def gen_image(app_id: str, body: ImageIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        await require_ai_access(app_id, user)
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
@@ -309,7 +312,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/media/voice")
     async def gen_voice(app_id: str, body: VoiceIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        await require_ai_access(app_id, user)
         key = await _eleven_key()
         if not key:
             raise HTTPException(503, "ElevenLabs API key not configured. Add it in AI Media → Connect ElevenLabs.")
@@ -329,7 +332,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/media/video")
     async def gen_video(app_id: str, body: VideoIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        await require_ai_access(app_id, user)
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         task = {"task_id": uid("task"), "app_id": app_id, "user_id": user["user_id"], "kind": "video",

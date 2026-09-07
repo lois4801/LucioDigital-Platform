@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { UserPlus, X, Crown } from "lucide-react";
+import PortalInvite from "@/components/PortalInvite";
 
 const ROLES = ["viewer", "editor", "admin"];
 
@@ -34,6 +35,7 @@ export default function MembersPanel({ appId, currentUser }) {
 
   return (
     <div className="max-w-3xl space-y-6">
+      <PortalInvite appId={appId} />
       <div className="card-surface p-5">
         <div className="overline mb-3 flex items-center gap-2"><UserPlus size={12} /> Invite member</div>
         <div className="flex flex-col md:flex-row gap-3">

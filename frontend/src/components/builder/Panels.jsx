@@ -28,6 +28,11 @@ export function ThemePanel({ theme, onChange }) {
       ))}
       <label className="block text-xs"><div className="flex justify-between text-[var(--mut)]"><span>Corner radius</span><span className="font-mono">{theme.radius}px</span></div>
         <input data-testid="theme-radius-input" type="range" min={0} max={32} value={theme.radius} onChange={e => set("radius", Number(e.target.value))} className="w-full accent-[var(--acc)]" /></label>
+      <div className="overline pt-1">Effects</div>
+      {[["motion", "Scroll animations & hover"], ["cursor", "Custom trailing cursor"]].map(([k, l]) => (
+        <label key={k} className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">{l}</span>
+          <button data-testid={`theme-${k}-toggle`} onClick={() => set(k, theme[k] === false)} className={`w-9 h-5 rounded-full relative transition-colors ${theme[k] !== false ? "bg-[var(--acc)]" : "bg-[var(--line)]"}`}><span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${theme[k] !== false ? "translate-x-4" : "translate-x-0.5"}`} /></button></label>
+      ))}
     </div>
   );
 }
@@ -50,6 +55,11 @@ export function StylePanel({ block, onChange }) {
       </div>
       {block.type === "hero" && <div><div className="text-[10px] text-[var(--dim)] mb-1">Hero variant</div>
         <div className="flex rounded-lg border border-[var(--line)] overflow-hidden text-[11px]">{["left", "centered", "split"].map(o => <button key={o} data-testid={`hero-variant-${o}`} onClick={() => onChange(s, { variant: o })} className={`flex-1 py-1.5 capitalize ${block.props.variant === o ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>{o}</button>)}</div></div>}
+      <div><div className="text-[10px] text-[var(--dim)] mb-1">Effects (one toggle each)</div>
+        <div className="grid grid-cols-2 gap-1">{[["reveal", "Scroll reveal"], ["parallax", "Parallax"], ["hover", "Hover lift"], ["float", "Floating"]].map(([k, l]) => {
+          const on = k === "reveal" ? (s.effects?.reveal !== false) : !!s.effects?.[k];
+          return <button key={k} data-testid={`effect-${k}-toggle`} onClick={() => set("effects", { ...(s.effects || {}), [k]: !on })} className={`px-2 py-1.5 rounded-lg border text-[11px] text-left ${on ? "border-[var(--acc)]/50 bg-[var(--acc)]/10 text-[var(--acc)]" : "border-[var(--line)] text-[var(--mut)]"}`}>{on ? "● " : "○ "}{l}</button>;
+        })}</div></div>
     </div>
   );
 }

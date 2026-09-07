@@ -1,6 +1,6 @@
 export const DEFAULT_THEME = {
   mode: "light", primary: "#F97316", secondary: "#14B8A6", bg: "#FFFFFF", surface: "#F8FAFC",
-  fg: "#0F172A", muted: "#64748B", border: "#E2E8F0", font_heading: "Plus Jakarta Sans", font_body: "Manrope", radius: 16,
+  fg: "#0F172A", muted: "#64748B", border: "#E2E8F0", font_heading: "Plus Jakarta Sans", font_body: "Manrope", radius: 16, motion: true, cursor: true,
 };
 
 export const FONTS = ["Plus Jakarta Sans", "Manrope", "Space Grotesk", "DM Sans", "Sora", "Outfit", "Playfair Display", "Poppins", "Nunito"];

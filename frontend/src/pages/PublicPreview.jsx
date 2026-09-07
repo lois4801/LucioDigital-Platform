@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "@/lib/api";
 import BlockPreview from "@/components/builder/BlockPreview";
+import EffectWrap from "@/components/builder/EffectWrap";
+import CursorTrail from "@/components/CursorTrail";
 import ChatWidget from "@/components/ChatWidget";
 import { themeVars, loadFonts } from "@/lib/theme";
 import { Layers, Eye } from "lucide-react";
@@ -15,6 +17,11 @@ export default function PublicPreview() {
   useEffect(() => {
     api.get(`/public/site/${token}`).then(r => { setSite(r.data); loadFonts(r.data.theme); }).catch(e => setErr(e.response?.data?.detail || "Preview unavailable"));
   }, [token]);
+  useEffect(() => {
+    if (!site) return;
+    const k = "os_visitor"; let s = localStorage.getItem(k); if (!s) { s = "v_" + Math.random().toString(36).slice(2, 12); localStorage.setItem(k, s); }
+    api.post(`/public/track/${token}`, { path: slug, event: "view", session: s, referrer: document.referrer }).catch(() => {});
+  }, [site, slug, token]);
 
   if (err) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
@@ -42,7 +49,8 @@ export default function PublicPreview() {
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> OmniStack AI</Link>
         </div>
       </div>
-      {page?.blocks.map(b => <BlockPreview key={b.id} block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} />)}
+      {page?.blocks.map(b => <EffectWrap key={b.id} effects={b.style?.effects} motionOn={site.theme.motion !== false}><BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} /></EffectWrap>)}
+      {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
     </div>
   );

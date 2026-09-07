@@ -13,6 +13,7 @@ import AppDetail from "@/pages/AppDetail";
 import PublicPreview from "@/pages/PublicPreview";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
+import CursorTrail from "@/components/CursorTrail";
 import DeployHub from "@/pages/DeployHub";
 import Portal from "@/pages/Portal";
 
@@ -61,6 +62,7 @@ export default function App() {
         <AuthProvider>
           <AppRouter />
           <Toaster theme="dark" position="top-right" richColors closeButton />
+          <CursorTrail color="#10B981" />
         </AuthProvider>
       </BrowserRouter>
     </div>

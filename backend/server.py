@@ -710,7 +710,7 @@ async def export_mobile(app_id: str, platform: str = "ios", user: dict = Depends
 # ---------- AI Prompt Editor ----------
 @api.post("/apps/{app_id}/ai/edit")
 async def ai_edit_block(app_id: str, body: AIPromptIn, user: dict = Depends(get_current_user)):
-    await get_user_app(app_id, user)
+    await GROWTH["require_ai_access"](app_id, user)
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "LLM key missing")
 
@@ -939,6 +939,11 @@ WF_HOOKS = register_workflows(api, db, get_current_user, get_user_app, log_activ
 CMS_HOOKS = register_cms(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS)
 INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files, WF_HOOKS)
 register_studio(api, db, get_current_user, get_user_app, log_activity, {**INBOX_HOOKS, **WF_HOOKS, **CMS_HOOKS})
+from growth import register as register_growth
+GROWTH = register_growth(api, db, get_current_user, get_user_app, log_activity, create_access_token, create_refresh_token, set_auth_cookies, WF_HOOKS["send_email"], WF_HOOKS)
+import studio as _studio, extras as _extras
+_studio.require_ai_access = GROWTH["require_ai_access"]
+_extras.require_ai_access = GROWTH["require_ai_access"]
 
 app.include_router(api)
 
