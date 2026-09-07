@@ -113,6 +113,10 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 ### Jun 2026 (v14) — Inline text editing on every block
 - BlockPreview `T` (contentEditable) now covers all remaining text: nav link labels, navbar CTA, stats kicker, logo-cloud names, pricing feature lines, footer column links, chart labels (paths like `plans.0.features.2`). Canvas hint `inline-edit-hint`. Verified: 103 editable elements on a Home page; edits mark the page dirty for Save.
 
+### Jun 2026 (v15) — Landing page admin CMS
+- `landing_cms.py`: `GET /public/landing` (cards, marquee, texts with defaults) and admin-only `PUT /admin/landing` (partial patch; admin = ADMIN_EMAIL). `/auth/me` now returns `is_admin`. Stored in `site_settings` {key:'landing'}.
+- `LandingAdmin.jsx`: hover edit/delete controls on niche cards (`card-edit-btn`/`card-delete-btn`, confirm on delete), `CardEditor` modal (title/description/cover image), `card-add-btn`; `MarqueeEditor` (`marquee-edit-btn`, add/rename/remove items); `AdminText` click-to-edit headlines (`text-hero-caption-title` "B2B Success Analytics", section overlines/headings, CTA heading). Visitors see plain content only.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

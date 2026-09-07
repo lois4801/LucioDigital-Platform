@@ -290,7 +290,7 @@ async def logout(request: Request, response: Response):
 
 @api.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
-    return user
+    return {**user, "is_admin": (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()}
 
 
 # Emergent Google OAuth session exchange
@@ -969,6 +969,8 @@ from site_content import register as register_site_content, migrate_all as migra
 register_site_content(api, db, get_current_user, get_user_app, log_activity)
 from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
+from landing_cms import register as register_landing, is_admin as _is_admin
+register_landing(api, db, get_current_user)
 
 app.include_router(api)
 

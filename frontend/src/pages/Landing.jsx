@@ -6,6 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Words, Spotlight, fast } from "@/components/motion";
 import ChatWidget from "@/components/ChatWidget";
 import api from "@/lib/api";
+import { toast } from "sonner";
+import { AdminText, CardEditor, MarqueeEditor, CardAdminControls, saveLanding } from "@/components/LandingAdmin";
+import { Settings2, Plus } from "lucide-react";
 
 const SHOWCASE = [
   { title: "Nexus Commerce", tag: "E-commerce", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", blurb: "Featured products, categories, offers, loyalty program and a store locator — built for independent retailers and DTC brands.", sections: ["Featured Products", "Categories", "Offers", "Loyalty Program", "Store Locator"] },
@@ -102,6 +105,22 @@ export default function Landing() {
   const [showcase, setShowcase] = useState(SHOWCASE);
   const [modal, setModal] = useState(null);
   const [leaving, setLeaving] = useState(false);
+  const admin = !!user?.is_admin;
+  const [cms, setCms] = useState({ cards: [], marquee: LOGOS, texts: {} });
+  const [editCard, setEditCard] = useState(null);
+  const [tickerOpen, setTickerOpen] = useState(false);
+  useEffect(() => { api.get("/public/landing").then(r => setCms(r.data)).catch(() => {}); }, []);
+  const tx = (k, fallback) => cms.texts?.[k] ?? fallback;
+  const saveText = (k) => async (v) => setCms(await saveLanding({ texts: { [k]: v } }));
+  async function saveCard(f) {
+    const cards = f.id ? cms.cards.map(c => c.id === f.id ? { ...c, ...f } : c) : [...cms.cards, f];
+    try { setCms(await saveLanding({ cards })); setEditCard(null); toast.success("Card saved"); } catch { toast.error("Save failed"); }
+  }
+  async function deleteCard(c) {
+    if (!window.confirm(`Delete the “${c.title}” card? This removes it for all visitors.`)) return;
+    try { setCms(await saveLanding({ cards: cms.cards.filter(x => x.id !== c.id) })); toast.success("Card deleted"); } catch { toast.error("Delete failed"); }
+  }
+  async function saveMarquee(list) { try { setCms(await saveLanding({ marquee: list })); setTickerOpen(false); toast.success("Ticker updated"); } catch { toast.error("Save failed"); } }
   useEffect(() => { api.get("/public/showcase").then(r => setShowcase(SHOWCASE.map(s => ({ ...s, ...(r.data.find(d => d.name === s.title) || {}) })))).catch(() => {}); }, []);
   function openShowcase(s, i) {
     if (s.token) { setLeaving(true); setTimeout(() => nav(`/p/${s.token}`), 380); } else setModal({ s, i });
@@ -162,8 +181,8 @@ export default function Landing() {
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)]/90 via-transparent to-transparent" />
               <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-end justify-between gap-3 text-left">
                 <div>
-                  <div className="overline">Live · Orbit SaaS Portal</div>
-                  <div className="font-display text-2xl mt-1">B2B Success Analytics</div>
+                  <AdminText admin={admin} value={tx("hero_caption_overline", "Live · Orbit SaaS Portal")} onSave={saveText("hero_caption_overline")} as="div" className="overline" testid="text-hero-caption-overline" />
+                  <AdminText admin={admin} value={tx("hero_caption_title", "B2B Success Analytics")} onSave={saveText("hero_caption_title")} as="div" className="font-display text-2xl mt-1" testid="text-hero-caption-title" />
                 </div>
                 <div className="flex gap-2">
                   {["99.98% uptime", "84ms", "Stripe · Pro"].map(x => <span key={x} className="chip backdrop-blur bg-black/40">{x}</span>)}
@@ -175,19 +194,24 @@ export default function Landing() {
       </section>
 
       {/* Marquee */}
-      <section className="relative z-10 border-y border-white/5 py-6 overflow-hidden">
+      <section className="relative z-10 border-y border-white/5 py-6 overflow-hidden group/marquee" data-testid="marquee-section">
+        {admin && <button data-testid="marquee-edit-btn" onClick={() => setTickerOpen(true)} className="absolute right-6 top-1/2 -translate-y-1/2 z-10 chip chip-active flex items-center gap-1 cursor-pointer"><Settings2 size={11} /> Edit ticker</button>}
         <div className="marquee flex gap-16 whitespace-nowrap">
-          {[...LOGOS, ...LOGOS].map((l, i) => <span key={i} className="font-display text-xl text-white/25 tracking-tight">{l}</span>)}
+          {[...cms.marquee, ...cms.marquee].map((l, i) => <span key={i} data-testid={i < cms.marquee.length ? `marquee-text-${i}` : undefined} className="font-display text-xl text-white/25 tracking-tight">{l}</span>)}
         </div>
       </section>
+      <MarqueeEditor items={cms.marquee} open={tickerOpen} onClose={() => setTickerOpen(false)} onSave={saveMarquee} />
+      <CardEditor card={editCard} open={!!editCard} onClose={() => setEditCard(null)} onSave={saveCard} />
 
       {/* Image strip */}
-      <section className="relative z-10 px-6 lg:px-14 py-16">
+      <section className="relative z-10 px-6 lg:px-14 py-16" data-testid="niche-cards-section">
+        {admin && <div className="max-w-7xl mx-auto mb-4 flex justify-end"><button data-testid="card-add-btn" onClick={() => setEditCard({ title: "", description: "", image: "" })} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1"><Plus size={12} /> Add card</button></div>}
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[["photo-1556742049-0cfed4f6a45d", "E-commerce"], ["photo-1551288049-bebda4e38f71", "SaaS dashboards"], ["photo-1544367567-0f2fcb009e0b", "Wellness apps"], ["photo-1601584115197-04ecc0da31d7", "Logistics tools"]].map(([p, l], i) => (
-            <div key={p} data-testid={`landing-image-${i}`} className={`card-lift relative rounded-2xl overflow-hidden border border-white/10 hover:scale-[1.02] ${i % 2 ? "md:mt-8" : ""}`} style={{ transform: `translateY(${(i % 2 ? -1 : 1) * 0}px)` }}>
-              <img src={`https://images.unsplash.com/${p}?w=900&q=80`} alt={l} className="w-full aspect-[4/5] object-cover hover:scale-105 transition-transform duration-700" />
-              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent text-sm font-semibold">{l}</div>
+          {cms.cards.map((c, i) => (
+            <div key={c.id} data-testid={`landing-image-${i}`} className={`group card-lift relative rounded-2xl overflow-hidden border border-white/10 hover:scale-[1.02] ${i % 2 ? "md:mt-8" : ""}`}>
+              {admin && <CardAdminControls onEdit={() => setEditCard(c)} onDelete={() => deleteCard(c)} />}
+              <img src={c.image} alt={c.title} className="w-full aspect-[4/5] object-cover hover:scale-105 transition-transform duration-700" />
+              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/85 to-transparent"><div className="text-sm font-semibold" data-testid={`landing-card-title-${i}`}>{c.title}</div>{c.description && <div className="text-[11px] text-white/70 mt-1 line-clamp-2">{c.description}</div>}</div>
             </div>
           ))}
         </div>
@@ -198,8 +222,8 @@ export default function Landing() {
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <motion.div variants={fade}>
-              <div className="overline mb-3">Products we ship</div>
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Every tenant, on-brand and always live.</h2>
+              <AdminText admin={admin} value={tx("products_overline", "Products we ship")} onSave={saveText("products_overline")} as="div" className="overline mb-3" testid="text-products-overline" />
+              <AdminText admin={admin} value={tx("products_heading", "Every tenant, on-brand and always live.")} onSave={saveText("products_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-products-heading" />
             </motion.div>
             <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start">View all tenants <ArrowRight size={14} /></motion.button>
           </div>
@@ -213,8 +237,8 @@ export default function Landing() {
       <section id="demos" data-testid="demos-section" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32 border-t border-white/5">
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
           <motion.div variants={fade} className="mb-12 max-w-2xl">
-            <div className="overline mb-3">See it in action</div>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Watch OmniStack build, brand and ship a product.</h2>
+            <AdminText admin={admin} value={tx("demos_overline", "See it in action")} onSave={saveText("demos_overline")} as="div" className="overline mb-3" testid="text-demos-overline" />
+            <AdminText admin={admin} value={tx("demos_heading", "Watch OmniStack build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
             <p className="text-[var(--mut)] mt-3">Three short walkthroughs: Site Mode, App Mode with industry templates, and the export &amp; handoff pipeline.</p>
           </motion.div>
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
@@ -228,8 +252,8 @@ export default function Landing() {
       <section id="platform" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32 border-t border-white/5">
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
           <motion.div variants={fade} className="max-w-2xl mb-14">
-            <div className="overline mb-3">The platform</div>
-            <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight">Everything between “kickoff” and “handoff”.</h2>
+            <AdminText admin={admin} value={tx("platform_overline", "The platform")} onSave={saveText("platform_overline")} as="div" className="overline mb-3" testid="text-platform-overline" />
+            <AdminText admin={admin} value={tx("platform_heading", "Everything between “kickoff” and “handoff”.")} onSave={saveText("platform_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-platform-heading" />
           </motion.div>
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             {BENTO.map((f, i) => (
@@ -270,7 +294,7 @@ export default function Landing() {
         <motion.div initial={{ opacity: 0, scale: 0.95 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: "-80px" }} transition={{ duration: 0.5, ease: fast }} className="gradient-border max-w-5xl mx-auto rounded-3xl border border-white/10 bg-[var(--card)] p-10 lg:p-16 text-center relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/15 via-transparent to-transparent" />
           <span className="icon-shimmer mx-auto relative"><ShieldCheck size={22} className="text-[var(--acc)] relative z-10" /></span>
-          <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-4 relative">Launch your agency workspace today.</h2>
+          <AdminText admin={admin} value={tx("cta_heading", "Launch your agency workspace today.")} onSave={saveText("cta_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight mt-4 relative" testid="text-cta-heading" />
           <button data-testid="footer-cta" onClick={go} className="btn-primary btn-glow pulse-soft mt-8 relative inline-flex items-center gap-2">Get started <ArrowRight size={16} /></button>
         </motion.div>
       </section>
