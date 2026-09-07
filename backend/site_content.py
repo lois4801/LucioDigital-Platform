@@ -401,7 +401,7 @@ def build_premium_site(app, niche_key=None, brand=None):
     brand = brand_name
     pages_nav = [("Home", "/"), ("About", "/about"), ("Services", "/services"), ("Contact", "/contact")]
     nav = _blk("navbar", {"brand": brand, **({"logo": brand_logo} if brand_logo else {}), "links": [{"label": a, "href": b} for a, b in pages_nav], "cta": n["cta"]}, hover=False)
-    footer = _blk("footer", {"brand": brand, "tagline": n["sub"][:90].rsplit(" ", 1)[0] + "…", "columns": [{"title": "Company", "links": ["About", "Services", "Careers", "Press"]}, {"title": "Contact", "links": [n["email"], n["phone"], n["address"]]}, {"title": "Legal", "links": ["Privacy", "Terms", "Accessibility"]}]}, hover=False)
+    footer = _blk("footer", {"brand": brand, **({"logo": brand_logo} if brand_logo else {}), "tagline": n["sub"][:90].rsplit(" ", 1)[0] + "…", "columns": [{"title": "Company", "links": ["About", "Services", "Careers", "Press"]}, {"title": "Contact", "links": [n["email"], n["phone"], n["address"]]}, {"title": "Legal", "links": ["Privacy", "Terms", "Accessibility"]}]}, hover=False)
     hero = _blk("hero", {"variant": "cover", "badge": n["badge"], "title": n["title"], "subtitle": n["sub"], "cta": n["cta"], "cta2": n["cta2"], "image": n["hero"]}, "default", "left", "lg", hover=False)
     home = [nav, hero] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate(n["sections"])) if b] + [footer]
     at, story = n["about"]

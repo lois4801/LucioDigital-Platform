@@ -637,19 +637,32 @@ async def build_export_files(app_doc: dict) -> dict:
     cols = await CMS_HOOKS["public_collections"](app_id)
     embed = f"<script src='{FRONTEND_URL}/api/public/embed.js' data-token='{app_doc.get('preview_token')}' data-origin='{FRONTEND_URL}'></script>" if app_doc.get("preview_token") else ""
     files = {}
+    logo = app_doc.get("logo") or ""
+    logo_asset = None
+    if logo.startswith("/api/public/files/"):
+        try:
+            from storage import get_object
+            data, ct = get_object(logo[len("/api/public/files/"):])
+            ext = logo.rsplit(".", 1)[-1] if "." in logo else "png"
+            logo_asset = f"assets/logo.{ext}"
+            files[f"site/{logo_asset}"] = data
+        except Exception as e:
+            logger.warning(f"Logo bundle skipped: {e}")
+    def _rewrite(html):
+        return html.replace(logo, f"/{logo_asset}") if logo_asset else (html.replace(logo, f"{FRONTEND_URL}{logo}") if logo else html)
     for pg in pages:
         fname = "index.html" if pg.get("slug") == "/" else f"{pg['slug'].strip('/')}.html"
-        files[f"site/{fname}"] = render_page(app_doc, theme, pg, pages, cols).replace("</body>", f"{embed}</body>")
+        files[f"site/{fname}"] = _rewrite(render_page(app_doc, theme, pg, pages, cols)).replace("</body>", f"{embed}</body>")
     for c in cols:
         for it in c["items"]:
-            files[f"site/{c['slug']}/{it['slug']}.html"] = render_item_page(app_doc, theme, c, it, pages).replace("</body>", f"{embed}</body>")
+            files[f"site/{c['slug']}/{it['slug']}.html"] = _rewrite(render_item_page(app_doc, theme, c, it, pages)).replace("</body>", f"{embed}</body>")
     files["site/styles.css"] = css(theme)
     files["site/pages.json"] = json.dumps(pages, indent=2)
     files["site/theme.json"] = json.dumps(theme, indent=2)
     files["site/vercel.json"] = json.dumps({"cleanUrls": True}, indent=2)
     readme = f"# {app_doc['name']}\n\nExported from OmniStack AI.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
     if app_doc.get("app_spec"):
-        for path, content in starter_app_files(app_doc["app_spec"], theme).items():
+        for path, content in starter_app_files(app_doc["app_spec"], {**theme, "logo": (f"/{logo_asset}" if logo_asset else (f"{FRONTEND_URL}{logo}" if logo else None))}).items():
             files[f"app/{path}"] = content
         readme += "\n## app/\nLovable-style React + FastAPI starter generated from the App Blueprint (see app/README.md, app/schema.sql for Postgres/Supabase).\n"
     slug = re.sub(r"[^a-z0-9]+", "", app_doc["name"].lower()) or "app"
@@ -922,6 +935,11 @@ async def startup():
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
     await reseed_demo_sites(db, admin_id)
     logger.info(f"Premium site redesign applied to {await migrate_premium_sites(db)} tenant(s)")
+    try:
+        init_storage()
+        logger.info("Object storage initialized")
+    except Exception as e:
+        logger.error(f"Storage init failed: {e}")
 
 
 @app.on_event("shutdown")
@@ -949,6 +967,8 @@ from templates import register as register_templates
 register_templates(api, db, get_current_user, get_user_app, log_activity)
 from site_content import register as register_site_content, migrate_all as migrate_premium_sites
 register_site_content(api, db, get_current_user, get_user_app, log_activity)
+from storage import register as register_storage, init_storage
+register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 
 app.include_router(api)
 

@@ -29,6 +29,7 @@ const H2 = (props) => <T as="h2" {...props} className={`font-[var(--tfh)] text-3
 const Icon = ({ name, size = 18 }) => { const I = Icons[name] || Icons.Sparkles; return <I size={size} />; };
 const Kicker = ({ children }) => <div className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--tp)] mb-3">{children}</div>;
 const isYouTube = (u = "") => /youtube\.com|youtu\.be/.test(u);
+const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u;
 
 export default function BlockPreview({ block, onEdit, onNavigate, onLead, collections = [] }) {
   const p = block.props || {}, s = block.style || {};
@@ -66,7 +67,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
 
   if (block.type === "navbar") return (
     <nav className="px-8 lg:px-12 py-5 flex items-center justify-between border-b border-[var(--tbd)]">
-      <T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-xl" />
+      <T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-xl flex items-center gap-2" />
+      {p.logo && <img data-testid="navbar-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain order-first" />}
       <div className="hidden md:flex gap-6 text-sm font-medium text-[var(--tmut)]">
         {(p.links || []).map((l, i) => <button key={i} onClick={(e) => { e.stopPropagation(); onNavigate?.(l.href); }} className="hover:text-[var(--tfg)]">{l.label}</button>)}
       </div>
@@ -214,7 +216,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
   );
   if (block.type === "footer") return (
     <footer className="px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
-      <div><T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
+      <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
       {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}>{l}</li>)}</ul></div>)}
     </footer>
   );

@@ -64,7 +64,8 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
         return ""
     if t == "navbar":
         links = "".join(f"<a href='{esc(l.get('href','#'))}'>{esc(l.get('label'))}</a>" for l in p.get("links", []))
-        return f"<div class='wrap'><nav><span class='brand'>{esc(p.get('brand'))}</span><span class='links'>{links}</span><a class='btn' href='#'>{esc(p.get('cta','Get started'))}</a></nav></div>"
+        logo = f"<img src='{esc(p['logo'])}' alt='' style='height:32px;width:auto;object-fit:contain'>" if p.get("logo") else ""
+        return f"<div class='wrap'><nav><span class='brand' style='display:flex;align-items:center;gap:10px'>{logo}{esc(p.get('brand'))}</span><span class='links'>{links}</span><a class='btn' href='#'>{esc(p.get('cta','Get started'))}</a></nav></div>"
     if t == "hero":
         centered = p.get("variant") == "centered" or s.get("align") == "center"
         split = p.get("variant") == "split" and p.get("image")
@@ -113,7 +114,8 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
         return f"<section class='{cls}'><div class='wrap grid g2'><div><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><p class='mut' style='margin-top:10px'>{esc(p.get('subtitle'))}</p><p style='margin-top:20px'>{esc(p.get('email'))}<br>{esc(p.get('phone'))}<br>{esc(p.get('address'))}</p></div><form class='card'><input placeholder='Name' style='width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px'><input placeholder='Email' style='width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px;margin-bottom:10px'><textarea placeholder='Message' rows='4' style='width:100%;padding:12px;border:1px solid var(--bd);border-radius:10px'></textarea><button class='btn' style='border:0;margin-top:12px;width:100%'>Send</button></form></div></section>"
     if t == "footer":
         cols = "".join(f"<div><h4>{esc(c.get('title'))}</h4><ul>{''.join(f'<li>{esc(l)}</li>' for l in c.get('links', []))}</ul></div>" for c in p.get("columns", []))
-        return f"<footer><div class='wrap grid g4'><div><span class='brand'>{esc(p.get('brand'))}</span><p class='mut' style='margin-top:8px'>{esc(p.get('tagline'))}</p></div>{cols}</div></footer>"
+        logo = f"<img src='{esc(p['logo'])}' alt='' style='height:32px;width:auto;object-fit:contain;display:block;margin-bottom:12px'>" if p.get("logo") else ""
+        return f"<footer><div class='wrap grid g4'><div>{logo}<span class='brand'>{esc(p.get('brand'))}</span><p class='mut' style='margin-top:8px'>{esc(p.get('tagline'))}</p></div>{cols}</div></footer>"
     return ""
 
 
@@ -280,7 +282,7 @@ export default function App() {{
   return (
     <BrowserRouter>
       <div className="shell">
-        <aside className="sidebar"><div className="brand"><span className="dot" />{esc(spec.get('name', 'App'))}</div><nav>{''.join(nav)}</nav>
+        <aside className="sidebar"><div className="brand">{f'<img src="{esc(theme.get("logo"))}" alt="" style={{{{height:28,width:"auto"}}}} />' if theme.get("logo") else '<span className="dot" />'}{esc(spec.get('name', 'App'))}</div><nav>{''.join(nav)}</nav>
           <button className="toggle" onClick={{() => setDark(d => !d)}}>{{dark ? "☀ Light mode" : "☾ Dark mode"}}</button></aside>
         <div className="content">
           <Breadcrumbs />

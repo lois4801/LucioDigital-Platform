@@ -105,6 +105,11 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Tenant app standards** (App Mode export): `<html class='light'>`, dark-mode toggle in sidebar, `.dark` vars, scroll-reveal `.reveal`, scale-on-hover, idle float keyframe; template palette map updated (Finance navy/emerald, Legal burgundy, Logistics steel blue, Education indigo, Restaurants amber, Events purple, IT cyan, Real Estate forest green).
 - Testing: iteration_13.json (all pass except stale banner) → fixed → iteration_14.json.
 
+### Jun 2026 (v13) — Tenant Logo Upload
+- `storage.py` (Emergent Object Storage): `POST /apps/{id}/brand/logo` (multipart, PNG/JPG/SVG/WEBP/GIF ≤2MB) stores object at `omnistack/logos/{app_id}/{uuid}.{ext}`, records in `db.files`, sets `apps.logo` + `brand_profile.logo`, and writes `props.logo` into every navbar/footer block; `DELETE` removes; `GET /public/files/{path}` serves publicly (immutable cache).
+- Logo renders in BlockPreview navbar/footer (`navbar-logo`/`footer-logo`), is preserved through niche previews/applies (`brand_logo`), and is bundled into exports as `site/assets/logo.<ext>` (HTML rewritten) + starter app sidebar brand.
+- UI: `LogoUpload.jsx` in Site Mode toolbar (`logo-upload-btn`, `logo-file-input`, `logo-current`, `logo-remove-btn`).
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

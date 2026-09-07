@@ -1,0 +1,24 @@
+{
+  "summary": "iter15 — Tenant Logo Upload feature end-to-end verified. Backend pytest 8/8 passed (test_iter15_logo_upload.py, ~35s): POST /apps/{id}/brand/logo returns {logo:'/api/public/files/omnistack/logos/{app_id}/{uuid}.png', pages_updated>0}; GET on that URL returns 200 image/png with correct PNG magic bytes and Cache-Control immutable; GET /api/apps/{id} shows logo + brand_profile.logo populated; every navbar/footer block in /api/apps/{id}/pages has props.logo == url; rejects .txt (400 'Logo must be PNG, JPG, SVG, WEBP or GIF'); rejects >2MB (400 'Logo must be under 2 MB'); DELETE clears logo (app.logo=null, brand_profile.logo=null, props.logo removed from navbar/footer); re-upload after delete works and serves new file. niche-preview (hvac) returns preserved.logo set and pages[0].blocks[0] is navbar with props.logo == url. premium-rebuild keeps logo on navbar and footer. Export zip contains site/assets/logo.png; site/index.html rewrites the '/api/public/files/...' URL to '/assets/logo.png'; for an app with app_spec (TEST_UI_App), app/frontend/src/App.jsx sidebar brand contains <img src=\"/assets/logo.png\" ...>. Frontend (Playwright, cookie login jaybernabe@luciodigital.com/Lucio2026!): opened Vote Banner Test Co site-mode → logo-upload-btn present ('Upload logo'/'Replace logo'), set PNG on logo-file-input → toast 'Logo applied to 4 pages — navbar, footer and exports', logo-current image rendered in toolbar, navbar-logo and footer-logo both visible in builder-canvas; logo-remove-btn removed logo (navbar-logo and logo-current count → 0); re-uploaded, then visited /p/pv_852446c0695a3dd08aee — public preview shows navbar-logo with absolute URL served from backend (screenshot confirms blue swatch beside 'Vote Banner Test Co' brand). Cleanup: deleted test logos from Vote Banner Test Co + TEST_UI_App at end; no demo apps modified.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter15_logo_upload.py",
+    "/app/test_reports/pytest/pytest_iter15.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "storage.py upload_logo: extension check is filename-based only — a user could upload arbitrary binary named 'foo.png'. Content-type sniffing (e.g., magic bytes) would be safer against MIME confusion but low-risk given tenant-only auth.",
+    "storage.py remove_logo iterates all pages and unconditionally $sets blocks even when no navbar/footer existed — harmless but generates unnecessary writes. Also does not return pages_updated count for consistency with upload_logo.",
+    "server.py build_export_files line 646: `ext = logo.rsplit('.', 1)[-1] if '.' in logo else 'png'` assumes the URL always has a valid extension — safe today because upload enforces it, but downstream _rewrite() replaces the exact url string only; if the same logo URL happened to be substring of another (unlikely), silent double-replace could occur.",
+    "LogoUpload.jsx: onChange(data.logo) followed by parent load() double-fetches; small perf nit, not a bug."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter15_logo_upload.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100% (upload → toast → navbar/footer/current → remove → re-upload → public preview all pass)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie session)",
+  "seed_data_creation": "Ephemeral TEST_iter15 Logo Co app created and DELETEd inside pytest fixture. Uploaded a small test PNG to Vote Banner Test Co (app_bdbf27abe643) and TEST_UI_App (app_627d86264eac) during UI + export tests, then DELETE /brand/logo on both to restore clean state. No demo apps (Nexus, Orbit, Fleet, Aura, Ledger, Studio Booking) touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Logo Upload fully green. Test file /app/backend/tests/test_iter15_logo_upload.py (8 tests). If rerunning, note fixture waits up to 30s for site build to produce navbar/footer blocks; if premature it falls back to POST /site/premium-rebuild. Frontend flow uses data-testids: logo-upload-btn, logo-file-input, logo-current, logo-remove-btn, navbar-logo, footer-logo (in BlockPreview.jsx).",
+  "rca of the issue": "n/a — no bugs found. One transient test setup gotcha: newly created apps may not yet have navbar/footer blocks populated (async site build); handled in fixture by polling then falling back to premium-rebuild before uploading the logo."
+}

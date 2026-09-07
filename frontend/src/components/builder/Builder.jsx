@@ -11,6 +11,7 @@ import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
 import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/builder/NicheSwitcher";
+import { LogoUpload } from "@/components/builder/LogoUpload";
 import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -81,6 +82,8 @@ export default function Builder({ appId, appDoc }) {
   const [previewPage, setPreviewPage] = useState(0);
   const [applyingNiche, setApplyingNiche] = useState(false);
   const [lookVote, setLookVote] = useState(appDoc?.look_vote || null);
+  const [logo, setLogo] = useState(appDoc?.logo || null);
+  useEffect(() => { setLogo(appDoc?.logo || null); }, [appDoc?.logo]);
   useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
   async function applyNiche() {
     if (!nichePreview) return;
@@ -184,6 +187,7 @@ export default function Builder({ appId, appDoc }) {
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
           <button data-testid="premium-redesign-btn" onClick={premiumRedesign} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Sparkles size={14} /> Premium redesign</button>
           <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
+          <LogoUpload appId={appId} logo={logo} onChange={(u) => { setLogo(u); load(); }} />
           <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
         </div>
       </div>
