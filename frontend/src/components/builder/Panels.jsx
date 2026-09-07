@@ -1,4 +1,5 @@
 import { FONTS } from "@/lib/theme";
+import { CURSOR_EFFECTS } from "@/lib/cursorEffects";
 import { Sun, Moon } from "lucide-react";
 
 const SWATCHES = [["#F97316", "#14B8A6"], ["#EA580C", "#0EA5E9"], ["#F59E0B", "#10B981"], ["#FB7185", "#6366F1"], ["#0F172A", "#F97316"], ["#7C3AED", "#22D3EE"]];
@@ -33,6 +34,11 @@ export function ThemePanel({ theme, onChange }) {
         <label key={k} className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">{l}</span>
           <button data-testid={`theme-${k}-toggle`} onClick={() => set(k, theme[k] === false)} className={`w-9 h-5 rounded-full relative transition-colors ${theme[k] !== false ? "bg-[var(--acc)]" : "bg-[var(--line)]"}`}><span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${theme[k] !== false ? "translate-x-4" : "translate-x-0.5"}`} /></button></label>
       ))}
+      <label className="block text-xs"><span className="text-[var(--mut)] block mb-1">Cursor effect (live site & export)</span>
+        <select data-testid="theme-cursor-effect-select" value={theme.cursor_effect || "none"} onChange={e => set("cursor_effect", e.target.value)}
+          className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1.5 text-xs outline-none">
+          {CURSOR_EFFECTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select></label>
     </div>
   );
 }

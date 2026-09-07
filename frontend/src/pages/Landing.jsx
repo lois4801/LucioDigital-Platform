@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink } from "lucide-react";
@@ -110,6 +110,7 @@ export default function Landing() {
   const [cms, setCms] = useState({ cards: [], marquee: LOGOS, texts: {} });
   const [editCard, setEditCard] = useState(null);
   const [tickerOpen, setTickerOpen] = useState(false);
+  const chatColorTimer = useRef(null);
   useEffect(() => { api.get("/public/landing").then(r => setCms(r.data)).catch(() => {}); }, []);
   const tx = (k, fallback) => cms.texts?.[k] ?? fallback;
   const saveText = (k) => async (v) => setCms(await saveLanding({ texts: { [k]: v } }));
@@ -308,7 +309,12 @@ export default function Landing() {
         <span><Tx k="footer_copy" f="© 2026 OmniStack AI · Agency Multi-Tenant Platform" /></span>
         <span>Built for Emergent</span>
       </footer>
-      <ChatWidget token="studio" brand="OmniStack AI" accent="#10B981" />
+      <ChatWidget token="studio" brand="OmniStack AI" accent="#10B981" textColor={tx("chat_text_color", "#000000")} admin={admin}
+        onTextColor={(v) => {
+          setCms(c => ({ ...c, texts: { ...c.texts, chat_text_color: v } }));
+          clearTimeout(chatColorTimer.current);
+          chatColorTimer.current = setTimeout(async () => { try { await saveText("chat_text_color")(v); } catch { toast.error("Save failed"); } }, 400);
+        }} />
     </div>
   );
 }

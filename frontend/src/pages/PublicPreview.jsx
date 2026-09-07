@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import BlockPreview from "@/components/builder/BlockPreview";
 import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
+import { useTenantCursorFX } from "@/components/CursorFX";
 import ChatWidget from "@/components/ChatWidget";
 import { themeVars, loadFonts } from "@/lib/theme";
 import { Layers, Eye } from "lucide-react";
@@ -13,6 +14,7 @@ export default function PublicPreview() {
   const [site, setSite] = useState(null);
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
+  useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect);
 
   useEffect(() => {
     api.get(`/public/site/${token}`).then(r => { setSite(r.data); loadFonts(r.data.theme); }).catch(e => setErr(e.response?.data?.detail || "Preview unavailable"));
@@ -49,8 +51,7 @@ export default function PublicPreview() {
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> OmniStack AI</Link>
         </div>
       </div>
-      {page?.blocks.map(b => <EffectWrap key={b.id} effects={b.style?.effects} motionOn={site.theme.motion !== false}><BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} /></EffectWrap>)}
-      {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
+      {page?.blocks.map(b => <EffectWrap key={b.id} effects={b.style?.effects} motionOn={site.theme.motion !== false}><BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} /></EffectWrap>)}      {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
     </div>
   );

@@ -293,6 +293,22 @@ async def me(user: dict = Depends(get_current_user)):
     return {**user, "is_admin": (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()}
 
 
+CURSOR_EFFECTS = {"none", "fairy", "bubbles", "smoke", "fire", "wind", "frost", "plasma", "ink", "comet", "matrix"}
+
+
+@api.patch("/me/preferences")
+async def update_preferences(body: dict, user: dict = Depends(get_current_user)):
+    updates = {}
+    if "cursor_effect" in body:
+        if body["cursor_effect"] not in CURSOR_EFFECTS:
+            raise HTTPException(status_code=400, detail="Unknown cursor effect")
+        updates["cursor_effect"] = body["cursor_effect"]
+    if not updates:
+        raise HTTPException(status_code=400, detail="No preferences provided")
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": updates})
+    return {**user, **updates}
+
+
 # Emergent Google OAuth session exchange
 @api.post("/auth/session")
 async def session_exchange(body: SessionExchangeIn, response: Response):

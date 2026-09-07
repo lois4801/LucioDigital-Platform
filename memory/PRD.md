@@ -139,3 +139,17 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - New `/app/frontend/src/components/UiLabels.jsx`: `UiLabelsProvider`, `<L k d>` inline contentEditable label (saves on blur + "Saved" toast), `UiLabelsToolbar` with "Apply to all tenants" and "Reset all".
 - Wired into AppDetail.jsx (Tenant overline, tenant name, all 12 tab labels), OverviewPanel.jsx (Lifecycle status, Live hosting metrics + metric labels, Visitors 24h, Quick links, card title/desc), AnalyticsCard.jsx (analytics heading/subheading, 5 stat titles, Daily views, Top pages).
 - Tested: iteration_19.json — backend 10/10 pytest, frontend 100% (persistence, per-tenant scoping, permission gating, tab nav intact).
+
+## 2026-06 — Inline text toolbar, chat attachments, Cursor Effects Engine (DONE)
+### Inline text styling + undo (iter 20)
+- `/app/frontend/src/components/InlineTextTools.jsx`: `EditableText` — click-to-edit with Ctrl+Z undo stack, floating toolbar (8 fonts: Inter, Poppins, Roboto, Playfair Display, Space Grotesk, DM Sans, Sora, Outfit + colour picker + Clear), dismisses on outside click. Used by Overview labels (`UiLabels.L`) and the Site Mode canvas (`BlockPreview.T`).
+- Styles persist per tenant: `apps.ui_label_styles` (Overview) and `block.props._styles` (canvas, saved with the page). Global defaults in `site_settings.ui_labels.styles`.
+- Fix: inline label click no longer swallows parent tab-button clicks (iter-20 regression).
+### Chat widget (iter 21)
+- Blank input placeholder; attachment button + `POST /api/public/chat/{token}/upload` (images, PDF, DOC/X, XLS/X, CSV, TXT, ZIP; 10 MB cap; Emergent Object Storage; records in `db.files`).
+- Chat text colour defaults to `#000000`, admin-editable from a colour picker in the widget header, persisted as landing CMS key `chat_text_color`; bubbles auto-lighten for contrast.
+### Cursor Effects Engine (iter 22)
+- `/app/frontend/src/lib/cursorEffects.js` + `/app/frontend/src/components/CursorFX.jsx`: canvas engine with 10 trails (fairy, bubbles, smoke, fire, wind, frost, plasma, ink, comet, matrix) + None, capped at 260 particles, auto-off on coarse pointer / reduced motion.
+- Picker (`cursor-fx-picker-btn`) in the Dashboard and tenant headers with hover-to-try preview; saved per user via `PATCH /api/me/preferences` and cached in localStorage.
+- Per-tenant effect via ThemePanel `theme.cursor_effect` — drives the public preview and is injected into exported sites (`CURSOR_FX_JS` in export_gen).
+- Tested: iteration_20/21/22.json — all backend + frontend cases pass (all 10 effects verified painting).

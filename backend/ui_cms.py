@@ -8,7 +8,8 @@ MAX_KEYS = 200
 
 
 class LabelsPatch(BaseModel):
-    labels: Dict[str, str]
+    labels: Optional[Dict[str, str]] = None
+    styles: Optional[Dict[str, Dict[str, str]]] = None
     scope: Optional[str] = "tenant"  # tenant | global
 
 
@@ -16,72 +17,91 @@ def _is_platform_admin(user: dict) -> bool:
     return (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()
 
 
+def _key(k: str) -> str:
+    return (k or "").strip().replace(".", "_").replace("$", "_")[:80]
+
+
 def _clean(labels: Dict[str, str]) -> Dict[str, str]:
     out = {}
     for k, v in list(labels.items())[:MAX_KEYS]:
-        k = (k or "").strip().replace(".", "_").replace("$", "_")[:80]
+        k = _key(k)
         if k:
             out[k] = (v or "").strip()[:400]
     return out
 
 
+def _clean_styles(styles: Dict[str, Dict[str, str]]) -> Dict[str, Dict[str, str]]:
+    out = {}
+    for k, v in list(styles.items())[:MAX_KEYS]:
+        k = _key(k)
+        if not k or not isinstance(v, dict):
+            continue
+        out[k] = {
+            "font": (v.get("font") or "").strip()[:120],
+            "color": (v.get("color") or "").strip()[:40],
+        }
+    return out
+
+
 def register(api, db, get_current_user, get_user_app):
-    async def _globals() -> Dict[str, str]:
+    async def _globals() -> dict:
         doc = await db.site_settings.find_one({"key": "ui_labels"}, {"_id": 0}) or {}
-        return doc.get("labels", {})
+        return {"labels": doc.get("labels", {}), "styles": doc.get("styles", {})}
 
     async def _can_edit(app_doc: dict, user: dict) -> bool:
         return _is_platform_admin(user) or app_doc["owner_id"] == user["user_id"]
 
+    def _shape(g: dict, t_labels: dict, t_styles: dict, can_edit: bool) -> dict:
+        return {
+            "labels": {**g["labels"], **t_labels},
+            "styles": {**g["styles"], **t_styles},
+            "tenant": t_labels,
+            "tenant_styles": t_styles,
+            "global": g["labels"],
+            "global_styles": g["styles"],
+            "can_edit": can_edit,
+        }
+
     @api.get("/apps/{app_id}/ui_labels")
     async def get_ui_labels(app_id: str, user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
-        g = await _globals()
-        t = doc.get("ui_overrides") or {}
-        return {
-            "labels": {**g, **t},
-            "tenant": t,
-            "global": g,
-            "can_edit": await _can_edit(doc, user),
-        }
+        return _shape(await _globals(), doc.get("ui_overrides") or {}, doc.get("ui_label_styles") or {}, await _can_edit(doc, user))
 
     @api.put("/apps/{app_id}/ui_labels")
     async def put_ui_labels(app_id: str, body: LabelsPatch, user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
         if not await _can_edit(doc, user):
             raise HTTPException(403, "Only the platform admin or tenant owner can edit labels")
-        patch = _clean(body.labels)
-        if not patch:
-            raise HTTPException(400, "No labels provided")
+        labels = _clean(body.labels or {})
+        styles = _clean_styles(body.styles or {})
+        if not labels and not styles:
+            raise HTTPException(400, "No labels or styles provided")
         ts = datetime.now(timezone.utc).isoformat()
         if body.scope == "global":
             if not _is_platform_admin(user):
                 raise HTTPException(403, "Only the platform admin can set global defaults")
-            g = {**(await _globals()), **patch}
+            g = await _globals()
+            g = {"labels": {**g["labels"], **labels}, "styles": {**g["styles"], **styles}}
             await db.site_settings.update_one(
                 {"key": "ui_labels"},
-                {"$set": {"key": "ui_labels", "labels": g, "updated_at": ts, "updated_by": user["email"]}},
+                {"$set": {"key": "ui_labels", **g, "updated_at": ts, "updated_by": user["email"]}},
                 upsert=True,
             )
         else:
-            await db.apps.update_one(
-                {"app_id": app_id},
-                {"$set": {**{f"ui_overrides.{k}": v for k, v in patch.items()}, "updated_at": ts}},
-            )
-        fresh = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "ui_overrides": 1})
-        g = await _globals()
-        t = (fresh or {}).get("ui_overrides") or {}
-        return {"labels": {**g, **t}, "tenant": t, "global": g, "can_edit": True}
+            sets = {f"ui_overrides.{k}": v for k, v in labels.items()}
+            sets.update({f"ui_label_styles.{k}": v for k, v in styles.items()})
+            await db.apps.update_one({"app_id": app_id}, {"$set": {**sets, "updated_at": ts}})
+        fresh = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "ui_overrides": 1, "ui_label_styles": 1}) or {}
+        return _shape(await _globals(), fresh.get("ui_overrides") or {}, fresh.get("ui_label_styles") or {}, True)
 
     @api.delete("/apps/{app_id}/ui_labels")
     async def reset_ui_labels(app_id: str, scope: str = "tenant", user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
         if not await _can_edit(doc, user):
             raise HTTPException(403, "Only the platform admin or tenant owner can edit labels")
-        await db.apps.update_one({"app_id": app_id}, {"$unset": {"ui_overrides": ""}})
+        await db.apps.update_one({"app_id": app_id}, {"$unset": {"ui_overrides": "", "ui_label_styles": ""}})
         if scope == "all":
             if not _is_platform_admin(user):
                 raise HTTPException(403, "Only the platform admin can reset global defaults")
-            await db.site_settings.update_one({"key": "ui_labels"}, {"$set": {"labels": {}}}, upsert=True)
-        g = await _globals()
-        return {"labels": g, "tenant": {}, "global": g, "can_edit": True}
+            await db.site_settings.update_one({"key": "ui_labels"}, {"$set": {"labels": {}, "styles": {}}}, upsert=True)
+        return _shape(await _globals(), {}, {}, True)

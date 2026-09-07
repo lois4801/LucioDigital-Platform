@@ -1,0 +1,41 @@
+{
+  "summary": "Iter-20 inline text toolbar (fonts+colours) + Ctrl+Z undo + builder canvas styles tested end-to-end. Backend: 11/11 pytest cases in test_iter20_ui_label_styles.py pass — styles round-trip (tenant), labels+styles combined PUT, empty-body 400, dot-key sanitisation ('a.b' → 'a_b'), global-scope styles surface on other apps and are overridden by tenant, non-owner PUT styles = 403, non-admin global-scope PUT = 403, DELETE scope=tenant clears both labels and tenant_styles, DELETE scope=all clears globals too. Frontend Overview: 11 editable labels detected under Vote Banner Test Co (analytics_subheading, stat_page_views, metric_uptime …); floating inline-text-toolbar appears on click with inline-font-select (Default + 8 fonts = 9 options) and inline-color-input; picking Playfair Display applied fontFamily inline and PERSISTED after page reload; color #00e5ff persisted after reload; outside-click dismisses toolbar; inline-style-clear-btn clears both font and colour and persists. Ctrl+Z during typing reverts character-by-character (typed 'XYZ' → undo1 'XY' → undo2 'X' → undo3 original), Escape cancels the edit, Enter commits (implicit). Builder canvas (/apps/{id} → Site Mode): 104 inline-edit-<path> targets rendered, toolbar works identically, chose 'Sora' font and #ffaa00 colour on inline-edit-title, clicked builder-save-btn and after full reload the h1 still shows Sora + orange; public preview page /p/{token} renders the same Sora font + rgb(255,170,0) heading colour with NO toolbar and NO contentEditable field (read-only). Props panel correctly filters out '_styles' key.\n\nONE CRITICAL FRONTEND REGRESSION: with can_edit=true, EditableText adds onClick={stopPropagation} to the contentEditable Tag, which prevents click events from bubbling to the parent <button data-testid=\"tab-*-btn\">. Result: admins/owners can no longer switch tabs by clicking (Site Mode / CMS / App Mode / Workflows / etc.) — the click only enters label edit mode. Programmatic .click() on the button still works. Non-editing members are unaffected. This blocks a core navigation path introduced by this iteration. Fix: don't stopPropagation on the editable Tag click when it is inside a nav-role button, or wrap L in a mode where only focus/keyboard enters edit (e.g. dblclick to edit for tab labels, or attach handler to a sibling icon).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "AppDetail tab bar / EditableText", "issue": "Clicking any tab as admin/owner opens inline edit instead of switching tab. EditableText's onClick stopPropagation swallows the parent <button data-testid=tab-*-btn> click. All 12 tabs affected (site-mode/cms/blueprint/workflows/inbox/media/billing/domain/handoff/activity/members). Regular users (can_edit=false) still navigate fine because EditableText returns a plain Tag without the handler.", "selector": "[data-testid=tab-builder-btn] > [data-testid=label-tab-builder]", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Overview label toolbar", "issues": ["Floating toolbar is anchored bottom-full/left-0 so on the very first label near top of the section it can overflow above the viewport. Consider auto-flip when near top."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter20_ui_label_styles.py",
+    "/app/backend/tests/test_iter19_ui_labels.py",
+    "/app/test_reports/pytest/iter20_ui_label_styles.xml"
+  ],
+  "action_items": [
+    "Fix EditableText inside tab buttons: either drop onClick={stopPropagation} on the editable Tag when parent is interactive, or gate edit-entry behind dblclick/focus-only when the L component is used inside a <button>. Tabs currently unreachable via mouse for admins.",
+    "(Optional) Auto-flip the InlineToolbar when the element sits within ~40px of the viewport top to avoid clipping."
+  ],
+  "critical_code_review_comments": [
+    "InlineTextTools.EditableText L69: `onClick={e => e.stopPropagation()}` on the contentEditable Tag prevents legitimate parent button clicks; combine with a check like `if (!e.target.closest('button'))` or move stopPropagation to the wrapper span only when NOT inside a role=button.",
+    "InlineTextTools.EditableText undo stack pushes only on `onInput`; deletions via Backspace also fire input and are pushed — good. But there is no upper cap when the user pastes large blocks: still ok because 60-entry limit exists.",
+    "BlockPreview.styleKey encodes path dots as '__'; consistent with backend _clean() replacing '.' with '_' (single underscore). This double vs single underscore is fine for the current path shape (no bare underscores in paths) but note the mismatch — if a block ever has a key containing '__' the sanitisation is ambiguous.",
+    "UiLabels.saveStyle sends {styles: {[key]: {font,color}}} on every change including color-input drag; consider debouncing to avoid a PUT per intermediate colour while dragging the native picker (Chrome fires input events continuously)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter20_ui_label_styles.py"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "90% (all new features work; regression on tab navigation for admins)"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026!  ; tenant app_id: app_bdbf27abe643",
+  "seed_data_creation": "Created 1 TEST_iter20_secondapp for backend global/tenant override tests; deleted afterwards via API. Cleared ui_labels tenant + global on app_bdbf27abe643 at end of session.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend styles endpoints fully covered (11 cases in test_iter20_ui_label_styles.py, JUnit at /app/test_reports/pytest/iter20_ui_label_styles.xml). Frontend inline toolbar UX works (font+color persist across reload on both Overview labels and Builder canvas T/E components, preview renders read-only). Confirmed critical regression: EditableText onClick stopPropagation breaks tab navigation for admins. When retesting, verify tabs are clickable AND label edit still works (e.g. by using dblclick to edit, or by scoping stopPropagation). Use programmatic click as workaround: `document.querySelector('[data-testid=tab-builder-btn]').click()`.",
+  "rca of the issue": "Cause: /app/frontend/src/components/InlineTextTools.jsx line ~71 attaches `onClick={e => e.stopPropagation()}` on the contentEditable Tag rendered by EditableText. AppDetail (and any component that nests L inside a <button>, such as the tab bar in UiLabels/AppDetail) relies on click bubbling from the label span to the button to trigger tab switching. Because the whole visible content of the tab button is the L span, every click lands on the span, stopPropagation fires, and the button's onClick (tab switch) never runs. Reproduction: login as jaybernabe@luciodigital.com → go to /apps/app_bdbf27abe643 → click any tab (e.g. Site Mode). Observed: tab stays on Overview, tab label enters edit mode. Expected: navigate to Site Mode. Mitigation options: (a) remove stopPropagation on the Tag and rely on the wrap span only; (b) escalate only when already focused (edit mode) — i.e. `if (document.activeElement === ref.current) e.stopPropagation()`; (c) change L to enter edit on double-click when it detects it is inside a role=button ancestor."
+}

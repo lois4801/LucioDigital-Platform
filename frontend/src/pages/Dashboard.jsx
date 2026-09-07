@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { CursorFXPicker } from "@/components/CursorFX";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -86,6 +87,7 @@ export default function Dashboard() {
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
             <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
+            <CursorFXPicker />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button data-testid="nav-notifications-btn" className="relative w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">

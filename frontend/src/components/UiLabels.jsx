@@ -1,12 +1,13 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { RotateCcw, Globe2 } from "lucide-react";
 import api from "@/lib/api";
+import { EditableText } from "@/components/InlineTextTools";
 
 const Ctx = createContext(null);
 
 export function UiLabelsProvider({ appId, children }) {
-  const [state, setState] = useState({ labels: {}, tenant: {}, global: {}, can_edit: false });
+  const [state, setState] = useState({ labels: {}, styles: {}, tenant: {}, tenant_styles: {}, can_edit: false });
 
   useEffect(() => {
     if (!appId) return;
@@ -18,58 +19,49 @@ export function UiLabelsProvider({ appId, children }) {
     setState(s => ({ ...s, ...data }));
   }, [appId]);
 
+  const saveStyle = useCallback(async (key, style) => {
+    const { data } = await api.put(`/apps/${appId}/ui_labels`, { styles: { [key]: { font: style.font || "", color: style.color || "" } }, scope: "tenant" });
+    setState(s => ({ ...s, ...data }));
+  }, [appId]);
+
   const reset = useCallback(async (scope = "tenant") => {
     const { data } = await api.delete(`/apps/${appId}/ui_labels?scope=${scope}`);
     setState(s => ({ ...s, ...data }));
   }, [appId]);
 
   const applyAllTenants = useCallback(async () => {
-    const tenant = state.tenant || {};
-    if (!Object.keys(tenant).length) { toast.info("Nothing to apply — edit some labels first."); return; }
-    const { data } = await api.put(`/apps/${appId}/ui_labels`, { labels: tenant, scope: "global" });
+    const labels = state.tenant || {};
+    const styles = state.tenant_styles || {};
+    if (!Object.keys(labels).length && !Object.keys(styles).length) { toast.info("Nothing to apply — edit some labels first."); return; }
+    const { data } = await api.put(`/apps/${appId}/ui_labels`, { labels, styles, scope: "global" });
     setState(s => ({ ...s, ...data }));
     toast.success("Applied to all tenants");
-  }, [appId, state.tenant]);
+  }, [appId, state.tenant, state.tenant_styles]);
 
-  return <Ctx.Provider value={{ ...state, save, reset, applyAllTenants }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ ...state, save, saveStyle, reset, applyAllTenants }}>{children}</Ctx.Provider>;
 }
 
 export function useUiLabels() {
-  return useContext(Ctx) || { labels: {}, can_edit: false, save: async () => {} };
+  return useContext(Ctx) || { labels: {}, styles: {}, can_edit: false, save: async () => {}, saveStyle: async () => {} };
 }
 
-// Inline click-to-edit label. Admin/owner edits; everyone else sees plain text.
-export function L({ k, d, as: Tag = "span", className, testid }) {
-  const { labels, can_edit, save } = useUiLabels();
-  const ref = useRef(null);
+// Inline click-to-edit label with font/colour toolbar. Admin/owner edits; others see plain text.
+export function L({ k, d, as = "span", className, testid }) {
+  const { labels, styles, can_edit, save, saveStyle } = useUiLabels();
   const value = labels[k] ?? d;
-  const tid = testid || `ui-label-${k}`;
-
-  useEffect(() => { if (ref.current && ref.current.innerText !== value) ref.current.innerText = value; }, [value]);
-
-  if (!can_edit) return <Tag className={className} data-testid={tid}>{value}</Tag>;
+  const st = styles?.[k] || {};
   return (
-    <Tag
-      ref={ref}
-      data-testid={tid}
-      data-label-key={k}
-      contentEditable
-      suppressContentEditableWarning
-      title="Click to edit"
-      className={`${className || ""} outline-none rounded-sm cursor-text hover:ring-1 hover:ring-[var(--acc)]/50 focus:ring-2 focus:ring-[var(--acc)] transition-shadow`}
-      onKeyDown={e => {
-        if (e.key === "Enter") { e.preventDefault(); ref.current.blur(); }
-        if (e.key === "Escape") { ref.current.innerText = value; ref.current.blur(); }
-      }}
-      onBlur={async () => {
-        const v = ref.current.innerText.trim();
-        if (!v || v === value) { ref.current.innerText = value; return; }
-        try { await save(k, v); toast.success("Saved"); }
-        catch { toast.error("Save failed"); ref.current.innerText = value; }
-      }}
-    >
-      {value}
-    </Tag>
+    <EditableText
+      as={as}
+      value={value}
+      className={className}
+      editable={can_edit}
+      font={st.font}
+      color={st.color}
+      testid={testid || `ui-label-${k}`}
+      onCommit={async v => { try { await save(k, v); toast.success("Saved"); } catch { toast.error("Save failed"); } }}
+      onStyleChange={async s => { try { await saveStyle(k, s); toast.success("Saved"); } catch { toast.error("Save failed"); } }}
+    />
   );
 }
 
@@ -78,7 +70,7 @@ export function UiLabelsToolbar() {
   if (!can_edit) return null;
   return (
     <div data-testid="ui-labels-toolbar" className="flex flex-wrap items-center gap-2 justify-end">
-      <span className="text-xs text-[var(--dim)] mr-auto">Click any label to rename it — changes save to this tenant.</span>
+      <span className="text-xs text-[var(--dim)] mr-auto">Click any label to rename it, pick a font or colour · Ctrl+Z undoes while typing.</span>
       <button data-testid="ui-labels-apply-all-btn" onClick={applyAllTenants}
         className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Globe2 size={12} /> Apply to all tenants</button>
       <button data-testid="ui-labels-reset-btn"

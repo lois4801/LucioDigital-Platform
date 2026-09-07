@@ -1,20 +1,28 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import * as Icons from "lucide-react";
 import { SwapOverlay } from "@/components/builder/ImageSwap";
+import { EditableText } from "@/components/InlineTextTools";
+
+const styleKey = (path) => `_styles.${String(path).replace(/\./g, "__")}`;
 
 // Inline-editable text. `path` is dotted path into block.props
-function T({ as: Tag = "span", value, path, onEdit, className, style }) {
-  const ref = useRef();
+function T({ as: Tag = "span", value, path, onEdit, className, style, styles }) {
   const editable = !!onEdit;
+  const st = styles?.[String(path).replace(/\./g, "__")] || {};
   return (
-    <Tag ref={ref} className={`${className || ""} ${editable ? "outline-none hover:ring-1 hover:ring-[var(--tp)]/40 focus:ring-2 focus:ring-[var(--tp)] rounded-sm cursor-text" : ""}`} style={style}
-      contentEditable={editable} suppressContentEditableWarning
-      data-testid={editable ? `inline-edit-${path}` : undefined}
-      onBlur={editable ? () => { const v = ref.current.innerText; if (v !== value) onEdit(path, v); } : undefined}
-      onKeyDown={editable ? (e) => { if (e.key === "Enter" && Tag !== "p") { e.preventDefault(); ref.current.blur(); } } : undefined}
-      onClick={editable ? (e) => e.stopPropagation() : undefined}>
-      {value}
-    </Tag>
+    <EditableText
+      as={Tag}
+      value={value}
+      className={className}
+      style={style}
+      editable={editable}
+      font={st.font}
+      color={st.color}
+      singleLine={Tag !== "p"}
+      testid={editable ? `inline-edit-${path}` : undefined}
+      onCommit={(v) => onEdit(path, v)}
+      onStyleChange={(s) => onEdit(styleKey(path), { font: s.font || "", color: s.color || "" })}
+    />
   );
 }
 
@@ -35,7 +43,7 @@ const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACK
 export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [] }) {
   const p = block.props || {}, s = block.style || {};
   const cls = sectionCls(s), m = mut(s);
-  const E = (path, extra = {}) => ({ path, onEdit, ...extra });
+  const E = (path, extra = {}) => ({ path, onEdit, styles: p._styles, ...extra });
   const Swap = ({ path, current }) => onImage ? <SwapOverlay testid={`image-swap-${path}`} onSwap={() => onImage(path, current)} /> : null;
   const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
   const [openItem, setOpenItem] = useState(null);

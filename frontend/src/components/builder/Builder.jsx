@@ -255,7 +255,7 @@ export default function Builder({ appId, appDoc }) {
               <div>
                 <div className="overline mb-2">{sel.type} content</div>
                 <div className="space-y-3 max-h-[36vh] overflow-y-auto scrollbar-thin pr-1">
-                  {Object.entries(sel.props).map(([k, v]) => (
+                  {Object.entries(sel.props).filter(([k]) => k !== "_styles").map(([k, v]) => (
                     <div key={k}><div className="text-[10px] text-[var(--dim)] mb-1 uppercase flex items-center justify-between">{k}
                       {(k === "image" || k === "images") && <button data-testid={`ai-image-${k}-btn`} disabled={imgBusy} onClick={() => genImage(sel, k)} className="normal-case text-[var(--acc)] flex items-center gap-1 hover:underline disabled:opacity-50">{imgBusy ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} {imgBusy ? "Generating…" : "Generate with AI"}</button>}</div>
                       {typeof v === "string" ? <input value={v} onChange={e => editProps(sel.id, k, e.target.value)} data-testid={`prop-${k}-input`} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1.5 text-xs outline-none focus:border-[var(--acc)]" />

@@ -14,6 +14,7 @@ import PublicPreview from "@/pages/PublicPreview";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
 import CursorTrail from "@/components/CursorTrail";
+import { CursorFXProvider } from "@/components/CursorFX";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
@@ -66,9 +67,11 @@ export default function App() {
     <div className="App">
       <BrowserRouter>
         <AuthProvider>
-          <AppRouter />
-          <Toaster theme="dark" position="top-right" richColors closeButton />
-          <CursorTrail color="#10B981" />
+          <CursorFXProvider>
+            <AppRouter />
+            <Toaster theme="dark" position="top-right" richColors closeButton />
+            <CursorTrail color="#10B981" />
+          </CursorFXProvider>
         </AuthProvider>
       </BrowserRouter>
     </div>

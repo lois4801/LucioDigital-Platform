@@ -1,0 +1,22 @@
+{
+  "summary": "Iter-22 Cursor Effects Engine tested end-to-end (backend + frontend). All 9 backend pytest tests pass and every frontend acceptance criterion verified — including all 10 effects painting non-zero alpha pixels, hover preview, click persistence across reload, None removing canvas, per-tenant override on public preview, and admin's personal effect restoring after leaving preview. No regressions observed (base cursor-dot/cursor-ring still render, no console/page errors from the canvas engine).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter22_cursor_fx.py",
+    "/app/test_reports/pytest/iter22.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "cursorEffects.js startCursorFX reads window.innerWidth/innerHeight directly and depends on `matchMedia` in CursorFX.jsx guard — SSR-safe today because it only runs in useEffect, but any future SSR/pre-render pipeline should re-check.",
+    "particle cap MAX=260 is global, not per-effect; heavy effects (comet spawns 3/sample) can starve lighter ones on rapid mouse movement — acceptable but consider per-effect budgets if perf regressions surface.",
+    "PATCH /me/preferences silently ignores unknown keys; if the endpoint is later extended, add explicit key allowlist to avoid drift."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter22_cursor_fx.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026!; tenant app_id: app_bdbf27abe643",
+  "seed_data_creation": "None. Test uses existing seeded admin + Vote Banner Test Co tenant. Cleanup resets admin cursor_effect='none' and tenant theme.cursor_effect='none'.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter-22 cursor FX all-green. Backend endpoints: PATCH /api/me/preferences (auth+400+persist verified), PUT/GET /api/apps/{id}/theme (cursor_effect roundtrip), GET /api/public/site/{token} exposes theme.cursor_effect, and export ZIP index.html contains data-cursor-fx + CURSOR_FX_JS marker only when != 'none'. Frontend: picker on /dashboard AND /apps/{id}, 11 options, hover-preview swaps canvas data-effect, click persists in DB+localStorage across reload, 'None' removes canvas, tenant select in Site Mode + builder-save-btn drives /p/{token} preview canvas regardless of admin choice, admin's personal effect restores on leaving preview. Every effect paints (non-zero alpha samples: fairy 11, bubbles 2, smoke 71, fire 13, wind 2, frost 9, plasma 2, ink 26, comet 10, matrix 4). Iter-19/20/21 regressions not re-run but per-request only quick sanity — no errors observed during navigation/tab switching."
+}

@@ -1,0 +1,23 @@
+{
+  "summary": "Iter-21 fully verified. Backend: 9/9 pytest cases pass in test_iter21_chat_upload.py (studio + tenant upload OK for .txt/.pdf/.png, .exe rejected 400, >10MB rejected 400, invalid token 404, download via /api/public/files/... works, existing /public/chat/{token} + history still works). Frontend regression fix VERIFIED: logged in as admin on /apps/app_bdbf27abe643, all 12 tab buttons (overview/builder/cms/blueprint/workflows/inbox/media/billing/domain/handoff/activity/members) switch panels on click (state=tab-underline moved to clicked tab; Members panel content rendered). Inline label editing still works after the fix (label-header-overline renamed 'Tenant'→'TENANT X', persisted after refresh, then reverted; floating inline-text-toolbar still opens on focus). ChatWidget on landing page: chat-input placeholder is blank (''), chat-attach-btn present, selecting a .txt via chat-file-input shows chat-attachment-chip with filename + remove button, send button ENABLED with only an attachment (no text), sending posts a body containing '[attachment] hello_iter21.txt — <BACKEND>/api/public/files/...' and AI replies. Text colour: default #000000 (rgb(0,0,0)) on chat-input and message bubbles; admin sees chat-text-color-input in widget header, visitors do NOT (verified logged-out); setting picker to #ff8800 immediately recolours input+bubbles (rgb(255,136,0)) and PERSISTS to landing CMS chat_text_color, still applied after full page reload. Reset back to #000000 at end via /api/admin/landing. Voice toggle button + normal chat send unaffected; chat history reloads on reopen (GET /public/chat/studio/history/{session}).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter21_chat_upload.py",
+    "/app/test_reports/pytest/iter21.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "InlineTextTools.jsx L71 fix `if (!e.target.closest('button')) e.stopPropagation()` correctly lets tab-button click bubble; note this also causes the label to enter edit mode simultaneously (contentEditable focus), which triggers a spurious 'Saved' toast on tab click because onBlur commits when navigating away — non-blocking but polish opportunity: skip commit if the label was never edited (compare against undo stack length > 1).",
+    "ChatWidget.jsx onKeyDown Enter only calls send() when input has text; with an attachment-only state the user must click chat-send-btn (Enter on empty input is a no-op). Consider: `onKeyDown={e => e.key === 'Enter' && (input.trim() || attachment) && send()}`.",
+    "ChatWidget uploads use fetch with content-type multipart auto — good; but the client-side 10MB check uses `f.size > 10*1024*1024` (correct) while backend probably uses same limit — aligned.",
+    "Landing.jsx line 312 saves chat_text_color on every native color input event; Chrome fires 'input' continuously while dragging the picker, resulting in many PUTs. Debounce (300ms) before calling saveText."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all iter-21 acceptance criteria pass; iter-20 regression fixed)"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026! ; tenant: app_bdbf27abe643 ; chat token: studio",
+  "seed_data_creation": "Uploaded a few small test files (hello.txt, t.png, doc.pdf, greet.txt, hello_iter21.txt) via public upload endpoint — they persist in db.files/storage but are tiny and namespaced under chat/studio and chat/{tenant token}; not user-facing. Landing CMS chat_text_color was temporarily set to #ff8800 for reload-persistence check and RESET to #000000 at end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Iter-20 tab regression is definitively fixed (all 12 tab buttons clickable for admins; inline label edit still functional). Iter-21 backend upload endpoint fully covered by /app/backend/tests/test_iter21_chat_upload.py (JUnit at /app/test_reports/pytest/iter21.xml). Frontend ChatWidget attachment + admin colour picker flow works end-to-end. When testing the native <input type=color> via Playwright, use the native value setter trick (`Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el,'#hex')` followed by dispatching 'input' + 'change') — a plain el.value = ... will not trigger React's onChange."
+}

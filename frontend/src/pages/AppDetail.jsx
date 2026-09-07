@@ -18,6 +18,7 @@ import InboxPanel from "@/components/InboxPanel";
 import WorkflowsPanel from "@/components/WorkflowsPanel";
 import CmsPanel from "@/components/CmsPanel";
 import { UiLabelsProvider, L } from "@/components/UiLabels";
+import { CursorFXPicker } from "@/components/CursorFX";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -94,6 +95,7 @@ export default function AppDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <CursorFXPicker />
             {appDoc.live_url && (
               <a data-testid="app-live-link" href={appDoc.live_url} target="_blank" rel="noopener noreferrer"
                 className="btn-ghost flex items-center gap-2 text-sm">
