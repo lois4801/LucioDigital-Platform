@@ -40,9 +40,17 @@ footer{{padding:56px 0;border-top:1px solid var(--bd)}}footer h4{{font-size:14px
 """
 
 
-def render_block(b: dict, pages_nav: str) -> str:
+def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
     t, p, s = b.get("type"), b.get("props", {}), b.get("style", {}) or {}
     cls = " ".join(filter(None, [s.get("bg") if s.get("bg") in ("muted", "accent", "dark") else "", s.get("padding") if s.get("padding") in ("sm", "lg") else "", "center" if s.get("align") == "center" else ""]))
+    if t == "collection_list":
+        col = next((c for c in (cols or []) if c["slug"] == p.get("collection")), None)
+        items = (col or {}).get("items", [])[: int(p.get("limit") or 6)]
+        cards = "".join(f"<a class='card' href='{col['slug']}/{it['slug']}.html' style='display:block'>" + (f"<img class='g' src='{esc(it['cover'])}' alt='' style='aspect-ratio:16/9;margin-bottom:14px'>" if it.get("cover") else "") +
+                        f"<p class='mut' style='font-size:12px'>{esc(it.get('date'))}</p><h3 style='font-size:20px;margin-top:6px'>{esc(it['title'])}</h3><p class='mut' style='margin-top:8px'>{esc(it.get('excerpt'))}</p></a>" for it in items)
+        return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='grid g3' style='margin-top:32px'>{cards or '<p class=mut>No published items yet.</p>'}</div></div></section>"
+    if t == "collection_detail":
+        return ""
     if t == "navbar":
         links = "".join(f"<a href='{esc(l.get('href','#'))}'>{esc(l.get('label'))}</a>" for l in p.get("links", []))
         return f"<div class='wrap'><nav><span class='brand'>{esc(p.get('brand'))}</span><span class='links'>{links}</span><a class='btn' href='#'>{esc(p.get('cta','Get started'))}</a></nav></div>"
@@ -88,13 +96,30 @@ def render_block(b: dict, pages_nav: str) -> str:
     return ""
 
 
-def render_page(app_doc: dict, theme: dict, page: dict, pages: List[dict]) -> str:
-    nav = "".join(f"<a href='{'index' if pg['slug']=='/' else pg['slug'].strip('/')}.html'>{esc(pg['name'])}</a>" for pg in pages)
-    body = "".join(render_block(b, nav) for b in page.get("blocks", []))
-    body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
+def _doc(app_doc, theme, title, body, css_path="styles.css"):
     return (f"<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-            f"<title>{esc(page['name'])} · {esc(app_doc['name'])}</title><link rel='stylesheet' href='{FONT_URL.format(h=theme['font_heading'].replace(' ', '+'), b=theme['font_body'].replace(' ', '+'))}'>"
-            f"<link rel='stylesheet' href='styles.css'></head><body>{body}</body></html>")
+            f"<title>{esc(title)} · {esc(app_doc['name'])}</title><link rel='stylesheet' href='{FONT_URL.format(h=theme['font_heading'].replace(' ', '+'), b=theme['font_body'].replace(' ', '+'))}'>"
+            f"<link rel='stylesheet' href='{css_path}'></head><body>{body}</body></html>")
+
+
+def render_page(app_doc: dict, theme: dict, page: dict, pages: List[dict], cols: List[dict] = None) -> str:
+    body = "".join(render_block(b, "", cols) for b in page.get("blocks", []))
+    body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
+    return _doc(app_doc, theme, page["name"], body)
+
+
+def render_item_page(app_doc: dict, theme: dict, col: dict, item: dict, pages: List[dict]) -> str:
+    home = next((pg for pg in pages if pg.get("slug") == "/"), None)
+    nav = next((b for b in (home or {}).get("blocks", []) if b.get("type") == "navbar"), None)
+    footer = next((b for b in (home or {}).get("blocks", []) if b.get("type") == "footer"), None)
+    paras = "".join(f"<p style='font-size:18px;line-height:1.7;margin-top:18px'>{esc(x)}</p>" for x in (item.get("body") or "").split("\n") if x.strip())
+    body = (render_block(nav, "") if nav else "") + \
+        f"<section class='lg'><div class='wrap' style='max-width:800px'><p class='badge'>{esc(col['name'])}</p><h1 style='font-size:clamp(36px,5vw,56px);margin-top:16px'>{esc(item['title'])}</h1><p class='mut' style='margin-top:12px'>{esc(item.get('date'))}{(' · ' + ', '.join(item.get('tags', []))) if item.get('tags') else ''}</p>" + \
+        (f"<img class='g' src='{esc(item['cover'])}' alt='' style='aspect-ratio:16/9;margin-top:28px'>" if item.get("cover") else "") + \
+        f"<p class='mut' style='font-size:20px;margin-top:28px'>{esc(item.get('excerpt'))}</p>{paras}<p style='margin-top:40px'><a class='btn2' href='../index.html'>← Back</a></p></div></section>" + \
+        (render_block(footer, "") if footer else "")
+    body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='../{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
+    return _doc(app_doc, theme, item["title"], body, "../styles.css")
 
 
 # ---------- Lovable-style starter code from app_spec ----------

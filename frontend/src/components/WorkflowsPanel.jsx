@@ -14,8 +14,11 @@ export default function WorkflowsPanel({ appId }) {
   const [draft, setDraft] = useState(null);
   const [running, setRunning] = useState(null);
   const [emailCfg, setEmailCfg] = useState(null);
+  const [templates, setTemplates] = useState([]);
+  const [tplOpen, setTplOpen] = useState(false);
+  async function installTemplate(key) { try { const { data } = await api.post(`/apps/${appId}/workflows/templates/${key}`); setWfs([data, ...wfs]); setTplOpen(false); toast.success(`Added “${data.name}”`); } catch { toast.error("Failed"); } }
 
-  useEffect(() => { load(); api.get("/settings/email").then(r => setEmailCfg(r.data)).catch(() => {}); }, [appId]);
+  useEffect(() => { load(); api.get("/settings/email").then(r => setEmailCfg(r.data)).catch(() => {}); api.get("/workflows/templates").then(r => setTemplates(r.data)).catch(() => {}); }, [appId]);
   async function load() { const { data } = await api.get(`/apps/${appId}/workflows`); setWfs(data.workflows); setTriggers(data.triggers); setSamples(data.samples); }
   async function save() {
     if (!draft.name.trim()) return toast.error("Name required");
@@ -43,8 +46,16 @@ export default function WorkflowsPanel({ appId }) {
           <div><div className="overline mb-1 flex items-center gap-2"><Zap size={12} className="text-[var(--acc)]" /> Workflow engine</div>
             <h3 className="font-display text-2xl font-semibold tracking-tight">Trigger → conditions → actions</h3>
             <p className="text-sm text-[var(--mut)] mt-1">Automations run when leads arrive, chats start, payments succeed or members join. Emails send via OmniStack mail{emailCfg && !emailCfg.configured && " (not configured — queued)"}.</p></div>
-          <button data-testid="workflow-new-btn" onClick={() => setDraft({ ...EMPTY })} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Plus size={14} /> New workflow</button>
+          <div className="flex gap-2">
+            <button data-testid="workflow-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost text-sm !py-2 !px-4">Templates</button>
+            <button data-testid="workflow-new-btn" onClick={() => setDraft({ ...EMPTY })} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Plus size={14} /> New workflow</button>
+          </div>
         </div>
+        {tplOpen && <div data-testid="workflow-templates-list" className="card-surface p-4 grid md:grid-cols-2 gap-2">
+          {templates.map(t => <button key={t.key} data-testid={`workflow-template-${t.key}`} onClick={() => installTemplate(t.key)} className="text-left p-3 rounded-xl border border-[var(--line)] hover:border-[var(--acc)]/50 hover:bg-white/3">
+            <div className="text-sm font-semibold flex items-center gap-2"><Zap size={12} className="text-[var(--acc)]" /> {t.name}</div>
+            <div className="text-[11px] font-mono text-[var(--mut)] mt-1">on {t.trigger} → {t.actions.map(a => a.type).join(" + ")}</div></button>)}
+        </div>}
         {wfs.length === 0 && <div className="card-surface p-10 text-center text-sm text-[var(--mut)]">No workflows yet. Try “When a form is submitted → email the lead + notify team”.</div>}
         {wfs.map(w => (
           <div key={w.workflow_id} data-testid="workflow-card" className="card-surface p-5">

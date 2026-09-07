@@ -59,6 +59,13 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - CMS collections (blog posts / case studies) bound to list & detail blocks.
 - Real sandboxed React code preview in App Mode (currently structured prototype from blueprint), GitHub OAuth app (PAT today), Stripe customer portal.
 
+### Jun 2026 (v6) — CMS, Client Portal, Workflow templates (`/app/backend/cms.py`)
+- **CMS** tab: collections per app (defaults Blog posts `/blog`, Case studies `/case-studies`, custom), items (title/slug/excerpt/body/cover/date/tags/published). `collection_list` block renders cards + in-place detail view; public site ships collections; export writes `site/<collection>/<slug>.html`.
+- **Client Portal** `/portal` (same login; clients invited via Members): live link, invoices, leads, activity, "Request a change" → Inbox (source `request`) + `change_requested` workflow trigger.
+- **Workflow templates**: 6 recipes (`GET /workflows/templates`, `POST /apps/{id}/workflows/templates/{key}`); new projects auto-install welcome_lead, log_chat, change_request. Templates picker in Workflows tab.
+- App Mode: upload .docx/.pdf/.txt/.md or paste a long narrative (`POST /apps/{id}/ai/brief-upload`) → used as brief or applied as a refine request; prototype pane has a themed gradient background.
+- Testing: iteration_6.json — 14/14 backend, frontend pass.
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.

@@ -47,6 +47,7 @@ Block types and props (every block: {"id": string, "type": string, "props": {...
 - cta: {title, subtitle, cta}
 - contact: {heading, subtitle, email, phone, address}
 - footer: {brand, tagline, columns:[{title, links:[string]}]}
+- collection_list: {heading, collection: "blog|case-studies", limit: 6}  (auto-fills from the CMS)
 Hrefs for links must be page slugs like "/", "/about", "/pricing" or "#section".
 """
 
@@ -329,8 +330,9 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             raise HTTPException(404, "Preview link is invalid or has been revoked")
         pages = await db.pages.find({"app_id": doc["app_id"]}, {"_id": 0}).to_list(50)
         pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
+        cols = await hooks["public_collections"](doc["app_id"]) if hooks.get("public_collections") else []
         return {"app": {k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
-                "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "chat_enabled": True}
+                "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True}
 
     # ===== PUBLIC AI CHATBOT (text + voice) =====
     STUDIO_CONTEXT = ("OmniStack AI is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "

@@ -28,12 +28,39 @@ const Btn = ({ children, ghost }) => <span className={`inline-block px-6 py-3 ro
 const H2 = (props) => <T as="h2" {...props} className={`font-[var(--tfh)] text-3xl lg:text-4xl font-bold tracking-tight ${props.className || ""}`} />;
 const Icon = ({ name, size = 18 }) => { const I = Icons[name] || Icons.Sparkles; return <I size={size} />; };
 
-export default function BlockPreview({ block, onEdit, onNavigate, onLead }) {
+export default function BlockPreview({ block, onEdit, onNavigate, onLead, collections = [] }) {
   const p = block.props || {}, s = block.style || {};
   const cls = sectionCls(s), m = mut(s);
   const E = (path, extra = {}) => ({ path, onEdit, ...extra });
   const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
+  const [openItem, setOpenItem] = useState(null);
   async function submitLead(e) { e.preventDefault(); if (!onLead) return; try { await onLead(lead); setLead({ name: "", email: "", message: "", sent: true }); } catch { } }
+
+  if (block.type === "collection_list") {
+    const col = collections.find(c => c.slug === p.collection) || collections[0];
+    const items = (col?.items || []).filter(i => i.published !== false).slice(0, Number(p.limit) || 6);
+    if (openItem) return (
+      <section className={`${cls} text-left`} data-testid="collection-detail-view"><div className="max-w-3xl mx-auto">
+        <button onClick={() => setOpenItem(null)} className="text-sm text-[var(--tp)] font-semibold">← Back to {col?.name}</button>
+        <div className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--ts)] mt-6">{col?.name}</div>
+        <h1 className="font-[var(--tfh)] text-4xl lg:text-5xl font-extrabold tracking-tight mt-3">{openItem.title}</h1>
+        <div className={`text-sm mt-3 ${m}`}>{openItem.date}{openItem.tags?.length ? " · " + openItem.tags.join(", ") : ""}</div>
+        {openItem.cover && <img src={openItem.cover} alt="" className="w-full aspect-video object-cover rounded-[var(--tr)] mt-8" />}
+        <p className={`text-xl mt-8 ${m}`}>{openItem.excerpt}</p>
+        {(openItem.body || "").split("\n").filter(Boolean).map((x, i) => <p key={i} className="text-lg leading-relaxed mt-5">{x}</p>)}
+      </div></section>
+    );
+    return (
+      <section className={cls}><H2 value={p.heading} {...E("heading")} />
+        <div className="grid md:grid-cols-3 gap-5 mt-8 text-left">
+          {items.map(it => <button key={it.item_id} data-testid="collection-item-card" onClick={(e) => { e.stopPropagation(); setOpenItem(it); }} className={`${card} text-left hover:-translate-y-1 transition-transform`}>
+            {it.cover && <img src={it.cover} alt="" className="w-full aspect-video object-cover rounded-xl mb-4" />}
+            <div className={`text-xs ${m}`}>{it.date}</div><div className="font-[var(--tfh)] text-lg font-bold mt-1">{it.title}</div><p className="text-sm text-[var(--tmut)] mt-2">{it.excerpt}</p></button>)}
+          {items.length === 0 && <div className={`text-sm ${m}`}>No published items in “{col?.name || p.collection}” yet — add some in the CMS tab.</div>}
+        </div>
+      </section>
+    );
+  }
 
   if (block.type === "navbar") return (
     <nav className="px-8 lg:px-12 py-5 flex items-center justify-between border-b border-[var(--tbd)]">

@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 6 (v6: CMS collections+items per app, Client Portal, Workflow templates, Long-brief upload). Backend: 14/14 pytest cases PASS in test_v6_cms_portal.py. GET /apps/{nexus}/cms returns 2 default collections (blog, case-studies) with items array; POST item + PUT toggle published false/true + DELETE all work. POST duplicate collection with same generated slug -> 400. GET /public/site/{nexus preview_token} returns .collections with blog items limited to published=true (verified by creating a draft and confirming it is filtered). GET /apps/{nexus}/export/source ZIP includes site/blog/<slug>.html. Templates: GET /workflows/templates returns 6 keys {welcome_lead,slack_ping,thank_payment,log_chat,pro_alert,change_request}; POST unknown key -> 404; POST /apps {name:'TEST_QA_v6',industry:'SaaS Portals',kind:'app'} -> GET /apps/{id}/workflows contains all 3 defaults (welcome_lead,log_chat,change_request) and triggers list includes 'change_requested'. Portal: GET /api/portal returns user + 8 apps each with role, invoices, leads, requests, activity. POST /portal/{nexus}/request creates message source='request', appears in /apps/{nexus}/inbox, and change_request workflow.runs increments within 6s. Brief upload: .txt (>20c) -> 200 chars/text; .docx (built via python-docx) -> 200; .exe -> 400. Frontend Playwright (correct route /apps/:appId): dashboard nav-portal-btn -> /portal shows client-portal with 8 portal-app-*, portal-live-link visible, portal-request-title+details+submit added a portal-request-row (count 2->3). Nexus tab-cms-btn -> cms-panel: cms-collection-blog + cms-collection-case-studies visible (once selecting cur), cms-new-item-btn opens editor, filled title+excerpt, cms-item-save-btn -> cms-item-row count increased to 2; cms-item-toggle-btn toggled published; cms-new-collection-input+btn added cms-collection-test-qa-ui-col. Workflows tab: workflow-templates-btn -> workflow-templates-list; clicked workflow-template-thank_payment -> workflow-card count 3->4. Site Mode tab-builder-btn -> builder-add-collection_list-block-btn -> 1 collection-item-card rendered; clicking it opened collection-detail-view; builder-save-btn saved. Public preview /p/{nexus token}: 1 collection-item-card rendered on home, click opened collection-detail-view. App Mode (/apps/app_627d86264eac tab-blueprint-btn): app-long-brief-btn opens dialog with brief-upload-btn + brief-long-input; pasting >20c enables brief-apply-btn (did NOT click, per instructions); blueprint-prototype inner canvas uses radial-gradient background (verified on line 131 of BlueprintPanel.jsx). Regression: /apps/{nexus} tab-inbox-btn, tab-handoff-btn, tab-cms-btn, tab-workflows-btn, tab-builder-btn all render; /deploy shows 8 deploy-row-*.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/apps/{id}/cms", "issue": "Duplicate-name check uses slugify(name) so 'Blog posts' (slug 'blog-posts') is allowed when a default 'Blog posts' with hard-coded slug 'blog' already exists. Uniqueness should key on normalized name OR default collections should be inserted with slugify('Blog posts')='blog-posts' to be consistent."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_v6_cms_portal.py", "/app/test_reports/pytest/pytest_v6.xml"],
+  "action_items": [
+    "Optional: unify duplicate-collection detection to compare on normalized name (or seed default collections with slugified slugs) so POSTing 'Blog posts' twice returns 400 regardless of default slug (line cms.py:109)."
+  ],
+  "critical_code_review_comments": [
+    "cms.py:109 duplicate check only uses slug not name — hard-coded default slugs ('blog','case-studies') don't collide with slugify(name) of same display name, so client can silently create a second 'Blog posts' collection with slug 'blog-posts'.",
+    "cms.py public_collections is called inline in the public site payload but its items query has .to_list(200) with no pagination indicator; large blogs will silently truncate. Consider adding a .count field.",
+    "cms.py extract_text for PDFs swallows any exception into a generic HTTPException(400,'Could not read this PDF') — logs would help diagnose corrupted uploads.",
+    "cms.py brief_upload reads entire file into memory with no size cap — a 50MB pdf will be fully loaded before rejection. Add UploadFile size check.",
+    "cms.py install_template inserts workflows with runs=0/last_run=None but does not de-duplicate: calling POST /apps/{id}/workflows/templates/change_request twice yields two identical workflows firing on every event; UI already installs 3 defaults on app create so a user re-adding change_request via /portal fire path will trigger multiple change_request workflows on the SAME app for one request. Consider idempotency by (app_id, template) key.",
+    "server.py new-app create flow: install_defaults is not shown in the request flow — verify defaults are installed only once (not on every GET); pytest confirmed 3 defaults appear on newly created app but no dedupe guard exists.",
+    "portal.py leads count uses source in ['contact','chat'] — chat_lead workflow triggers on source='chat' but sample uses different key names. Not blocking but naming is inconsistent between messages.source and workflow trigger sample keys.",
+    "Portal: portal-request-row rendered client-side but portal-live-link only shows when preview_enabled — safe, but there is no fallback text for offline apps (empty column looks broken)."
+  ],
+  "updated_files": ["/app/backend/tests/test_v6_cms_portal.py", "/app/test_reports/iteration_6.json"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026!",
+  "seed_data_creation": "Nexus (app_1cb6f2b89eb6): 1 TEST_UI v6 Post CMS item + TEST_QA_UI_col collection left by UI test (safe to prune); 1 collection_list block added to Home page and SAVED (part of test flow). 1 'Update hero' portal request left on Nexus inbox. change_request workflow.runs on Nexus incremented once by request test. New app 'TEST_QA_v6' created and deleted in teardown. 1 thank_payment workflow-card added on Nexus workflows (safe to prune).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "6 pytest suites: backend_test.py, test_extras.py, test_v3_studio.py, test_v4_inbox_github.py, test_v5_workflows.py, test_v6_cms_portal.py — all deterministic with -n 0. NEXUS_ID=app_1cb6f2b89eb6, preview_token=pv_cd9ae858f296ee1b2b15, blueprint app=app_627d86264eac. Correct app route is /apps/:appId (plural) NOT /app/. Public preview at /p/:token. AI generation was NOT called this iteration per instructions. Nexus has a saved collection_list block on Home now (published item 'Why headless commerce wins in 2026') — visible in public preview. change_request workflow on Nexus exists and fires correctly on POST /api/portal/{id}/request. No new AI credits consumed.",
+  "rca of the issue": "N/A — no blocking bugs. Minor duplicate-collection uniqueness issue documented above."
+}

@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 # LLM
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from studio import DEFAULT_THEME
-from export_gen import render_page, css, starter_app_files
+from export_gen import render_page, render_item_page, css, starter_app_files
 
 # ---------- Setup ----------
 JWT_ALGORITHM = "HS256"
@@ -393,6 +393,7 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
         "updated_at": now_utc().isoformat(),
     }
     await db.apps.insert_one(doc)
+    await CMS_HOOKS["install_defaults"](app_id)
     # seed a starter page
     await db.pages.insert_one({
         "page_id": new_id("pg"),
@@ -633,11 +634,15 @@ async def build_export_files(app_doc: dict) -> dict:
     pages = await db.pages.find({"app_id": app_id}, {"_id": 0}).to_list(50)
     pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
     theme = {**DEFAULT_THEME, **(app_doc.get("theme") or {})}
+    cols = await CMS_HOOKS["public_collections"](app_id)
     embed = f"<script src='{FRONTEND_URL}/api/public/embed.js' data-token='{app_doc.get('preview_token')}' data-origin='{FRONTEND_URL}'></script>" if app_doc.get("preview_token") else ""
     files = {}
     for pg in pages:
         fname = "index.html" if pg.get("slug") == "/" else f"{pg['slug'].strip('/')}.html"
-        files[f"site/{fname}"] = render_page(app_doc, theme, pg, pages).replace("</body>", f"{embed}</body>")
+        files[f"site/{fname}"] = render_page(app_doc, theme, pg, pages, cols).replace("</body>", f"{embed}</body>")
+    for c in cols:
+        for it in c["items"]:
+            files[f"site/{c['slug']}/{it['slug']}.html"] = render_item_page(app_doc, theme, c, it, pages).replace("</body>", f"{embed}</body>")
     files["site/styles.css"] = css(theme)
     files["site/pages.json"] = json.dumps(pages, indent=2)
     files["site/theme.json"] = json.dumps(theme, indent=2)
@@ -927,11 +932,13 @@ from extras import register as register_extras
 from studio import register as register_studio
 from inbox import register as register_inbox
 from workflows import register as register_workflows
+from cms import register as register_cms
 from seed_sites import reseed_demo_sites
 register_extras(api, db, get_current_user, get_user_app, log_activity)
 WF_HOOKS = register_workflows(api, db, get_current_user, get_user_app, log_activity)
+CMS_HOOKS = register_cms(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS)
 INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files, WF_HOOKS)
-register_studio(api, db, get_current_user, get_user_app, log_activity, {**INBOX_HOOKS, **WF_HOOKS})
+register_studio(api, db, get_current_user, get_user_app, log_activity, {**INBOX_HOOKS, **WF_HOOKS, **CMS_HOOKS})
 
 app.include_router(api)
 

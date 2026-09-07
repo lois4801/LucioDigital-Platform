@@ -83,6 +83,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2">
             {inboxUnread > 0 && <span data-testid="dashboard-inbox-badge" className="chip chip-active">{inboxUnread} new leads</span>}
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
+            <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button data-testid="nav-notifications-btn" className="relative w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">

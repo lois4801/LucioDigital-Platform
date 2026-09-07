@@ -42,7 +42,7 @@ export default function PublicPreview() {
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> OmniStack AI</Link>
         </div>
       </div>
-      {page?.blocks.map(b => <BlockPreview key={b.id} block={b} onNavigate={navigate} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} />)}
+      {page?.blocks.map(b => <BlockPreview key={b.id} block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} />)}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
     </div>
   );

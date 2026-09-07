@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger("agency.workflows")
 
-TRIGGERS = ["form_submitted", "chat_lead", "payment_succeeded", "member_invited", "page_published"]
+TRIGGERS = ["form_submitted", "chat_lead", "payment_succeeded", "member_invited", "page_published", "change_requested"]
 OPS = {"==": lambda a, b: str(a).lower() == str(b).lower(), "!=": lambda a, b: str(a).lower() != str(b).lower(),
        "contains": lambda a, b: str(b).lower() in str(a).lower(), ">": lambda a, b: float(a or 0) > float(b or 0), "<": lambda a, b: float(a or 0) < float(b or 0)}
 
@@ -53,7 +53,8 @@ SAMPLE = {"form_submitted": {"name": "Jane Doe", "email": "jane@example.com", "m
           "chat_lead": {"name": "Website visitor", "email": "", "message": "Do you offer refunds?"},
           "payment_succeeded": {"email": "client@example.com", "plan": "Pro", "amount": 99, "tier": "pro"},
           "member_invited": {"email": "editor@example.com", "role": "editor"},
-          "page_published": {"page": "Home", "slug": "/"}}
+          "page_published": {"page": "Home", "slug": "/"},
+          "change_requested": {"name": "Client", "email": "client@example.com", "title": "Update hero copy", "details": "Please change the headline."}}
 
 
 def register(api, db, get_current_user, get_user_app, log_activity):

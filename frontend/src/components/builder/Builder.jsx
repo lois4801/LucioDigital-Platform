@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -24,6 +24,7 @@ const BLOCK_TEMPLATES = [
   { type: "chart", icon: BarChart3, label: "Chart", defaults: { heading: "Growth", series: [{ m: "Jan", v: 12 }, { m: "Feb", v: 24 }, { m: "Mar", v: 48 }, { m: "Apr", v: 66 }] } },
   { type: "cta", icon: Megaphone, label: "Call to action", defaults: { title: "Ready to get started?", subtitle: "Join thousands of happy customers.", cta: "Start free" } },
   { type: "contact", icon: Mail, label: "Contact", defaults: { heading: "Contact us", subtitle: "We reply within a day.", email: "hello@example.com", phone: "+1 (555) 010-2030", address: "100 King St W, Toronto" } },
+  { type: "collection_list", icon: Database, label: "Collection list", defaults: { heading: "Latest from the blog", collection: "blog", limit: 6 } },
   { type: "footer", icon: PanelBottom, label: "Footer", defaults: { brand: "Brand", tagline: "Made with care.", columns: [{ title: "Product", links: ["Features", "Pricing"] }, { title: "Company", links: ["About", "Contact"] }, { title: "Legal", links: ["Privacy", "Terms"] }] } },
 ];
 
@@ -39,13 +40,13 @@ function OutlineItem({ block, index, selected, onSelect, onRemove }) {
   );
 }
 
-function CanvasItem({ block, selected, onSelect, onEdit, onNavigate }) {
+function CanvasItem({ block, selected, onSelect, onEdit, onNavigate, collections }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} onClick={onSelect} className={`relative group ${selected ? "outline outline-2 outline-[var(--tp)]" : "hover:outline hover:outline-1 hover:outline-[var(--tp)]/40"}`}>
       <button {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="absolute left-2 top-2 z-10 w-8 h-8 rounded-lg bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none transition-opacity"><GripVertical size={14} /></button>
       <span className="absolute right-2 top-2 z-10 text-[10px] font-mono uppercase bg-black/70 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">{block.type}</span>
-      <BlockPreview block={block} onEdit={onEdit} onNavigate={onNavigate} />
+      <BlockPreview block={block} onEdit={onEdit} onNavigate={onNavigate} collections={collections} />
     </div>
   );
 }
@@ -126,6 +127,8 @@ export default function Builder({ appId, appDoc }) {
   }
   const navigateTo = (href) => { const pg = pages.find(p => p.slug === href); if (pg) switchPage(pg.page_id); };
   const [imgBusy, setImgBusy] = useState(false);
+  const [collections, setCollections] = useState([]);
+  useEffect(() => { api.get(`/apps/${appId}/cms`).then(r => setCollections(r.data)).catch(() => {}); }, [appId]);
   async function genImage(block, key) {
     const ctx = block.props.title || block.props.heading || appDoc?.name || "brand";
     const desc = window.prompt("Describe the image", `${ctx} — ${appDoc?.industry || ""} marketing visual, premium, natural light`);
@@ -182,7 +185,7 @@ export default function Builder({ appId, appDoc }) {
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                  {blocks.map(b => <CanvasItem key={b.id} block={b} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onNavigate={navigateTo} />)}
+                  {blocks.map(b => <CanvasItem key={b.id} block={b} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onNavigate={navigateTo} collections={collections} />)}
                 </SortableContext>
                 {blocks.length === 0 && <div className="p-24 text-center text-[var(--tmut)]">Empty page. Add blocks from the left, or let AI design the whole site.</div>}
               </div>

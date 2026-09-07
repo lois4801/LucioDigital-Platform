@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Table, FormInput, BarChart3, LayoutGrid, MessageSquare, Settings, KanbanSquare, Calendar, LogIn } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Table, FormInput, BarChart3, LayoutGrid, MessageSquare, Settings, KanbanSquare, Calendar, LogIn, FileUp } from "lucide-react";
 
 const COMP_ICON = { table: Table, list: Table, form: FormInput, stats: BarChart3, chart: BarChart3, cards: LayoutGrid, chat: MessageSquare, settings: Settings, kanban: KanbanSquare, calendar: Calendar, auth: LogIn, detail: Layout, hero: Layout, navbar: Layout };
 const EXAMPLES = ["Patient booking app for a dental clinic: appointments, patients, treatments, invoices, SMS reminders", "Field-service CRM for HVAC technicians with jobs, dispatch board, quotes and customer portal", "Internal tool for tracking influencer campaigns, budgets and content approvals"];
@@ -37,6 +38,26 @@ export default function BlueprintPanel({ appId, apiRoot }) {
   const [msg, setMsg] = useState("");
   const [target, setTarget] = useState(null);
   const [refining, setRefining] = useState(false);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [longBrief, setLongBrief] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef();
+  async function uploadBrief(e) {
+    const f = e.target.files?.[0]; if (!f) return; setUploading(true);
+    const fd = new FormData(); fd.append("file", f);
+    try { const { data } = await api.post(`/apps/${appId}/ai/brief-upload`, fd, { headers: { "Content-Type": "multipart/form-data" } }); setLongBrief(data.text); toast.success(`Extracted ${data.chars.toLocaleString()} characters from ${data.filename}`); }
+    catch (err) { toast.error(err.response?.data?.detail || "Upload failed"); } finally { setUploading(false); e.target.value = ""; }
+  }
+  async function applyLongBrief() {
+    setBriefOpen(false);
+    if (spec) { setMsg(longBrief); await refineWith(longBrief); } else { setBrief(longBrief); }
+    setLongBrief("");
+  }
+  async function refineWith(text) {
+    setRefining(true); setChat(c => [...c, { role: "user", content: text.slice(0, 400) + (text.length > 400 ? "…" : ""), target }]);
+    try { const { data } = await api.post(`/apps/${appId}/ai/refine-app`, { message: text, target }, { timeout: 300000 }); setSpec(data.spec); setChat(c => [...c, { role: "assistant", content: data.summary }]); setTarget(null); toast.success("Blueprint updated"); }
+    catch (e) { toast.error(e.response?.data?.detail || "Refinement failed"); } finally { setRefining(false); setMsg(""); }
+  }
   useEffect(() => { api.get(`/apps/${appId}/ai/app-chat`).then(r => setChat(r.data)).catch(() => {}); }, [appId]);
   async function refine() {
     if (!msg.trim() || refining) return;
@@ -48,6 +69,16 @@ export default function BlueprintPanel({ appId, apiRoot }) {
   const s = spec?.screens?.[screen];
   return (
     <div data-testid="blueprint-panel" className="space-y-6">
+      <Dialog open={briefOpen} onOpenChange={setBriefOpen}>
+        <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-2xl">
+          <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileUp size={16} className="text-[var(--acc)]" /> Long brief or requirements document</DialogTitle></DialogHeader>
+          <p className="text-sm text-[var(--mut)]">Upload a .docx / .pdf / .txt / .md, or paste a long narrative. {spec ? "It will be applied as a change request to the current blueprint." : "It becomes the brief for a new blueprint."}</p>
+          <input ref={fileRef} data-testid="brief-file-input" type="file" accept=".docx,.pdf,.txt,.md" className="hidden" onChange={uploadBrief} />
+          <button data-testid="brief-upload-btn" onClick={() => fileRef.current.click()} disabled={uploading} className="w-full border border-dashed border-[var(--line)] hover:border-[var(--acc)]/60 rounded-xl py-5 flex items-center justify-center gap-2 text-sm">{uploading ? <Loader2 size={16} className="animate-spin text-[var(--acc)]" /> : <FileUp size={16} className="text-[var(--acc)]" />} {uploading ? "Extracting text…" : "Choose document"}</button>
+          <textarea data-testid="brief-long-input" value={longBrief} onChange={e => setLongBrief(e.target.value)} rows={12} placeholder="Or paste your narrative here…" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--acc)] resize-none" />
+          <div className="flex justify-between items-center text-[11px] font-mono text-[var(--dim)]"><span>{longBrief.length.toLocaleString()} chars</span><button data-testid="brief-apply-btn" onClick={applyLongBrief} disabled={longBrief.trim().length < 20} className="btn-primary text-sm !py-2 !px-5 disabled:opacity-50">{spec ? "Apply to blueprint" : "Use as brief"}</button></div>
+        </DialogContent>
+      </Dialog>
       <div className="card-surface p-5">
         <div className="flex flex-col lg:flex-row lg:items-end gap-4">
           <div className="flex-1">
@@ -56,7 +87,10 @@ export default function BlueprintPanel({ appId, apiRoot }) {
             <textarea data-testid="app-brief-input" value={brief} onChange={e => setBrief(e.target.value)} rows={2} placeholder="e.g. Patient booking app for a dental clinic…" className="mt-3 w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--acc)] resize-none" />
             <div className="flex flex-wrap gap-2 mt-2">{EXAMPLES.map((x, i) => <button key={i} data-testid={`app-example-${i}`} onClick={() => setBrief(x)} className="chip normal-case tracking-normal cursor-pointer hover:!text-white">{x.slice(0, 44)}…</button>)}</div>
           </div>
-          <button data-testid="app-generate-btn" onClick={generate} disabled={busy || brief.trim().length < 10} className="btn-primary flex items-center gap-2 disabled:opacity-50 shrink-0">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {busy ? "Architecting (30–60s)…" : spec ? "Regenerate blueprint" : "Generate blueprint"}</button>
+          <div className="flex flex-col gap-2 shrink-0">
+            <button data-testid="app-generate-btn" onClick={generate} disabled={busy || brief.trim().length < 10} className="btn-primary flex items-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {busy ? "Architecting (30–60s)…" : spec ? "Regenerate blueprint" : "Generate blueprint"}</button>
+            <button data-testid="app-long-brief-btn" onClick={() => setBriefOpen(true)} className="btn-ghost flex items-center gap-2 text-sm"><FileUp size={14} /> Upload doc / long brief</button>
+          </div>
         </div>
       </div>
 
@@ -94,7 +128,7 @@ export default function BlueprintPanel({ appId, apiRoot }) {
                   <div className="font-bold text-sm px-2 py-2 text-slate-900">{spec.name}</div>
                   {spec.screens?.filter(x => x.nav !== false).map((sc, i) => { const idx = spec.screens.indexOf(sc); return <button key={i} onClick={() => setScreen(idx)} className={`w-full text-left text-xs px-2 py-1.5 rounded-lg ${idx === screen ? "bg-orange-500 text-white" : "text-slate-600 hover:bg-slate-200"}`}>{sc.name}</button>; })}
                 </div>
-                <div className="flex-1 p-6 space-y-5 max-h-[560px] overflow-y-auto">
+                <div className="flex-1 p-6 space-y-5 max-h-[560px] overflow-y-auto" style={{ background: "radial-gradient(1200px 400px at 80% -10%, rgba(249,115,22,0.10), transparent), radial-gradient(800px 300px at 0% 100%, rgba(20,184,166,0.10), transparent), #FAFAFA" }}>
                   <div><h2 className="text-xl font-bold">{s?.name}</h2><p className="text-xs text-slate-500 mt-1">{s?.description}</p></div>
                   {s?.components?.map((c, i) => { const I = COMP_ICON[c.type] || Layout; const hit = target?.screen === s.name && target?.component === (c.label || c.type); return <div key={i} data-testid={`proto-component-${i}`} onClick={() => setTarget({ screen: s.name, component: c.label || c.type })} className={`rounded-2xl border p-4 cursor-pointer transition-colors ${hit ? "border-orange-500 ring-2 ring-orange-500/30 bg-orange-50" : "border-slate-200 hover:border-orange-300"}`}><div className="flex items-center gap-2 text-xs font-semibold text-slate-700 mb-3"><I size={13} className="text-orange-500" /> {c.label || c.type}{c.model && <span className="ml-auto font-mono text-[10px] text-teal-600">{c.model}</span>}</div><Mock c={c} /></div>; })}
                 </div>
