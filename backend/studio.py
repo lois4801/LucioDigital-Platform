@@ -149,7 +149,8 @@ def _blocks_text(blocks: List[dict]) -> str:
     return "\n".join(lines)[:6000]
 
 
-def register(api, db, get_current_user, get_user_app, log_activity):
+def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
+    hooks = hooks or {}
 
     # ===== THEME =====
     @api.get("/apps/{app_id}/theme")
@@ -202,6 +203,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(404, "Page not found")
         if "blocks" in upd:
             await log_activity(app_id, user["user_id"], "page.saved", f"Saved {len(upd['blocks'])} blocks")
+            if hooks.get("maybe_autosync"):
+                await hooks["maybe_autosync"](app_id, user["user_id"])
         return await db.pages.find_one({"page_id": page_id}, {"_id": 0})
 
     @api.delete("/apps/{app_id}/pages/{page_id}")
@@ -284,7 +287,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/public/site/{token}")
     async def public_site(token: str):
         if token == "studio":
-            return {"app": {"name": "Lucio/Studio", "industry": "Agency platform", "color": "#10B981"}, "theme": DEFAULT_THEME, "pages": []}
+            return {"app": {"name": "OmniStack AI", "industry": "Agency platform", "color": "#10B981"}, "theme": DEFAULT_THEME, "pages": []}
         doc = await db.apps.find_one({"preview_token": token, "preview_enabled": True}, {"_id": 0})
         if not doc:
             raise HTTPException(404, "Preview link is invalid or has been revoked")
@@ -294,7 +297,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
                 "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "chat_enabled": True}
 
     # ===== PUBLIC AI CHATBOT (text + voice) =====
-    STUDIO_CONTEXT = ("Lucio/Studio is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "
+    STUDIO_CONTEXT = ("OmniStack AI is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "
                       "generate app blueprints and starter code (Lovable-style), create AI images/video/voice, bill clients via Stripe "
                       "(Starter $29, Pro $99, Scale $299 per month), connect custom domains and share live preview links.")
 
@@ -303,7 +306,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         if token == "studio":
-            name, context = "Lucio/Studio", STUDIO_CONTEXT
+            name, context = "OmniStack AI", STUDIO_CONTEXT
         else:
             doc = await db.apps.find_one({"preview_token": token, "preview_enabled": True}, {"_id": 0})
             if not doc:
@@ -321,6 +324,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         except Exception as e:
             raise HTTPException(500, f"Assistant unavailable: {str(e)[:120]}")
         ts = now_iso()
+        if token != "studio" and hooks.get("upsert_chat_lead"):
+            await hooks["upsert_chat_lead"](doc["app_id"], body.session_id, body.message.strip()[:1500], reply)
         await db.chat_messages.insert_many([
             {"session_id": body.session_id, "token": token, "role": "user", "content": body.message.strip()[:1500], "created_at": ts},
             {"session_id": body.session_id, "token": token, "role": "assistant", "content": reply, "created_at": now_iso()},
@@ -345,9 +350,19 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Empty text")
         voice = body.voice if body.voice in ("alloy", "ash", "coral", "echo", "fable", "nova", "onyx", "sage", "shimmer") else "coral"
         key = hashlib.sha256(f"{text}|{voice}|1.0|tts-1|mp3".encode()).hexdigest()[:40]
+        eleven = await db.settings.find_one({"key": "elevenlabs_api_key"}, {"_id": 0})
+        eleven_key = (eleven or {}).get("value") or os.environ.get("ELEVENLABS_API_KEY", "")
+        if eleven_key:
+            key = "el" + key[2:]
         if not await db.tts_cache.find_one({"key": key}):
             try:
-                audio = await OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY).generate_speech(text=text, model="tts-1", voice=voice)
+                if eleven_key:
+                    from elevenlabs.client import ElevenLabs
+                    def _el():
+                        return b"".join(ElevenLabs(api_key=eleven_key).text_to_speech.convert(text=text, voice_id="21m00Tcm4TlvDq8ikWAM", model_id="eleven_multilingual_v2"))
+                    audio = await asyncio.to_thread(_el)
+                else:
+                    audio = await OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY).generate_speech(text=text, model="tts-1", voice=voice)
             except Exception as e:
                 raise HTTPException(500, f"TTS failed: {str(e)[:120]}")
             await db.tts_cache.insert_one({"key": key, "audio_b64": base64.b64encode(audio).decode(), "created_at": now_iso()})

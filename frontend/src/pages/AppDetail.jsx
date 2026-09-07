@@ -13,11 +13,13 @@ import MediaStudio from "@/components/MediaStudio";
 import BillingPanel from "@/components/BillingPanel";
 import DomainPanel from "@/components/DomainPanel";
 import BlueprintPanel from "@/components/BlueprintPanel";
+import InboxPanel from "@/components/InboxPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
-  { key: "builder", label: "Website Builder" },
-  { key: "blueprint", label: "App Blueprint" },
+  { key: "builder", label: "Site Mode" },
+  { key: "blueprint", label: "App Mode" },
+  { key: "inbox", label: "Inbox" },
   { key: "media", label: "AI Media" },
   { key: "billing", label: "Billing" },
   { key: "domain", label: "Domain" },
@@ -78,6 +80,7 @@ export default function AppDetail() {
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
                 {appDoc.name}
+                <span data-testid="header-kind-chip" className={`chip ${appDoc.kind === "app" ? "chip-handover" : ""}`} style={{ padding: "2px 8px" }}>{appDoc.kind === "app" ? "App" : "Website"}</span>
                 {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
                 {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}
               </div>
@@ -112,6 +115,7 @@ export default function AppDetail() {
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && <Builder appId={appId} appDoc={appDoc} />}
         {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
+        {tab === "inbox" && <InboxPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}

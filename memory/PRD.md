@@ -37,6 +37,21 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Public preview `/p/<token>` is multi-page + themed + live AI chat widget (Claude, session history in `db.chat_messages`, OpenAI tts-1 voice via `/api/public/tts`, browser mic). Landing also has the chat widget (token `studio`).
 - Testing: iteration_3.json — 14/14 backend, frontend flows pass.
 
+### Jun 2026 (v4) — OmniStack AI rebrand + agency ops (`/app/backend/inbox.py`, `seed_sites.py`)
+- Rebrand to **OmniStack AI**; projects have `kind` website|app (dashboard filters, New project modal selector); tabs renamed Site Mode / App Mode.
+- **Lead Inbox** tab per app (`db.messages`): contact-form submissions from public preview (`POST /public/contact/{token}`) + AI chat conversations (upserted per session) → Gmail-like list with unread/star/archive/reply/delete; global `GET /inbox` + unread badge on dashboard. Reply email delivery is QUEUED (no provider yet).
+- **Chat embed**: `GET /api/public/embed.js` + `/embed/chat/:token` iframe page; snippet card in Handoff; auto-injected into exported HTML.
+- **GitHub Sync**: PAT stored in `db.settings` (`POST /settings/github` validates), `POST /apps/{id}/github/push` real push via Git Data API when token present, MOCKED status otherwise; auto-sync toggle pushes on every page save.
+- **AI images in blocks**: "Generate with AI" on hero `image` / gallery `images` props (gpt-image-1).
+- Export bundle: `site/` (+embed), `app/` (+ `backend/schema.sql` Postgres/Supabase), `mobile/` (Capacitor + App Store / Google Play steps). Native build automation remains MOCKED.
+- Seeded demo apps reseeded (`demo_site_v=2`) with unique themes (light/dark, fonts, colors), 4 pages each, niche Unsplash imagery and videos. TTS prefers ElevenLabs when key configured.
+- Testing: iteration_4.json — 15/15 backend, frontend flows pass.
+
+## Phase 2 (next) — OmniStack spec items not yet built
+- Site Mode: tablet breakpoint (desktop/mobile exist), CMS collections bound to blocks.
+- App Mode: split chat ↔ live preview with click-to-target contextual edits; iterative chat refinement of blueprint; live schema drafting panel.
+- Deployment Hub page (subdomain + domain mapping in one view); GitHub OAuth app (currently PAT); email provider for inbox replies (Resend/SendGrid).
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.

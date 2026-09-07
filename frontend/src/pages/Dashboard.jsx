@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
+const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
 const STATUS_META = {
   active: { label: "Active", cls: "chip-active", dot: "" },
   maintenance: { label: "In Maintenance", cls: "chip-maint", dot: "amber" },
@@ -21,12 +22,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [industry, setIndustry] = useState("All");
+  const [kind, setKind] = useState("all");
+  const [inboxUnread, setInboxUnread] = useState(0);
   const [view, setView] = useState("grid");
   const [notifs, setNotifs] = useState([]);
   const [newOpen, setNewOpen] = useState(false);
-  const [newApp, setNewApp] = useState({ name: "", industry: "SaaS Portals", description: "" });
+  const [newApp, setNewApp] = useState({ name: "", industry: "SaaS Portals", description: "", kind: "website" });
 
-  useEffect(() => { load(); loadNotifs(); }, []);
+  useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); }, []);
 
   async function load() {
     setLoading(true);
@@ -40,17 +43,18 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => apps.filter((a) => {
     if (industry !== "All" && a.industry !== industry) return false;
+    if (kind !== "all" && (a.kind || "website") !== kind) return false;
     if (q && !`${a.name} ${a.description} ${(a.tags||[]).join(" ")}`.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
-  }), [apps, industry, q]);
+  }), [apps, industry, q, kind]);
 
   async function createApp() {
     if (!newApp.name) return toast.error("Name required");
     try {
       const { data } = await api.post("/apps", { ...newApp, status: "active" });
       setApps([data, ...apps]); setNewOpen(false);
-      setNewApp({ name: "", industry: "SaaS Portals", description: "" });
-      toast.success("Tenant created");
+      setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website" });
+      toast.success("Project created");
       nav(`/apps/${data.app_id}`);
     } catch (e) { toast.error("Create failed"); }
   }
@@ -72,11 +76,12 @@ export default function Dashboard() {
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div>
-              <div className="font-display font-semibold tracking-tight text-lg leading-none">Lucio<span className="text-[var(--acc)]">/</span>Studio</div>
-              <div className="overline mt-1">Agency Control Center</div>
+              <div className="font-display font-semibold tracking-tight text-lg leading-none">OmniStack<span className="text-[var(--acc)]"> AI</span></div>
+              <div className="overline mt-1">Agency Workspace</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {inboxUnread > 0 && <span data-testid="dashboard-inbox-badge" className="chip chip-active">{inboxUnread} new leads</span>}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button data-testid="nav-notifications-btn" className="relative w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">
@@ -149,6 +154,10 @@ export default function Dashboard() {
               className="w-full bg-[var(--card)] border border-[var(--line)] rounded-full pl-9 pr-4 py-2.5 text-sm font-mono focus:border-[var(--acc)] outline-none" />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {KINDS.map(([k, l]) => (
+              <button key={k} data-testid={`kind-filter-${k}-btn`} onClick={() => setKind(k)} className={`chip ${kind === k ? "!bg-[var(--cyan)]/12 !border-[var(--cyan)]/50 !text-[var(--cyan)]" : ""}`}>{l}</button>
+            ))}
+            <span className="w-px h-5 bg-[var(--line)] mx-1" />
             {INDUSTRIES.map((ind) => (
               <button key={ind} data-testid={`industry-filter-${ind.toLowerCase().replace(/\s+/g,'-')}-btn`}
                 onClick={() => setIndustry(ind)}
@@ -170,12 +179,18 @@ export default function Dashboard() {
           <Dialog open={newOpen} onOpenChange={setNewOpen}>
             <DialogTrigger asChild>
               <button data-testid="new-app-btn" className="btn-primary flex items-center gap-2">
-                <Plus size={16} /> New tenant
+                <Plus size={16} /> New project
               </button>
             </DialogTrigger>
             <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">
-              <DialogHeader><DialogTitle className="font-display">Spin up a new client tenant</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle className="font-display">Create a new project</DialogTitle></DialogHeader>
               <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {[["website", "Website", "Framer-style site with pages, theme & AI"], ["app", "App", "Lovable-style app blueprint + starter code"]].map(([k, l, d]) => (
+                    <button key={k} data-testid={`new-project-kind-${k}`} onClick={() => setNewApp({ ...newApp, kind: k })} className={`text-left p-3 rounded-xl border ${newApp.kind === k ? "border-[var(--acc)] bg-[var(--acc)]/10" : "border-[var(--line)] hover:bg-white/5"}`}>
+                      <div className="font-display font-semibold">{l}</div><div className="text-[11px] text-[var(--mut)] mt-1">{d}</div></button>
+                  ))}
+                </div>
                 <label className="block"><span className="overline block mb-1">Name</span>
                   <input data-testid="new-app-name-input" value={newApp.name} onChange={(e) => setNewApp({ ...newApp, name: e.target.value })}
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" /></label>
@@ -187,7 +202,7 @@ export default function Dashboard() {
                 <label className="block"><span className="overline block mb-1">Description</span>
                   <textarea data-testid="new-app-desc-input" rows={3} value={newApp.description} onChange={(e) => setNewApp({ ...newApp, description: e.target.value })}
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" /></label>
-                <button data-testid="new-app-create-btn" onClick={createApp} className="btn-primary w-full">Create tenant</button>
+                <button data-testid="new-app-create-btn" onClick={createApp} className="btn-primary w-full">Create {newApp.kind === "app" ? "app" : "website"}</button>
               </div>
             </DialogContent>
           </Dialog>
@@ -215,7 +230,7 @@ export default function Dashboard() {
                   className="card-surface overflow-hidden cursor-pointer group">
                   <div className="relative aspect-video overflow-hidden">
                     {a.video_url ? (
-                      <video src={a.video_url} autoPlay muted loop playsInline
+                      <video src={a.video_url} poster={a.thumbnail || undefined} autoPlay muted loop playsInline preload="metadata"
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-[var(--card-hov)] to-[var(--bg-2)]" />
@@ -223,6 +238,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
                       <span className="chip">{a.industry}</span>
+                      <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
                     </div>

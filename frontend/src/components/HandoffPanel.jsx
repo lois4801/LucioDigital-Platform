@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Download, Github, Smartphone, ShieldAlert, Package } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import PreviewLinkCard from "@/components/PreviewLinkCard";
+import { EmbedCard, GithubCard } from "@/components/HandoffExtras";
 
 export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
   const [job, setJob] = useState(null);
@@ -54,7 +55,7 @@ export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
           <div className="flex-1">
             <div className="overline">Web Export</div>
             <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Production-ready source bundle</h3>
-            <p className="text-sm text-[var(--mut)] mt-2">Downloads a Vercel-ready .zip with static HTML, blocks JSON, and package.json. Ready to push to GitHub or drop on any static host.</p>
+            <p className="text-sm text-[var(--mut)] mt-2">Downloads a .zip with <code>site/</code> (multi-page HTML + chat embed), <code>app/</code> (React + FastAPI starter, Postgres/Supabase <code>schema.sql</code>) and <code>mobile/</code> (Capacitor wrapper with App Store &amp; Google Play publishing steps).</p>
             <button data-testid="export-source-zip-btn" onClick={downloadSource}
               className="mt-5 btn-primary flex items-center gap-2 text-sm !py-2 !px-4">
               <Download size={14} /> Download .zip bundle
@@ -102,6 +103,8 @@ export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
       </div>
 
       <div className="lg:col-span-2"><PreviewLinkCard appDoc={appDoc} setAppDoc={setAppDoc} /></div>
+      <EmbedCard appDoc={appDoc} />
+      <GithubCard appDoc={appDoc} setAppDoc={setAppDoc} />
 
       {/* Transfer mode */}
       <div className="card-surface p-6 lg:col-span-2">

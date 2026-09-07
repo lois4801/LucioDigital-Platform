@@ -39,7 +39,7 @@ export default function Register() {
             <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
-            <div className="font-display font-semibold tracking-tight text-lg">Lucio<span className="text-[var(--acc)]">/</span>Studio</div>
+            <div className="font-display font-semibold tracking-tight text-lg">OmniStack<span className="text-[var(--acc)]"> AI</span></div>
           </div>
           <div className="overline mb-3">Create account</div>
           <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>

@@ -60,7 +60,7 @@ export default function Landing() {
         <nav data-testid="landing-nav-pill" className="flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
           <Link to="/" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10">
             <Layers size={16} className="text-[var(--acc)]" />
-            <span className="font-display font-semibold tracking-tight">Lucio<span className="text-[var(--acc)]">/</span>Studio</span>
+            <span className="font-display font-semibold tracking-tight">OmniStack<span className="text-[var(--acc)]"> AI</span></span>
           </Link>
           {[["Showcase", "#showcase"], ["Platform", "#platform"], ["Pricing", "#pricing"]].map(([l, h]) => (
             <a key={l} href={h} data-testid={`nav-pill-${l.toLowerCase()}-link`} className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white transition-colors">{l}</a>
@@ -189,10 +189,10 @@ export default function Landing() {
       </section>
 
       <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span>© 2026 Lucio/Studio · Agency Multi-Tenant Platform</span>
+        <span>© 2026 OmniStack AI · Agency Multi-Tenant Platform</span>
         <span>Built for Emergent</span>
       </footer>
-      <ChatWidget token="studio" brand="Lucio/Studio" accent="#10B981" />
+      <ChatWidget token="studio" brand="OmniStack AI" accent="#10B981" />
     </div>
   );
 }

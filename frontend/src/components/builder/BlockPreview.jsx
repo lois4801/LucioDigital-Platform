@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import * as Icons from "lucide-react";
 
 // Inline-editable text. `path` is dotted path into block.props
@@ -28,10 +28,12 @@ const Btn = ({ children, ghost }) => <span className={`inline-block px-6 py-3 ro
 const H2 = (props) => <T as="h2" {...props} className={`font-[var(--tfh)] text-3xl lg:text-4xl font-bold tracking-tight ${props.className || ""}`} />;
 const Icon = ({ name, size = 18 }) => { const I = Icons[name] || Icons.Sparkles; return <I size={size} />; };
 
-export default function BlockPreview({ block, onEdit, onNavigate }) {
+export default function BlockPreview({ block, onEdit, onNavigate, onLead }) {
   const p = block.props || {}, s = block.style || {};
   const cls = sectionCls(s), m = mut(s);
   const E = (path, extra = {}) => ({ path, onEdit, ...extra });
+  const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
+  async function submitLead(e) { e.preventDefault(); if (!onLead) return; try { await onLead(lead); setLead({ name: "", email: "", message: "", sent: true }); } catch { } }
 
   if (block.type === "navbar") return (
     <nav className="px-8 lg:px-12 py-5 flex items-center justify-between border-b border-[var(--tbd)]">
@@ -151,8 +153,13 @@ export default function BlockPreview({ block, onEdit, onNavigate }) {
     <section className={cls}><div className="grid lg:grid-cols-2 gap-10 text-left">
       <div><H2 value={p.heading} {...E("heading")} /><T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-3 ${m}`} />
         <div className="mt-6 space-y-1 text-sm"><div><T value={p.email} {...E("email")} /></div>{p.phone !== undefined && <div><T value={p.phone} {...E("phone")} /></div>}{p.address !== undefined && <div className="text-[var(--tmut)]"><T value={p.address} {...E("address")} /></div>}</div></div>
-      <div className={`${card} space-y-3`}>{["Name", "Email"].map(x => <input key={x} placeholder={x} className="w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none" />)}
-        <textarea placeholder="Message" rows={4} className="w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none" /><Btn>Send message</Btn></div>
+      <form onSubmit={submitLead} className={`${card} space-y-3`} data-testid="contact-form">
+        {lead.sent ? <div className="text-center py-8 text-[var(--ts)] font-semibold" data-testid="contact-form-sent">Thanks — we'll be in touch shortly.</div> : <>
+          <input data-testid="contact-name-input" required value={lead.name} onChange={e => setLead({ ...lead, name: e.target.value })} placeholder="Name" className="w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none" />
+          <input data-testid="contact-email-input" required type="email" value={lead.email} onChange={e => setLead({ ...lead, email: e.target.value })} placeholder="Email" className="w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none" />
+          <textarea data-testid="contact-message-input" required value={lead.message} onChange={e => setLead({ ...lead, message: e.target.value })} placeholder="Message" rows={4} className="w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none" />
+          <button type="submit" data-testid="contact-submit-btn" disabled={!onLead} className="inline-block px-6 py-3 rounded-full font-semibold text-sm bg-[var(--tp)] text-white disabled:opacity-70">Send message</button></>}
+      </form>
     </div></section>
   );
   if (block.type === "footer") return (

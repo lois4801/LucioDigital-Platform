@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import AppDetail from "@/pages/AppDetail";
 import PublicPreview from "@/pages/PublicPreview";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
+import ChatEmbed from "@/pages/ChatEmbed";
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
@@ -41,6 +42,7 @@ function AppRouter() {
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/apps/:appId" element={<ProtectedRoute><AppDetail /></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />
+      <Route path="/embed/chat/:token" element={<ChatEmbed />} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />

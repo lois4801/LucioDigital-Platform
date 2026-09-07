@@ -19,7 +19,7 @@ export default function PublicPreview() {
   if (err) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
       <Eye size={28} className="text-[var(--mut)]" /><div className="font-display text-2xl">{err}</div>
-      <Link to="/" className="btn-ghost text-sm">Back to Lucio/Studio</Link>
+      <Link to="/" className="btn-ghost text-sm">Back to OmniStack AI</Link>
     </div>
   );
   if (!site) return <div className="min-h-screen flex items-center justify-center"><div className="overline">Loading preview…</div></div>;
@@ -39,10 +39,10 @@ export default function PublicPreview() {
         </div>
         <div className="flex items-center gap-3">
           <span className="chip chip-handover"><Eye size={11} /> Preview</span>
-          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> Lucio/Studio</Link>
+          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> OmniStack AI</Link>
         </div>
       </div>
-      {page?.blocks.map(b => <BlockPreview key={b.id} block={b} onNavigate={navigate} />)}
+      {page?.blocks.map(b => <BlockPreview key={b.id} block={b} onNavigate={navigate} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} />)}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
     </div>
   );

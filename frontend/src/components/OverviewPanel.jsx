@@ -14,7 +14,7 @@ export default function OverviewPanel({ appDoc, patch }) {
         <div className="card-surface overflow-hidden">
           {appDoc.video_url && (
             <div className="aspect-video relative">
-              <video src={appDoc.video_url} autoPlay muted loop playsInline
+              <video src={appDoc.video_url} poster={appDoc.thumbnail || undefined} autoPlay muted loop playsInline
                 className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent" />
             </div>

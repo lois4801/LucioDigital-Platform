@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Eye } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Eye, Loader2 } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -125,6 +125,19 @@ export default function Builder({ appId, appDoc }) {
     catch (e) { toast.error(e.response?.data?.detail || "AI edit failed"); } finally { setAiBusy(false); }
   }
   const navigateTo = (href) => { const pg = pages.find(p => p.slug === href); if (pg) switchPage(pg.page_id); };
+  const [imgBusy, setImgBusy] = useState(false);
+  async function genImage(block, key) {
+    const ctx = block.props.title || block.props.heading || appDoc?.name || "brand";
+    const desc = window.prompt("Describe the image", `${ctx} — ${appDoc?.industry || ""} marketing visual, premium, natural light`);
+    if (!desc) return;
+    setImgBusy(true);
+    try {
+      const { data } = await api.post(`/apps/${appId}/media/image`, { prompt: desc, style: "website" }, { timeout: 180000 });
+      if (key === "images") editProps(block.id, "images", [data.data_url, ...(block.props.images || [])]);
+      else editProps(block.id, "image", data.data_url);
+      toast.success("Image generated and placed in the block");
+    } catch (e) { toast.error(e.response?.data?.detail || "Image generation failed"); } finally { setImgBusy(false); }
+  }
 
   const sel = blocks.find(b => b.id === selected);
   if (loading) return <div className="overline text-center py-20">Loading builder…</div>;
@@ -192,7 +205,8 @@ export default function Builder({ appId, appDoc }) {
                 <div className="overline mb-2">{sel.type} content</div>
                 <div className="space-y-3 max-h-[36vh] overflow-y-auto scrollbar-thin pr-1">
                   {Object.entries(sel.props).map(([k, v]) => (
-                    <div key={k}><div className="text-[10px] text-[var(--dim)] mb-1 uppercase">{k}</div>
+                    <div key={k}><div className="text-[10px] text-[var(--dim)] mb-1 uppercase flex items-center justify-between">{k}
+                      {(k === "image" || k === "images") && <button data-testid={`ai-image-${k}-btn`} disabled={imgBusy} onClick={() => genImage(sel, k)} className="normal-case text-[var(--acc)] flex items-center gap-1 hover:underline disabled:opacity-50">{imgBusy ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} {imgBusy ? "Generating…" : "Generate with AI"}</button>}</div>
                       {typeof v === "string" ? <input value={v} onChange={e => editProps(sel.id, k, e.target.value)} data-testid={`prop-${k}-input`} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1.5 text-xs outline-none focus:border-[var(--acc)]" />
                         : typeof v === "boolean" ? <input type="checkbox" checked={v} onChange={e => editProps(sel.id, k, e.target.checked)} />
                         : <textarea value={JSON.stringify(v, null, 2)} rows={4} onChange={e => { try { editProps(sel.id, k, JSON.parse(e.target.value)); } catch { } }} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1.5 text-[11px] font-mono outline-none focus:border-[var(--acc)]" />}

@@ -6,6 +6,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 import os
 import io
+import re
 import json
 import uuid
 import zipfile
@@ -118,6 +119,7 @@ class SessionExchangeIn(BaseModel):
 class AppCreateIn(BaseModel):
     name: str
     industry: str
+    kind: str = "website"  # website | app
     description: str = ""
     status: str = "active"  # active | maintenance | handover
     tags: List[str] = []
@@ -371,6 +373,7 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
         "owner_id": user["user_id"],
         "name": body.name,
         "industry": body.industry,
+        "kind": body.kind if body.kind in ("website", "app") else "website",
         "description": body.description,
         "status": body.status,
         "tags": body.tags,
@@ -625,28 +628,44 @@ def _generate_html(app_doc: dict, blocks: List[dict]) -> str:
     return "".join(parts)
 
 
-@api.get("/apps/{app_id}/export/source")
-async def export_source(app_id: str, user: dict = Depends(get_current_user)):
-    app_doc = await get_user_app(app_id, user)
+async def build_export_files(app_doc: dict) -> dict:
+    app_id = app_doc["app_id"]
     pages = await db.pages.find({"app_id": app_id}, {"_id": 0}).to_list(50)
     pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
     theme = {**DEFAULT_THEME, **(app_doc.get("theme") or {})}
+    embed = f"<script src='{FRONTEND_URL}/api/public/embed.js' data-token='{app_doc.get('preview_token')}' data-origin='{FRONTEND_URL}'></script>" if app_doc.get("preview_token") else ""
+    files = {}
+    for pg in pages:
+        fname = "index.html" if pg.get("slug") == "/" else f"{pg['slug'].strip('/')}.html"
+        files[f"site/{fname}"] = render_page(app_doc, theme, pg, pages).replace("</body>", f"{embed}</body>")
+    files["site/styles.css"] = css(theme)
+    files["site/pages.json"] = json.dumps(pages, indent=2)
+    files["site/theme.json"] = json.dumps(theme, indent=2)
+    files["site/vercel.json"] = json.dumps({"cleanUrls": True}, indent=2)
+    readme = f"# {app_doc['name']}\n\nExported from OmniStack AI.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
+    if app_doc.get("app_spec"):
+        for path, content in starter_app_files(app_doc["app_spec"]).items():
+            files[f"app/{path}"] = content
+        readme += "\n## app/\nLovable-style React + FastAPI starter generated from the App Blueprint (see app/README.md, app/schema.sql for Postgres/Supabase).\n"
+    slug = re.sub(r"[^a-z0-9]+", "", app_doc["name"].lower()) or "app"
+    files["mobile/capacitor.config.json"] = json.dumps({"appId": f"com.omnistack.{slug}", "appName": app_doc["name"], "webDir": "../site", "server": {"androidScheme": "https"}}, indent=2)
+    files["mobile/package.json"] = json.dumps({"name": f"{slug}-mobile", "private": True, "scripts": {"add:ios": "npx cap add ios", "add:android": "npx cap add android", "sync": "npx cap sync", "open:ios": "npx cap open ios", "open:android": "npx cap open android"}, "devDependencies": {"@capacitor/cli": "^6.0.0"}, "dependencies": {"@capacitor/core": "^6.0.0", "@capacitor/ios": "^6.0.0", "@capacitor/android": "^6.0.0"}}, indent=2)
+    files["mobile/README.md"] = (f"# {app_doc['name']} — App Store & Google Play\n\nThis folder wraps the exported site as a native app with Capacitor.\n\n"
+                                "1. `cd mobile && npm i`\n2. `npm run add:ios` / `npm run add:android`\n3. `npm run sync`\n4. `npm run open:ios` → Xcode → Archive → App Store Connect\n"
+                                "5. `npm run open:android` → Android Studio → Build → Generate Signed Bundle (.aab) → Google Play Console\n\n"
+                                "Icons/splash: `npx @capacitor/assets generate`. Store listing images: use the AI Media Studio in OmniStack.\n")
+    files["README.md"] = readme + "\n## mobile/\nCapacitor wrapper for publishing to the Apple App Store and Google Play (see mobile/README.md).\n"
+    return files
 
+
+@api.get("/apps/{app_id}/export/source")
+async def export_source(app_id: str, user: dict = Depends(get_current_user)):
+    app_doc = await get_user_app(app_id, user)
+    files = await build_export_files(app_doc)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
-        for pg in pages:
-            fname = "index.html" if pg.get("slug") == "/" else f"{pg['slug'].strip('/')}.html"
-            z.writestr(f"site/{fname}", render_page(app_doc, theme, pg, pages))
-        z.writestr("site/styles.css", css(theme))
-        z.writestr("site/pages.json", json.dumps(pages, indent=2))
-        z.writestr("site/theme.json", json.dumps(theme, indent=2))
-        z.writestr("site/vercel.json", json.dumps({"cleanUrls": True}, indent=2))
-        readme = f"# {app_doc['name']}\n\nExported from Lucio/Studio.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host.\n"
-        if app_doc.get("app_spec"):
-            for path, content in starter_app_files(app_doc["app_spec"]).items():
-                z.writestr(f"app/{path}", content)
-            readme += "\n## app/\nLovable-style React + FastAPI starter generated from the App Blueprint. See app/README.md.\n"
-        z.writestr("README.md", readme)
+        for path, content in files.items():
+            z.writestr(path, content)
     buf.seek(0)
 
     await log_activity(app_id, user["user_id"], "export.source", "Exported source bundle (.zip)")
@@ -896,6 +915,7 @@ async def startup():
                     "created_at": (now_utc() - timedelta(hours=i * 3 + 1)).isoformat(),
                 })
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
+    await reseed_demo_sites(db, admin_id)
 
 
 @app.on_event("shutdown")
@@ -905,8 +925,11 @@ async def shutdown():
 
 from extras import register as register_extras
 from studio import register as register_studio
+from inbox import register as register_inbox
+from seed_sites import reseed_demo_sites
 register_extras(api, db, get_current_user, get_user_app, log_activity)
-register_studio(api, db, get_current_user, get_user_app, log_activity)
+INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files)
+register_studio(api, db, get_current_user, get_user_app, log_activity, INBOX_HOOKS)
 
 app.include_router(api)
 
