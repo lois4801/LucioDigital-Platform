@@ -163,3 +163,8 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Known nit (not fixed, non-blocking): no endpoint to clear a cursor vote; attachments are parsed from body text rather than a dedicated field.
 - Base cursor dot + ring now recolour automatically from the active effect's swatch (`CursorTrailThemed` in CursorFX.jsx); falls back to green when the effect is None.
 - Removed the trailing ring/big circle from the custom cursor across the workspace, all tenant pages, public previews and exported sites (`CursorTrail` now renders only the dot; export FX_JS ring removed).
+
+## 2026-06 — Reply with files + builder draft recovery (iter 24, DONE)
+- **Reply With Files**: `POST /api/apps/{app_id}/attachments` (auth, 15 MB, CHAT_MIME allowlist, object storage). `ReplyIn` now takes `attachments:[{name,url}]` (max 10, stored on the reply, links appended to the outgoing email; 400 when body and attachments are both empty). `LeadReply.jsx` gained an Attach button, chip list with remove, attachment-only sending, and thumbnails in the reply history. The tenant Inbox tab now reuses `LeadReply` so its composer supports attachments + AI drafts too (its old textarea composer was removed).
+- **Draft Recovery**: `Builder.jsx` writes unsaved blocks to `os_builder_draft_{app_id}_{page_id}` (debounced while dirty), detects a stale draft on load/page switch and shows `builder-draft-banner` with Restore / Discard; the draft clears on save.
+- Tested: iteration_24.json — backend 10/10 pytest, frontend 100%. Follow-up flagged by the tester and fixed after the run: Inbox-tab composer now supports attachments.

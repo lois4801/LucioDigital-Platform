@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2 } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2, History } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -86,6 +86,7 @@ export default function Builder({ appId, appDoc }) {
   const [swapTarget, setSwapTarget] = useState(null);
   const [history, setHistory] = useState({ past: [], future: [] });
   const [cursorVote, setCursorVote] = useState(null);
+  const [draft, setDraft] = useState(null);
   const [logo, setLogo] = useState(appDoc?.logo || null);
   useEffect(() => { setLogo(appDoc?.logo || null); }, [appDoc?.logo]);
   useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
@@ -105,19 +106,50 @@ export default function Builder({ appId, appDoc }) {
   useEffect(() => { load(); }, [appId]);
   useEffect(() => { loadFonts(theme); }, [theme]);
 
+  const draftKey = (pid) => `os_builder_draft_${appId}_${pid}`;
+
+  // Draft recovery: keep unsaved canvas changes in localStorage until the page is saved.
+  useEffect(() => {
+    if (!pageId || !dirty) return;
+    const t = setTimeout(() => {
+      try { localStorage.setItem(draftKey(pageId), JSON.stringify({ blocks, at: Date.now() })); } catch {}
+    }, 800);
+    return () => clearTimeout(t);
+  }, [blocks, dirty, pageId, appId]);
+
+  const restoreDraft = () => {
+    if (!draft) return;
+    setBlocks(draft.blocks); setDirty(true); setSelected(draft.blocks?.[0]?.id || null); setDraft(null);
+    toast.success("Unsaved changes restored — press Save to keep them");
+  };
+  const discardDraft = () => {
+    try { localStorage.removeItem(draftKey(pageId)); } catch {}
+    setDraft(null);
+  };
+
   async function load(keepPage) {
     setLoading(true);
     try {
       const [{ data: pgs }, { data: th }] = await Promise.all([api.get(`/apps/${appId}/pages`), api.get(`/apps/${appId}/theme`)]);
       setPages(pgs); setTheme(th);
       const pg = pgs.find(p => p.page_id === keepPage) || pgs[0];
-      if (pg) { setPageId(pg.page_id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); }
+      if (pg) { setPageId(pg.page_id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); checkDraft(pg); }
     } catch { toast.error("Failed to load builder"); }
     finally { setLoading(false); }
   }
+  function checkDraft(pg) {
+    try {
+      const raw = localStorage.getItem(draftKey(pg.page_id));
+      if (!raw) { setDraft(null); return; }
+      const d = JSON.parse(raw);
+      if (!d?.blocks || JSON.stringify(d.blocks) === JSON.stringify(pg.blocks || [])) { localStorage.removeItem(draftKey(pg.page_id)); setDraft(null); return; }
+      setDraft(d);
+    } catch { setDraft(null); }
+  }
+
   function switchPage(id) {
     if (dirty && !confirm("Discard unsaved changes on this page?")) return;
-    const pg = pages.find(p => p.page_id === id); setPageId(id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); setDirty(false);
+    const pg = pages.find(p => p.page_id === id); setPageId(id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); setDirty(false); setHistory({ past: [], future: [] }); checkDraft(pg);
   }
   const mutate = (next) => { setHistory(h => ({ past: [...h.past.slice(-49), blocks], future: [] })); setBlocks(next); setDirty(true); };
   const undo = () => setHistory(h => {
@@ -165,7 +197,9 @@ export default function Builder({ appId, appDoc }) {
     setSaving(true);
     try {
       await Promise.all([api.patch(`/apps/${appId}/pages/${pageId}`, { blocks }), api.put(`/apps/${appId}/theme`, { theme })]);
-      setPages(pages.map(p => p.page_id === pageId ? { ...p, blocks } : p)); setDirty(false); toast.success("Page & theme saved");
+      setPages(pages.map(p => p.page_id === pageId ? { ...p, blocks } : p)); setDirty(false); setDraft(null);
+      try { localStorage.removeItem(draftKey(pageId)); } catch {}
+      toast.success("Page & theme saved");
     } catch { toast.error("Save failed"); } finally { setSaving(false); }
   }
   async function createPage(name) {
@@ -234,6 +268,15 @@ export default function Builder({ appId, appDoc }) {
       </div>
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
       <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
+      {draft && (
+        <div data-testid="builder-draft-banner" className="mb-4 card-surface p-4 flex flex-wrap items-center gap-3 !border-amber-400/40">
+          <History size={15} className="text-amber-300" />
+          <div className="flex-1 text-sm">Unsaved changes from {new Date(draft.at).toLocaleString()} were recovered for this page
+            <div className="text-[11px] text-[var(--mut)] mt-0.5">Restore them onto the canvas, or discard to keep the last saved version.</div></div>
+          <button data-testid="builder-draft-restore-btn" onClick={restoreDraft} className="btn-primary text-sm !py-2 !px-4">Restore changes</button>
+          <button data-testid="builder-draft-discard-btn" onClick={discardDraft} className="btn-ghost text-sm !py-2 !px-4">Discard</button>
+        </div>
+      )}
       {cursorVote && !cursorVote.applied && (
         <div data-testid="cursor-vote-banner" className="mb-4 card-surface p-4 flex flex-wrap items-center gap-3 !border-[var(--acc)]/40">
           <MousePointer2 size={15} className="text-[var(--acc)]" />

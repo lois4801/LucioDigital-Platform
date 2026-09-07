@@ -127,6 +127,23 @@ def register(api, db, get_current_user, get_user_app, log_activity, now_iso):
         await db.files.insert_one({"file_id": uuid.uuid4().hex, "app_id": app_id, "storage_path": res["path"], "original_filename": file.filename, "content_type": CHAT_MIME[ext], "size": res.get("size", len(data)), "is_deleted": False, "created_at": now_iso()})
         return {"url": f"/api/public/files/{res['path']}", "filename": file.filename, "size": res.get("size", len(data)), "content_type": CHAT_MIME[ext]}
 
+    @api.post("/apps/{app_id}/attachments")
+    async def upload_attachment(app_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        ext = (file.filename or "").rsplit(".", 1)[-1].lower() if "." in (file.filename or "") else ""
+        if ext not in CHAT_MIME:
+            raise HTTPException(400, "Allowed files: images, PDF, DOC(X), XLS(X), CSV, TXT, ZIP")
+        data = await file.read()
+        if len(data) > 15 * 1024 * 1024:
+            raise HTTPException(400, "File must be under 15 MB")
+        path = f"{APP_NAME}/attachments/{app_id}/{uuid.uuid4().hex}.{ext}"
+        try:
+            res = put_object(path, data, CHAT_MIME[ext])
+        except Exception as e:
+            raise HTTPException(502, f"Storage upload failed: {str(e)[:120]}")
+        await db.files.insert_one({"file_id": uuid.uuid4().hex, "app_id": app_id, "storage_path": res["path"], "original_filename": file.filename, "content_type": CHAT_MIME[ext], "size": res.get("size", len(data)), "is_deleted": False, "created_at": now_iso()})
+        return {"url": f"/api/public/files/{res['path']}", "name": file.filename, "size": res.get("size", len(data)), "content_type": CHAT_MIME[ext]}
+
     @api.get("/public/files/{path:path}")
     async def public_file(path: str):
         rec = await db.files.find_one({"storage_path": path, "is_deleted": False}, {"_id": 0})

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Inbox, Star, Archive, Trash2, Reply, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame } from "lucide-react";
+import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame } from "lucide-react";
 import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
+import { LeadReply } from "@/components/LeadReply";
 
 const FILTERS = [["all", "Inbox"], ["hot", "Hot leads"], ["unread", "Unread"], ["starred", "Starred"], ["archived", "Archived"]];
 const ScoreBadge = ({ m }) => m.score == null ? <span className="chip" style={{ padding: "1px 6px" }} title="Scoring…">…</span>
@@ -16,19 +17,12 @@ export default function InboxPanel({ appId }) {
   async function scoreAll() { setScoring(true); try { const { data } = await api.post(`/apps/${appId}/inbox/score`, {}, { timeout: 180000 }); toast.success(`Scored ${data.scored} leads`); load(); } catch { toast.error("Scoring failed"); } finally { setScoring(false); } }
   const [filter, setFilter] = useState("all");
   const [sel, setSel] = useState(null);
-  const [reply, setReply] = useState("");
-  const [busy, setBusy] = useState(false);
 
   useEffect(() => { load(); }, [appId]);
   async function load() { try { const { data } = await api.get(`/apps/${appId}/inbox`); setMsgs(data.messages); setUnread(data.unread); setHot(data.hot || 0); } catch { toast.error("Failed to load inbox"); } }
   async function patch(m, body) { const { data } = await api.patch(`/apps/${appId}/inbox/${m.message_id}`, body); setMsgs(ms => { const next = ms.map(x => x.message_id === m.message_id ? data : x); setUnread(next.filter(x => x.status === "unread").length); return next; }); if (sel?.message_id === m.message_id) setSel(data); }
-  function open(m) { setSel(m); setReply(""); if (m.status === "unread") patch(m, { status: "read" }); }
+  function open(m) { setSel(m); if (m.status === "unread") patch(m, { status: "read" }); }
   async function del(m) { if (!confirm("Delete this message?")) return; await api.delete(`/apps/${appId}/inbox/${m.message_id}`); setMsgs(ms => ms.filter(x => x.message_id !== m.message_id)); if (sel?.message_id === m.message_id) setSel(null); }
-  async function sendReply() {
-    setBusy(true);
-    try { const { data } = await api.post(`/apps/${appId}/inbox/${sel.message_id}/reply`, { body: reply }); setSel(data); setMsgs(ms => ms.map(x => x.message_id === data.message_id ? data : x)); setReply(""); toast.success(data.from_email ? "Reply saved · email delivery queued (connect an email provider to send)" : "Reply saved to conversation"); }
-    catch { toast.error("Reply failed"); } finally { setBusy(false); }
-  }
   const list = msgs.filter(m => filter === "all" ? m.status !== "archived" : filter === "hot" ? m.hot && m.status !== "archived" : filter === "unread" ? m.status === "unread" : filter === "starred" ? m.starred : m.status === "archived");
   const unscored = msgs.filter(m => m.score == null).length;
 
@@ -76,10 +70,9 @@ export default function InboxPanel({ appId }) {
             </div>
             <div data-testid="inbox-message-body" className="mt-5 text-sm whitespace-pre-wrap leading-relaxed bg-[var(--bg-2)] border border-[var(--line)] rounded-xl p-4 max-h-[36vh] overflow-y-auto scrollbar-thin">{sel.body}</div>
             <Attachments body={sel.body} testid="inbox-attachments" />
-            {sel.replies?.length > 0 && <div className="mt-4 space-y-2">{sel.replies.map(r => <div key={r.reply_id} className="text-sm border-l-2 border-[var(--acc)] pl-3"><div className="text-[10px] font-mono text-[var(--dim)]">{r.by} · {new Date(r.created_at).toLocaleString()} · {r.delivery.replace("_", " ")}</div><div className="mt-1 whitespace-pre-wrap">{r.body}</div></div>)}</div>}
+            {sel.replies?.length > 0 && <div className="mt-4 space-y-2">{sel.replies.map(r => <div key={r.reply_id} className="text-sm border-l-2 border-[var(--acc)] pl-3"><div className="text-[10px] font-mono text-[var(--dim)]">{r.by} · {new Date(r.created_at).toLocaleString()} · {r.delivery.replace("_", " ")}</div><div className="mt-1 whitespace-pre-wrap">{r.body}</div>{r.attachments?.length > 0 && <Attachments testid="inbox-reply-attachments" body={r.attachments.map(a => `[attachment] ${a.name} — ${a.url}`).join("\n")} />}</div>)}</div>}
             <div className="mt-auto pt-4">
-              <textarea data-testid="inbox-reply-input" value={reply} onChange={e => setReply(e.target.value)} rows={3} placeholder={`Reply to ${sel.from_name || "visitor"}…`} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-4 py-3 text-sm outline-none focus:border-[var(--acc)] resize-none" />
-              <div className="flex justify-end mt-2"><button data-testid="inbox-reply-btn" onClick={sendReply} disabled={busy || !reply.trim()} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={13} className="animate-spin" /> : <Reply size={13} />} Send reply</button></div>
+              <LeadReply lead={{ ...sel, app_id: appId }} onUpdated={(m) => { setSel(m); setMsgs(ms => ms.map(x => x.message_id === m.message_id ? m : x)); }} />
             </div>
           </>
         )}

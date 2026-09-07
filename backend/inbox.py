@@ -37,8 +37,14 @@ class InboxPatch(BaseModel):
     starred: Optional[bool] = None
 
 
+class ReplyAttachment(BaseModel):
+    name: str
+    url: str
+
+
 class ReplyIn(BaseModel):
     body: str
+    attachments: Optional[List[ReplyAttachment]] = None
 
 
 class GithubTokenIn(BaseModel):
@@ -190,8 +196,16 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         if not msg:
             raise HTTPException(404, "Message not found")
         reply = {"reply_id": uid("rp"), "by": user.get("name") or user["email"], "body": body.body.strip()[:4000], "created_at": now_iso(), "delivery": "in_app"}
+        atts = [{"name": a.name.strip()[:160], "url": a.url.strip()[:500]} for a in (body.attachments or [])][:10]
+        if atts:
+            reply["attachments"] = atts
+        if not reply["body"] and not atts:
+            raise HTTPException(400, "Add a message or an attachment")
         if msg.get("from_email") and wf.get("send_email"):
-            res = await wf["send_email"](msg["from_email"], f"Re: {msg.get('subject', 'your message')}", reply["body"])
+            email_body = reply["body"]
+            if atts:
+                email_body += "\n\nAttachments:\n" + "\n".join(f"· {a['name']}: {FRONTEND_URL}{a['url']}" for a in atts)
+            res = await wf["send_email"](msg["from_email"], f"Re: {msg.get('subject', 'your message')}", email_body)
             reply["delivery"] = "email_sent" if res["status"] == "sent" else "email_queued"
         await db.messages.update_one({"message_id": message_id}, {"$push": {"replies": reply}, "$set": {"status": "read", "updated_at": now_iso()}})
         await log_activity(app_id, user["user_id"], "lead.replied", f"Replied to {msg.get('from_name') or 'lead'}")
