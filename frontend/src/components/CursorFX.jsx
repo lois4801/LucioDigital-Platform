@@ -86,8 +86,8 @@ function CursorFXLayer({ effect, density, speed }) {
 export function CursorTrailThemed() {
   const { effect } = useCursorFX();
   const e = CURSOR_EFFECTS.find(x => x.id === effect);
-  const [dot, ring] = e && e.id !== "none" ? e.swatch : ["#10B981", "#10B981"];
-  return <CursorTrail color={dot} ringColor={ring} />;
+  const [dot] = e && e.id !== "none" ? e.swatch : ["#10B981"];
+  return <CursorTrail color={dot} />;
 }
 
 export function CursorFXPicker() {  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();

@@ -128,9 +128,9 @@ FX_CSS = """
 """
 FX_JS = """<script>(function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'-60px'});document.querySelectorAll('.fx-reveal').forEach(function(el){io.observe(el)});
 var px=document.querySelectorAll('.fx-parallax');if(px.length){addEventListener('scroll',function(){px.forEach(function(el){var r=el.getBoundingClientRect();var p=(r.top+r.height/2-innerHeight/2)/innerHeight;el.style.transform='translateY('+(-p*40)+'px)'})},{passive:true})}
-if(!matchMedia('(pointer: coarse)').matches&&document.body.dataset.cursor!=='off'){var c=getComputedStyle(document.documentElement).getPropertyValue('--p')||'#F97316';var d=document.createElement('div'),g=document.createElement('div');d.className='os-cur';g.className='os-cur';d.style.cssText+='width:8px;height:8px;background:'+c;g.style.cssText+='width:36px;height:36px;border:1px solid '+c+';opacity:.7;transition:transform .2s';document.body.append(d,g);document.documentElement.style.cursor='none';
-var t={x:innerWidth/2,y:innerHeight/2},p={x:t.x,y:t.y},q={x:t.x,y:t.y},h=false;addEventListener('mousemove',function(e){t.x=e.clientX;t.y=e.clientY;h=!!e.target.closest('a,button,input,textarea')},{passive:true});
-(function loop(){p.x+=(t.x-p.x)*.35;p.y+=(t.y-p.y)*.35;q.x+=(t.x-q.x)*.12;q.y+=(t.y-q.y)*.12;d.style.transform='translate3d('+(p.x-4)+'px,'+(p.y-4)+'px,0)';g.style.transform='translate3d('+(q.x-18)+'px,'+(q.y-18)+'px,0) scale('+(h?1.6:1)+')';requestAnimationFrame(loop)})()}})();</script>"""
+if(!matchMedia('(pointer: coarse)').matches&&document.body.dataset.cursor!=='off'){var c=getComputedStyle(document.documentElement).getPropertyValue('--p')||'#F97316';var d=document.createElement('div');d.className='os-cur';d.style.cssText+='width:8px;height:8px;background:'+c;document.body.append(d);document.documentElement.style.cursor='none';
+var t={x:innerWidth/2,y:innerHeight/2},p={x:t.x,y:t.y};addEventListener('mousemove',function(e){t.x=e.clientX;t.y=e.clientY},{passive:true});
+(function loop(){p.x+=(t.x-p.x)*.35;p.y+=(t.y-p.y)*.35;d.style.transform='translate3d('+(p.x-4)+'px,'+(p.y-4)+'px,0)';requestAnimationFrame(loop)})()}})();</script>"""
 
 
 CURSOR_FX_JS = """<script>(function(){var fx=document.body.dataset.cursorFx||'none';if(fx==='none')return;if(matchMedia('(pointer: coarse)').matches||matchMedia('(prefers-reduced-motion: reduce)').matches)return;

@@ -162,3 +162,4 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Tested: iteration_23.json — backend 9/9 pytest, frontend 100%, no issues.
 - Known nit (not fixed, non-blocking): no endpoint to clear a cursor vote; attachments are parsed from body text rather than a dedicated field.
 - Base cursor dot + ring now recolour automatically from the active effect's swatch (`CursorTrailThemed` in CursorFX.jsx); falls back to green when the effect is None.
+- Removed the trailing ring/big circle from the custom cursor across the workspace, all tenant pages, public previews and exported sites (`CursorTrail` now renders only the dot; export FX_JS ring removed).
