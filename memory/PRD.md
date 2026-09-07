@@ -110,6 +110,9 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - Logo renders in BlockPreview navbar/footer (`navbar-logo`/`footer-logo`), is preserved through niche previews/applies (`brand_logo`), and is bundled into exports as `site/assets/logo.<ext>` (HTML rewritten) + starter app sidebar brand.
 - UI: `LogoUpload.jsx` in Site Mode toolbar (`logo-upload-btn`, `logo-file-input`, `logo-current`, `logo-remove-btn`).
 
+### Jun 2026 (v14) — Inline text editing on every block
+- BlockPreview `T` (contentEditable) now covers all remaining text: nav link labels, navbar CTA, stats kicker, logo-cloud names, pricing feature lines, footer column links, chart labels (paths like `plans.0.features.2`). Canvas hint `inline-edit-hint`. Verified: 103 editable elements on a Home page; edits mark the page dirty for Save.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

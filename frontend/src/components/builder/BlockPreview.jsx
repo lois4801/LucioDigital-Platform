@@ -70,9 +70,9 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
       <T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-xl flex items-center gap-2" />
       {p.logo && <img data-testid="navbar-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain order-first" />}
       <div className="hidden md:flex gap-6 text-sm font-medium text-[var(--tmut)]">
-        {(p.links || []).map((l, i) => <button key={i} onClick={(e) => { e.stopPropagation(); onNavigate?.(l.href); }} className="hover:text-[var(--tfg)]">{l.label}</button>)}
+        {(p.links || []).map((l, i) => <button key={i} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className="hover:text-[var(--tfg)]"><T value={l.label} {...E(`links.${i}.label`)} /></button>)}
       </div>
-      <Btn>{p.cta || "Get started"}</Btn>
+      <Btn><T value={p.cta || "Get started"} {...E("cta")} /></Btn>
     </nav>
   );
   if (block.type === "hero") {
@@ -106,7 +106,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
     );
   }
   if (block.type === "stats") return (
-    <section className={cls} data-testid="block-stats"><Kicker>{p.heading}</Kicker>
+    <section className={cls} data-testid="block-stats"><Kicker><T value={p.heading} {...E("heading")} /></Kicker>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">{(p.items || []).map((it, i) => <div key={i} className={`${card} text-left`}><div className="font-[var(--tfh)] text-3xl lg:text-4xl font-extrabold text-[var(--tp)]"><T value={it.value} {...E(`items.${i}.value`)} /></div><div className="text-sm text-[var(--tmut)] mt-2"><T value={it.label} {...E(`items.${i}.label`)} /></div></div>)}</div>
     </section>
   );
@@ -118,7 +118,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
   if (block.type === "logos") return (
     <section className={`${cls} text-center`}>
       <T as="p" value={p.heading} {...E("heading")} className={`block text-xs uppercase tracking-[0.15em] font-semibold ${m}`} />
-      <div className="mt-6 flex flex-wrap justify-center gap-10 text-xl font-bold text-[var(--tmut)]/70 font-[var(--tfh)]">{(p.names || []).map((n, i) => <span key={i}>{n}</span>)}</div>
+      <div className="mt-6 flex flex-wrap justify-center gap-10 text-xl font-bold text-[var(--tmut)]/70 font-[var(--tfh)]">{(p.names || []).map((n, i) => <T key={i} value={n} {...E(`names.${i}`)} />)}</div>
     </section>
   );
   if (block.type === "features") return (
@@ -167,7 +167,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
           <div key={i} className={`${card} ${pl.highlight ? "!border-[var(--tp)] shadow-[0_24px_60px_-30px_var(--tp)]" : ""}`}>
             <T value={pl.name} {...E(`plans.${i}.name`)} className="text-sm font-semibold text-[var(--tmut)]" />
             <div className="font-[var(--tfh)] text-4xl font-extrabold mt-2"><T value={pl.price} {...E(`plans.${i}.price`)} /><span className="text-sm text-[var(--tmut)] font-medium">/{pl.period || "mo"}</span></div>
-            <ul className="mt-4 space-y-2 text-sm text-[var(--tmut)]">{(pl.features || []).map((f, k) => <li key={k} className="flex gap-2"><Icons.Check size={14} className="text-[var(--ts)] mt-0.5" />{f}</li>)}</ul>
+            <ul className="mt-4 space-y-2 text-sm text-[var(--tmut)]">{(pl.features || []).map((f, k) => <li key={k} className="flex gap-2"><Icons.Check size={14} className="text-[var(--ts)] mt-0.5" /><T value={f} {...E(`plans.${i}.features.${k}`)} /></li>)}</ul>
             <div className="mt-6"><Btn ghost={!pl.highlight}>Choose {pl.name}</Btn></div>
           </div>
         ))}
@@ -189,7 +189,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
     return (
       <section className={cls}><H2 value={p.heading} {...E("heading")} />
         <div className="h-44 mt-8 flex items-end gap-3">{(p.series || []).map((x, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-2"><div style={{ height: `${(x.v / max) * 100}%`, background: "linear-gradient(180deg,var(--tp),var(--ts))" }} className="w-full rounded-t-lg min-h-[6px]" /><div className="text-[10px] text-[var(--tmut)]">{x.m}</div></div>))}</div>
+          <div key={i} className="flex-1 flex flex-col items-center gap-2"><div style={{ height: `${(x.v / max) * 100}%`, background: "linear-gradient(180deg,var(--tp),var(--ts))" }} className="w-full rounded-t-lg min-h-[6px]" /><div className="text-[10px] text-[var(--tmut)]"><T value={x.m} {...E(`series.${i}.m`)} /></div></div>))}</div>
         {p.caption && <T as="p" value={p.caption} {...E("caption")} className={`block mt-4 text-sm ${m}`} />}
       </section>
     );
@@ -217,7 +217,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, collec
   if (block.type === "footer") return (
     <footer className="px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
       <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
-      {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}>{l}</li>)}</ul></div>)}
+      {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={l} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
     </footer>
   );
   return <div className="p-6 text-sm text-[var(--tmut)]">Unknown block: {block.type}</div>;
