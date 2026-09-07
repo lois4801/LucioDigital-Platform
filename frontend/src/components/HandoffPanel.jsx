@@ -3,8 +3,9 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Download, Github, Smartphone, ShieldAlert, Package } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import PreviewLinkCard from "@/components/PreviewLinkCard";
 
-export default function HandoffPanel({ appDoc, patch, apiRoot }) {
+export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
   const [job, setJob] = useState(null);
   const [progress, setProgress] = useState(0);
   const [platform, setPlatform] = useState("ios");
@@ -99,6 +100,8 @@ export default function HandoffPanel({ appDoc, patch, apiRoot }) {
           </div>
         </div>
       </div>
+
+      <div className="lg:col-span-2"><PreviewLinkCard appDoc={appDoc} setAppDoc={setAppDoc} /></div>
 
       {/* Transfer mode */}
       <div className="card-surface p-6 lg:col-span-2">

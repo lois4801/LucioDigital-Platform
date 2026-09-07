@@ -9,10 +9,16 @@ import HandoffPanel from "@/components/HandoffPanel";
 import ActivityLog from "@/components/ActivityLog";
 import MembersPanel from "@/components/MembersPanel";
 import OverviewPanel from "@/components/OverviewPanel";
+import MediaStudio from "@/components/MediaStudio";
+import BillingPanel from "@/components/BillingPanel";
+import DomainPanel from "@/components/DomainPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Visual Builder" },
+  { key: "media", label: "AI Media" },
+  { key: "billing", label: "Billing" },
+  { key: "domain", label: "Domain" },
   { key: "handoff", label: "Handoff & Export" },
   { key: "activity", label: "Activity" },
   { key: "members", label: "Members" },
@@ -70,6 +76,8 @@ export default function AppDetail() {
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
                 {appDoc.name}
+                {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
+                {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}
               </div>
             </div>
           </div>
@@ -101,7 +109,10 @@ export default function AppDetail() {
       <main className="px-6 lg:px-10 py-8 fade-in">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && <Builder appId={appId} appDoc={appDoc} />}
-        {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} />}
+        {tab === "media" && <MediaStudio appId={appId} />}
+        {tab === "billing" && <BillingPanel appDoc={appDoc} />}
+        {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
+        {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} setAppDoc={setAppDoc} />}
         {tab === "activity" && <ActivityLog appId={appId} />}
         {tab === "members" && <MembersPanel appId={appId} currentUser={user} />}
       </main>

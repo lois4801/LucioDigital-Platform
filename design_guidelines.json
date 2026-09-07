@@ -1,7 +1,7 @@
 {
-  "project_title": "Agency Showcase & Multi-Tenant App Platform",
-  "theme": "Dark Mode Primary (Achromatic Slate & Tactical Emerald Accent)",
-  "design_archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST / TACTICAL MINIMALISM",
+  "project_title": "Agency Showcase & Multi-Tenant App Platform Dashboard",
+  "theme": "Dark Mode Framer Aesthetic (Obsidian Slate & Tactical Emerald Accent)",
+  "design_archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST / FRAMER-INSPIRED MINIMALISM",
   "typography": {
     "font_family_heading": "'Space Grotesk', 'Outfit', sans-serif",
     "font_family_body": "'JetBrains Mono', 'Plus Jakarta Sans', sans-serif",
@@ -37,6 +37,18 @@
       "High visibility tactical look with subtle 1px crisp borders."
     ]
   },
+  "framer_design_system": {
+    "nav_pill": "Centered floating header with backdrop-blur-xl bg-[#090A0F]/80 border border-white/10 rounded-full px-6 py-3 shadow-2xl z-50",
+    "bento_grid": "Asymmetric multi-span layout with 1px border cards, subtle top edge highlights, and hover lift transitions",
+    "section_padding": "Expansive vertical padding (py-24 to py-32) with generous element spacing (gap-6 to gap-8)",
+    "typography_scale": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1]",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h3_card": "text-xl sm:text-2xl font-semibold",
+      "body": "text-base text-slate-300 leading-relaxed",
+      "mono_label": "text-xs font-mono uppercase tracking-[0.2em] text-emerald-400"
+    }
+  },
   "visual_enhancers": {
     "glassmorphism": "backdrop-blur-xl bg-[#090A0F]/80 border border-white/10 shadow-2xl",
     "tracing_beam_effect": "A 1px glowing emerald/cyan gradient border animation on active tenant cards.",
@@ -44,7 +56,7 @@
     "live_status_badges": "Pill badges with pulsing live indicators (emerald pinging dot for Active, amber for Maintenance, cyan for Handover)."
   },
   "video_showcase_strategy": {
-    "overview": "Video showcases are a central feature of the platform. Video cards and hero showcases must feature muted, looping preview videos with smooth play/pause controls, fullscreen modal preview, and interactive capability tags.",
+    "overview": "Video showcases feature muted, looping preview videos with smooth play/pause controls, fullscreen modal preview, interactive device frame toggles, and live preview links.",
     "video_sources": [
       {
         "id": "app_video_1",
@@ -84,13 +96,13 @@
     "agency_lead_avatar": "https://images.unsplash.com/photo-1742119803195-aaf41d6b2e61?crop=entropy&cs=srgb&fm=jpg&q=85"
   },
   "key_features_to_build": [
-    "Master Agency Showcase Dashboard with 5+ distinct client app cards, status indicators, live metrics (CPU, RAM, API response time, active visitors), industry filters, search bar, and view switcher (Grid vs List).",
-    "App Detail Page with nested multi-tab layout: Overview, Visual Builder (Frame.ai Style block engine), Export & Handover Pipeline, Activity Logs & Error Monitoring, and Team RBAC & Isolation Settings.",
-    "Frame.ai Style Modular Builder: Block-based drag-and-drop or prompt-driven visual element editor featuring Hero, Feature Grid, Pricing Matrix, Contact Form, and Data Charts with real-time preview & prompt AI generator input.",
-    "Client Handover & Export tab: Downloadable production-ready source bundle generator (.zip mock), iOS (.ipa) & Android (.apk/.aab) build panel with live build progress simulator, and Client Transfer Mode toggle (rebranding, ownership handover, API key rotation).",
-    "Multi-Tenant Isolation & Activity Log: Detailed logs timeline with error reporting, deployment events, maintenance status toggles, and notification tray.",
-    "Auth Pages: Dual login & signup modal/pages supporting JWT credentials and Emergent Google OAuth flow.",
-    "Marketing Landing View: Autoplay video hero showcase, client logos, interactive tenant matrix, pricing tier calculator, and quick-launch modal."
+    "Framer.com-styled Landing Page featuring floating glass nav pill, video hero showcase, client logos marquee, interactive tenant showcase matrix, pricing calculator, and spin-up modal.",
+    "Master Dashboard: Central hub hosting 5+ distinct client web/native mobile apps with CPU/RAM metrics, live response times, industry filter tabs, search, and view switcher (Grid vs List).",
+    "Framer-Style Visual Block Builder: Modular block canvas (Hero, Feature Grid, Pricing, AI Studio Block) with drag-drop/reorder, prompt-to-UI AI generator, live desktop/mobile preview frames.",
+    "AI Media Studio: ElevenLabs voice generator (voice selection & audio waveform playback), GPT-Image prompt engine with gallery, fal.ai video prompt generator with video preview.",
+    "Stripe Billing & Pricing Importer: Tiered subscription plans (Starter, Pro, Enterprise), Stripe integration settings, dropzone to import and auto-parse pricing from Excel (.xlsx) / Word (.docx) files.",
+    "Custom Domains & DNS Checklist: Custom domain binding (e.g. app.clientbrand.com) with interactive DNS setup checklist (A Record, CNAME, TXT verification status).",
+    "Public Live Preview Links: Dedicated live shareable route (/preview/:appId) with device switcher, responsive sandbox frame, and live client feedback modal."
   ],
   "testing_and_data_attributes": {
     "rule": "ALL interactive components (buttons, tabs, inputs, cards, selects, toggles) MUST include explicit data-testid attributes in kebab-case format.",
@@ -99,13 +111,13 @@
       "data-testid='app-card-ecommerce-nexus'",
       "data-testid='builder-ai-prompt-input'",
       "data-testid='builder-add-hero-block-btn'",
-      "data-testid='export-source-zip-btn'",
-      "data-testid='export-ios-build-btn'",
-      "data-testid='client-transfer-toggle'",
-      "data-testid='auth-google-login-btn'",
-      "data-testid='auth-jwt-submit-btn'",
-      "data-testid='industry-filter-saas-btn'"
+      "data-testid='ai-media-voice-tab'",
+      "data-testid='ai-media-generate-voice-btn'",
+      "data-testid='stripe-import-file-dropzone'",
+      "data-testid='custom-domain-verify-dns-btn'",
+      "data-testid='public-preview-device-toggle'",
+      "data-testid='export-source-zip-btn'"
     ]
   },
-  "instructions_to_main_agent": "Ensure the application is built modularly with React Router. Seed comprehensive mock data for 5+ tenants (E-commerce, SaaS, Internal Tools, Service Booking, AI Portal) with full interactive state (switching tabs, adding blocks in builder, triggering AI prompts, running export simulations, changing user roles, toggling maintenance modes, and playing video previews)."
+  "instructions_to_main_agent": "Ensure the app adopts a Framer.com aesthetic (floating glass nav pill, dark slate backdrop, crisp 1px borders, smooth motion). Build full multi-tenant workspace with interactive Visual Block Builder, AI Media Studio (ElevenLabs voice, GPT-Image, fal.ai video), Stripe billing with file importer, Custom domain DNS panel, and Public Live Preview links."
 }

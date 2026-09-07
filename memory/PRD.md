@@ -1,28 +1,42 @@
 # PRD — Agency Showcase & Multi-Tenant App Platform
 
 ## Problem
-Build a production-ready dashboard for an agency to host, manage, showcase and hand off multiple distinct client web/mobile apps from a single workspace.
+Build a production-ready dashboard for an agency to host, manage, showcase and hand off multiple distinct client web/mobile apps from a single workspace. Website styled like framer.com.
 
 ## Personas
-- Agency owner (Jay @ Lucio Digital) — creates, manages, and hands off apps.
+- Agency owner (Jay @ Lucio Digital) — creates, manages, bills and hands off apps.
 - Client — invited as viewer/editor/admin to their own app tenant only.
 
 ## Core Requirements
 1. Master agency dashboard — 5+ client app cards, status pills, metrics, industry filter, search.
-2. Frame.ai-style block builder — hero, features, pricing, contact, chart blocks with AI prompt editor.
-3. Client Handoff & Export tab — .zip source bundle (real) + iOS/Android build panel (MOCKED) + Client Transfer Mode toggle.
+2. Block builder — hero, features, pricing, contact, chart blocks; real drag-and-drop (@dnd-kit); Claude AI prompt editor.
+3. Client Handoff & Export — .zip source bundle (real), iOS/Android builds (MOCKED), Client Transfer Mode, Live Preview Link.
 4. Multi-tenant RBAC — owner/admin/editor/viewer roles per app, activity log, notifications.
 5. Dual auth — JWT email/password + Emergent Google OAuth.
+6. AI Media Studio — GPT-Image-1 images, fal.ai (Hailuo-02) video, ElevenLabs voiceover (key added in-app).
+7. Stripe billing per tenant — plan tiers, pricing import from .xlsx/.csv/.docx, checkout, status polling, webhook.
+8. Custom domains — real DNS (CNAME + TXT) lookup, status badge.
 
-## Implemented (Feb 2026)
-- Backend: FastAPI + Mongo, dual auth, apps CRUD, pages/blocks CRUD, memberships/RBAC, activity logs, notifications, .zip export, MOCKED mobile export, Claude Sonnet 5 AI block editor.
-- Frontend: Landing page with video hero, Login/Register (JWT) + Google OAuth button, AuthCallback, Dashboard grid with filters, App detail with 5 tabs (Overview, Builder, Handoff, Activity, Members), block builder with drag-to-reorder and AI prompt panel.
-- Seed: 6 demo apps for admin `jaybernabe@luciodigital.com`.
+## Implemented
+### Feb 2026 (v1)
+- Backend: FastAPI + Mongo, dual auth, apps CRUD, pages/blocks, memberships/RBAC, activity logs, notifications, .zip export, MOCKED mobile export, Claude Sonnet 5 AI block editor.
+- Frontend: Landing, Login/Register + Google, Dashboard grid with filters, App detail tabs, builder.
+### Jun 2026 (v2) — all in `/app/backend/extras.py` + new frontend components
+- AI Media Studio tab (`MediaStudio.jsx`): image (gpt-image-1, Emergent key), video (fal.ai via Universal Key proxy, background task + polling), voice (ElevenLabs; key stored in `db.settings`, highlighted "Add ElevenLabs key" button; 503 until configured).
+- Billing tab (`BillingPanel.jsx`): Stripe claimable sandbox (Flow A, tax mode "full" w/ fallback), plan catalog per owner in `db.plan_catalogs`, import parser (openpyxl/python-docx/csv) → Stripe products/prices by lookup_key, checkout, `/payment/success|cancel` pages, `/api/stripe/webhook`.
+- Domain tab (`DomainPanel.jsx`): real dnspython lookups, CNAME target `tenants.luciostudio.app`, TXT `_lucio-verify.<domain>`, statuses pending/partial/verified.
+- Live preview (`PreviewLinkCard.jsx`, `/p/:token` → `PublicPreview.jsx`, `GET /api/public/preview/{token}`), regenerate revokes old token, enable toggle.
+- Builder rewritten with @dnd-kit sortable outline + canvas drag handles.
+- Landing redesigned Framer-style (pill nav, centered hero, marquee, bento grid, pricing teaser, motion reveals). Guidelines: `/app/design_guidelines_framer.md`.
+- Testing: iteration_2.json — 17/17 new backend + 22/22 regression pass; frontend flows verified.
 
 ## Backlog (P1/P2)
-- Real drag-and-drop reorder via `@dnd-kit` (currently up/down buttons)
-- Custom domains per tenant + DNS panel
-- Real CI/CD for mobile builds (currently mocked)
-- Stripe billing for tiered agency plans
-- Team-level audit log CSV export
-- Password reset email flow (Resend)
+- P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
+- P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.
+- P2: Real CI/CD for mobile builds (currently MOCKED).
+- P2: Team-level audit log CSV export; password reset email flow (Resend).
+- P2: Stripe customer portal / cancel subscription; per-plan feature gating.
+- Cosmetic: Radix Dialog aria-describedby warning; /auth/me 401 on public pages.
+
+## Stripe notes
+- Sandbox account CA (`acct_1UCqXZRU6y7XBGGy`), keys in backend/.env. Claim link shared with user in finish summary. Tax mode: Stripe-managed (full) with automatic fallback to calc-only.

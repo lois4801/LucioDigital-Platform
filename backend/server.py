@@ -826,6 +826,9 @@ async def startup():
         await db.pages.create_index("app_id")
         await db.memberships.create_index("app_id")
         await db.activity_logs.create_index("app_id")
+        await db.media_assets.create_index("app_id")
+        await db.payment_transactions.create_index("session_id", unique=True)
+        await db.apps.create_index("preview_token")
     except Exception as e:
         logger.warning(f"index create warning: {e}")
 
@@ -893,6 +896,9 @@ async def startup():
 async def shutdown():
     client.close()
 
+
+from extras import register as register_extras
+register_extras(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 

@@ -167,6 +167,10 @@ body {
     border-radius: 2px;
 }
 
+.marquee { animation: marquee 28s linear infinite; width: max-content; }
+@keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+html { scroll-behavior: smooth; }
+
 .fade-in { animation: fadeIn 380ms ease both; }
 @keyframes fadeIn { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform:none; } }
 

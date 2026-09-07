@@ -221,7 +221,11 @@ export default function Dashboard() {
                       <div className="w-full h-full bg-gradient-to-br from-[var(--card-hov)] to-[var(--bg-2)]" />
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
-                    <div className="absolute top-3 left-3 chip">{a.industry}</div>
+                    <div className="absolute top-3 left-3 flex gap-1.5">
+                      <span className="chip">{a.industry}</span>
+                      {a.plan && <span className="chip chip-active">{a.plan}</span>}
+                      {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
+                    </div>
                     <div className="absolute top-3 right-3">
                       <span className={`chip ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
                     </div>

@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 2: End-to-end testing of new AI Media Studio, Billing (Stripe + xlsx/csv import), Custom Domains (real DNS), Live Preview link, Framer-style Landing, and Visual Builder drag-and-drop. Backend: 17/17 new pytest cases in test_extras.py pass against the public preview URL (plus previous 22/22 test_backend.py cases still pass). Frontend: verified login->dashboard->app detail with all 8 tabs (overview, builder, media, billing, domain, handoff, activity, members) rendering. Media: voice mode shows locked state with connect-elevenlabs-btn; clicking generate opens key dialog (elevenlabs-key-input). Media/config returns elevenlabs=false, images=true. Image generation via gpt-image-1 produced valid base64 asset (~180s). Video POST returned running task_id and polling endpoint works — did NOT wait for completion. Billing: 3 default plans (Starter $29, Pro $99, Scale $299) with lookup_keys; xlsx and csv import both round-trip 2 plans; stripe checkout returns URL containing checkout.stripe.com; transactions logged with pending status. Domain: www.github.com -> Pending DNS badge; live DNS lookup found CNAME 'github.com'; invalid 'notadomain' returns 400; remove clears. Preview: regenerate rotates token, old backend GET /api/public/preview/<old> returns 404 (verified in pytest), toggle-off makes it 404. Landing page renders hero-video, landing-nav-pill, showcase-card 0-3, bento-card-0, and all three pricing-cta-* buttons.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AI Media / ElevenLabs key dialog", "issues": ["Radix DialogContent missing Description/aria-describedby — a11y warning printed twice in console. Non-blocking."]},
+      {"screen": "Global", "issues": ["AuthContext still fires /api/auth/me on public pages causing a single 401 console error before login. Cosmetic only, carried from iteration 1."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_extras.py",
+    "/app/test_reports/pytest/pytest_extras.xml"
+  ],
+  "action_items": [
+    "OPTIONAL a11y: Pass DialogTitle/Description (or aria-describedby={undefined}) to the ElevenLabs key dialog to silence Radix warning.",
+    "OPTIONAL: Gate /api/auth/me call in AuthContext on presence of a cookie or non-public route to remove the noisy 401 on the landing page."
+  ],
+  "critical_code_review_comments": [
+    "extras.py has grown to 568 lines mixing AI media, Stripe billing, DNS/domain and preview endpoints — split into extras/media.py, extras/billing.py, extras/domain.py, extras/preview.py to keep each module <300 LOC.",
+    "run_fal_video() is a synchronous blocking function polled with time.sleep from a thread; if the FastAPI worker is restarted while a video task is in-flight, the running task_id will be stranded as 'running' forever with no reconciliation job. Consider persisting the fal status_url and adding a background sweep to resume/timeout stale tasks.",
+    "regen_preview() builds tokens with uid('pv') + uid('')[1:] which concatenates two uuid4 hex fragments and a fixed underscore in the middle — works but is unusual; use secrets.token_urlsafe(24) for a cleaner opaque token.",
+    "sync_plans_to_stripe() scans stripe.Product.list().auto_paging_iter() for every plan to find the emergent_product_id — O(N*M). Cache the products dict per call. Also imports openpyxl/docx modules at first use (fine) but stripe.Product.list is called on defaults path even when catalog exists (only via _plans_for's else branch — OK).",
+    "billing/checkout falls back to automatic_tax after managed-payments failure but silently ignores non-managed error paths; consider surfacing the original Stripe error message in the HTTP 500 for easier client debugging."
+  ],
+  "updated_files": ["/app/backend/tests/test_extras.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026!",
+  "seed_data_creation": "test_extras.py creates one TEST_Extras_* app (deleted at teardown) and imports 2 pricing rows twice; final PUT restores Starter/Pro/Scale defaults so UI stays consistent.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Two backend pytest files now: /app/backend/tests/backend_test.py (22 tests, iteration 1) and /app/backend/tests/test_extras.py (17 tests, iteration 2). Note: test_extras.py has a subtle inter-class parallel-ordering issue with pytest-xdist LoadScope — TestBillingImport can run before TestBillingPlans in a worker split, leaving imported plans in the catalog and making TestBillingPlans.test_get_default_plans fail with 2 plans instead of 3. Run TestBillingPlans first (or with -o addopts=\"\" to disable xdist) if in doubt. The tests themselves are functionally correct; on a sequential run all 17 pass. ElevenLabs is intentionally unconfigured (503 expected). Image generation costs credits and takes ~30-60s; video is background task, do not wait for completion.",
+  "rca of the issue": "N/A — no blocking bugs. The one apparent 200 status when re-fetching a revoked preview URL in the browser is expected (SPA client route always serves 200; backend /api/public/preview/<old> correctly returns 404, verified in TestPreview.test_regenerate_and_public_preview)."
+}
