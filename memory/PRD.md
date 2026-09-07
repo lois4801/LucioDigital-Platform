@@ -74,6 +74,12 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Portal invites**: `POST /apps/{id}/portal/invite` emails a one-time 7-day magic link (`GET /api/auth/magic/{token}` → cookies → /portal); fallback copy-link when email fails; UI in Members tab.
 - Testing: iteration_7.json — 8/9 backend then ai-write fixed & verified; frontend pass.
 
+### Jun 2026 (v8) — Premium motion system (`/app/frontend/src/components/motion.jsx`, index.css "Premium motion system")
+- Landing: word-by-word headline, pulsing hero glow, shimmer badge, glow buttons, cursor spotlight, sliding nav pill (layoutId), showcase/bento/pricing `card-lift` glow, LIVE `badge-glow`, arrow-slide, Pro `pro-glow`, shimmer-on-hover buttons, CTA `gradient-border` scale-in + `icon-shimmer` + `pulse-soft`.
+- Dashboard: CountUp stats, motion headline, staggered fade-up cards, card-lift, badge-glow status chips, sliding filter indicators.
+- Builder/AI/seed defaults: every new/generated/seeded block gets `effects {reveal:true, hover:true for card-type blocks}`; DEFAULT_THEME radius 20; generate-site prompt enforces premium SaaS aesthetic; demo sites regenerated.
+- Testing: iteration_8.json — 4/4 backend, frontend pass, no issues.
+
 ## Backlog (P1/P2)
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.
 - P1: Move generated media (base64 in Mongo, fal temp URLs) to Emergent Object Storage.

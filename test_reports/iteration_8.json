@@ -1,0 +1,34 @@
+{
+  "summary": "v8 premium motion/design upgrade verified end-to-end. Backend (pytest test_v8_motion.py, 4/4 PASS): GET /api/apps returns 8 apps with 6 seeded @ demo_site_v==2 and non-null theme; GET /api/apps/{seeded}/pages -> every Home block has style.effects.reveal=True and every features/gallery/testimonials/pricing/collection_list/logos block has effects.hover=True; POST /api/apps creates app with GET /theme radius==20 AND motion==true, cursor==true (defaults); public preview at /api/public/site/{token} for Nexus (pv_cd9ae858f296ee1b2b15) returns pages whose first-page blocks include effects.reveal=True. Frontend (Chromium, 1920x4000): Landing '/' -> hero-headline has exactly 9 word spans and all opacity==1 after animation (motion.span whileInView fires immediately in-viewport); shimmer badge, spotlight, cursor-dot, chat-widget-fab all present; nav-pill-pricing-link click moves highlight (layoutId animates); hero-cta-primary present + hoverable; showcase-card-0..3 all render; bento-card-0..4 all render; pricing-cta-pro + footer-cta present. 0 console errors on landing. Dashboard after login (jaybernabe@luciodigital.com/Lucio2026!): stat-tenants final value '8' == app-card-* count (8), 6 seeded + 2 pre-existing TEST apps from prior iterations; CountUp completes within 1.5s; kind-filter-app-btn click filters 8->5 cards + shows sliding pill (kind-pill layoutId); chip.badge-glow present on 8 status chips; hovering an app-card changes borderColor from rgb(40,45,63) to rgba(16,185,129,0.55) (card-lift working). Builder site-mode on Nexus: builder-add-features-block-btn adds a features block; effect-reveal-toggle and effect-hover-toggle are BOTH present and BOTH display '● ' prefix (active) as spec requires. Public preview /p/pv_cd9ae858f296ee1b2b15 renders all 8 site sections, 0 console errors, blocks animate (fx-reveal). Regression: /apps/:id tabs (site/inbox/workflows/cms/members/handoff) all clickable + render, /deploy loads, /portal loads with 7 client projects sidebar + Nexus overview panel. Only console noise site-wide: single 401 on the /auth/me pre-login probe (expected/cosmetic).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_v8_motion.py",
+    "/app/test_reports/pytest/pytest_v8.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "motion.jsx Words: whileInView triggers when the h1 is already inside the initial viewport (hero above the fold), so the initial={{opacity:0,y:18}} state is effectively skipped on the very first paint on tall viewports. Users on short viewports (< ~600px) will see the intended word-by-word cascade; on 4000px viewport tests all 9 opacities read 1 immediately. Not a bug per spec but worth noting: consider replacing whileInView with animate for the hero headline so the cascade is guaranteed regardless of initial scroll position.",
+    "Landing.jsx line 89-90 renders TWO <Words as='h1'> blocks side-by-side (`hero-headline` has 9 words, then a second h1 'every client app.' with delay 0.55). The second h1 has no data-testid, which is fine for the spec, but the DOM has two <h1> tags in the same header — accessibility-wise consider making the second one a <span> or visually one heading.",
+    "Dashboard.jsx CountUp target for stat-tenants uses the raw app count without filtering by status, so 'Tenants' can differ from the visible/filtered card list once kind-filter is applied. Confirmed: after clicking kind-filter-app-btn, stat card still reads 8 while only 5 cards render. Consider re-computing stats from the filtered set OR labeling clearly (currently label 'TENANTS' is the global total, which is arguably correct).",
+    "studio.py _ensure_ids line 131 uses setdefault on style.effects which means an existing block with style.effects={} (empty dict) will NOT get reveal/hover backfilled. All 6 currently-seeded apps happen to have non-empty effects so tests pass, but a legacy imported site with style.effects={} would render without motion. Consider: if not b['style'].get('effects'): b['style']['effects'] = {...}.",
+    "seed_sites.py _blk (referenced in review request) — not directly verified in this iteration since only outputs on /api/apps were spot-checked. All 6 seeded home pages returned reveal=True everywhere and hover=True on required block types, so _blk defaults match spec."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_v8_motion.py"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (owner) — from /app/memory/test_credentials.md. Nexus app id: app_1cb6f2b89eb6 (from /app/memory/nexus_id). Preview token: pv_cd9ae858f296ee1b2b15.",
+  "seed_data_creation": "None persisted. Test creates+deletes a TEST_v8_radius_app via POST/DELETE /api/apps. The two TEST_ apps visible on dashboard (TEST_UI_App, QA_v4_App_1788805736) are leftovers from prior iterations, not this one.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "8 pytest suites: backend_test, test_extras, test_v3_studio, test_v4_inbox_github, test_v5_workflows, test_v6_cms_portal, test_v7_growth, test_v8_motion. v8 additions all pass. Known open bug from iteration_7 (studio._parse_json strict=True chokes on Claude blog body control chars in POST /apps/{id}/cms/{col}/ai-write) is NOT re-tested here (each call burns AI credits). NEXUS_ID=app_1cb6f2b89eb6, preview_token=pv_cd9ae858f296ee1b2b15. Landing spec: hero-headline == exactly 9 word spans + a separate second h1 'every client app.' with 3 words. Dashboard stat-tenants is global count, not filter-aware. Effect toggles use '● ' prefix when active.",
+  "rca of the issue": "No issues found in v8 scope. All requested testids present, all effects defaults propagate, radius default is 20, public preview renders."
+}

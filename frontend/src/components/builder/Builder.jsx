@@ -95,7 +95,7 @@ export default function Builder({ appId, appDoc }) {
   const mutate = (next) => { setBlocks(next); setDirty(true); };
   function addBlock(tpl) {
     const id = `blk_${Math.random().toString(36).slice(2, 12)}`;
-    const b = { id, type: tpl.type, props: JSON.parse(JSON.stringify(tpl.defaults)), style: { bg: "default", align: tpl.type === "hero" || tpl.type === "cta" ? "center" : "left", padding: "md" } };
+    const b = { id, type: tpl.type, props: JSON.parse(JSON.stringify(tpl.defaults)), style: { bg: "default", align: tpl.type === "hero" || tpl.type === "cta" ? "center" : "left", padding: tpl.type === "hero" || tpl.type === "cta" ? "lg" : "md", effects: { reveal: true, hover: ["features", "gallery", "testimonials", "pricing", "collection_list", "logos"].includes(tpl.type) } } };
     const next = tpl.type === "navbar" ? [b, ...blocks] : [...blocks, b];
     mutate(next); setSelected(id);
   }

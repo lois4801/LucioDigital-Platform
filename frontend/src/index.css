@@ -171,6 +171,36 @@ button:active { transform: scale(0.97); }
 .btn-primary:active, .btn-ghost:active, .chip:active { filter: brightness(1.2); box-shadow: 0 0 0 3px var(--acc-glow), 0 0 24px var(--acc-glow); }
 .btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .has-cursor-trail, .has-cursor-trail a, .has-cursor-trail button { cursor: none; }
+/* ===== Premium motion system ===== */
+.spotlight { background: radial-gradient(600px circle at var(--spot-x, 50%) var(--spot-y, 30%), rgba(16,185,129,0.10), transparent 60%); transition: background 80ms linear; }
+@keyframes glowPulse { 0%,100% { opacity: .55; transform: translate(-50%,0) scale(1); } 50% { opacity: .9; transform: translate(-50%,0) scale(1.08); } }
+.hero-glow { animation: glowPulse 6s ease-in-out infinite; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.shimmer { position: relative; overflow: hidden; }
+.shimmer::after { content: ""; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); background-size: 200% 100%; animation: shimmer 2.8s linear infinite; pointer-events: none; }
+.shimmer-hover::after { animation: none; opacity: 0; }
+.shimmer-hover:hover::after { animation: shimmer 1.1s linear 1; opacity: 1; }
+.btn-glow { transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .18s, background-color .18s; }
+.btn-glow:hover { transform: scale(1.04); box-shadow: 0 0 0 1px rgba(16,185,129,.4), 0 12px 40px -8px rgba(16,185,129,.6); }
+.card-lift { transition: transform .2s cubic-bezier(.22,1,.36,1), border-color .2s, box-shadow .2s; }
+.card-lift:hover { transform: translateY(-4px); border-color: rgba(16,185,129,.55) !important; box-shadow: 0 0 0 1px rgba(16,185,129,.25), 0 24px 60px -30px rgba(16,185,129,.55); }
+.card-lift:hover .icon-pulse { animation: iconPulse 1s ease-in-out infinite; }
+@keyframes iconPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+@keyframes badgeGlow { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.35); } 50% { box-shadow: 0 0 14px 2px rgba(16,185,129,.45); } }
+.chip-active.glow, .badge-glow { animation: badgeGlow 2s ease-in-out infinite; }
+.chip-maint.badge-glow { animation-name: badgeGlowAmber; } @keyframes badgeGlowAmber { 0%,100% { box-shadow: 0 0 0 0 rgba(245,158,11,.3); } 50% { box-shadow: 0 0 14px 2px rgba(245,158,11,.45); } }
+.arrow-slide svg { transition: transform .2s cubic-bezier(.22,1,.36,1); } .arrow-slide:hover svg { transform: translateX(5px); }
+@keyframes borderShift { 0% { background-position: 0% 50%; } 100% { background-position: 200% 50%; } }
+.gradient-border { position: relative; }
+.gradient-border::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; background: linear-gradient(90deg, #065F46, #14B8A6, #10B981, #065F46); background-size: 200% 100%; animation: borderShift 4s linear infinite; -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+@keyframes spinShimmer { to { transform: rotate(360deg); } }
+.icon-shimmer { position: relative; display: inline-flex; }
+.icon-shimmer::after { content: ""; position: absolute; inset: -8px; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0 70%, rgba(16,185,129,.8) 85%, transparent 100%); animation: spinShimmer 2.4s linear infinite; }
+@keyframes softPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+.pulse-soft { animation: softPulse 2.4s ease-in-out infinite; }
+.pro-glow { box-shadow: 0 0 0 1px rgba(16,185,129,.5), 0 0 70px -20px rgba(16,185,129,.7); transform: scale(1.03); }
+.chip { transition: background-color .15s, color .15s, border-color .15s, transform .15s; }
+
 .marquee { animation: marquee 28s linear infinite; width: max-content; }
 @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 html { scroll-behavior: smooth; }

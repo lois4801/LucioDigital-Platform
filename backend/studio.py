@@ -29,7 +29,7 @@ def uid(prefix):
 DEFAULT_THEME = {
     "mode": "light", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#FFFFFF", "surface": "#F8FAFC",
     "fg": "#0F172A", "muted": "#64748B", "border": "#E2E8F0",
-    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 16, "motion": True, "cursor": True,
+    "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True,
 }
 
 BLOCK_SCHEMA = """
@@ -128,6 +128,7 @@ def _ensure_ids(blocks: List[dict]) -> List[dict]:
         b.setdefault("id", uid("blk"))
         b.setdefault("props", {})
         b.setdefault("style", {"bg": "default", "align": "left", "padding": "md"})
+        b["style"].setdefault("effects", {"reveal": True, "hover": b["type"] in ("features", "gallery", "testimonials", "pricing", "collection_list", "logos")})
         out.append(b)
     return out
 
@@ -232,7 +233,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         system = ("You are a senior product designer producing Figma-quality, light, minimalistic marketing websites. "
                   "Return ONLY valid JSON, no markdown. Shape: {\"theme\": {primary, secondary, font_heading, font_body, radius}, "
                   "\"pages\": [{\"name\", \"slug\", \"blocks\": [...]}]}. " + BLOCK_SCHEMA +
-                  " Rules: Home page has 7-9 blocks starting with navbar and ending with footer; other pages 4-6 blocks (navbar first, footer last). "
+                  " Design rules: premium high-end SaaS aesthetic — bold high-contrast hero (variant split or centered with a badge), strong typographic hierarchy, generous padding (lg on hero/cta, md elsewhere), alternate bg default/muted between sections, feature cards with icons. Rules: Home page has 7-9 blocks starting with navbar and ending with footer; other pages 4-6 blocks (navbar first, footer last). "
                   "Navbar links must reference the generated page slugs. Copy must be specific, persuasive and concise. "
                   "Use tasteful orange (#F97316) + turquoise (#14B8A6) unless the brief demands otherwise. "
                   "For images use real Unsplash URLs like https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80. Omit ids.")

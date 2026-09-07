@@ -1,5 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -129,7 +131,7 @@ export default function Dashboard() {
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
           <div>
             <div className="overline mb-2">Master Workspace</div>
-            <h1 className="font-display text-4xl lg:text-5xl font-semibold tracking-tighter">Your agency, at a glance.</h1>
+            <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: fast }} className="font-display text-4xl lg:text-5xl font-semibold tracking-tighter">Your agency, at a glance.</motion.h1>
             <p className="text-[var(--mut)] mt-2">Every client tenant, live metrics, and one-click handoff — all from here.</p>
           </div>
           <div className="grid grid-cols-4 gap-3 min-w-[420px]">
@@ -141,7 +143,7 @@ export default function Dashboard() {
             ].map((s) => (
               <div key={s.k} className="card-surface px-4 py-3">
                 <div className="flex items-center gap-2"><span className={`pulse-dot ${s.dot}`} /><span className="overline">{s.k}</span></div>
-                <div className="font-display text-2xl font-semibold mt-1">{s.v}</div>
+                <div className="font-display text-2xl font-semibold mt-1" data-testid={`stat-${s.k.toLowerCase().replace('.', '')}`}><CountUp value={s.v} /></div>
               </div>
             ))}
           </div>
@@ -157,14 +159,14 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {KINDS.map(([k, l]) => (
-              <button key={k} data-testid={`kind-filter-${k}-btn`} onClick={() => setKind(k)} className={`chip ${kind === k ? "!bg-[var(--cyan)]/12 !border-[var(--cyan)]/50 !text-[var(--cyan)]" : ""}`}>{l}</button>
+              <button key={k} data-testid={`kind-filter-${k}-btn`} onClick={() => setKind(k)} className={`chip relative ${kind === k ? "!border-[var(--cyan)]/50 !text-[var(--cyan)]" : ""}`}>{kind === k && <motion.span layoutId="kind-pill" className="absolute inset-0 rounded-full bg-[var(--cyan)]/12" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></button>
             ))}
             <span className="w-px h-5 bg-[var(--line)] mx-1" />
             {INDUSTRIES.map((ind) => (
               <button key={ind} data-testid={`industry-filter-${ind.toLowerCase().replace(/\s+/g,'-')}-btn`}
                 onClick={() => setIndustry(ind)}
-                className={`chip ${industry === ind ? "!bg-[var(--acc)]/12 !border-[var(--acc)]/50 !text-[var(--acc)]" : ""}`}>
-                {ind}
+                className={`chip relative ${industry === ind ? "!border-[var(--acc)]/50 !text-[var(--acc)]" : ""}`}>
+                {industry === ind && <motion.span layoutId="industry-pill" className="absolute inset-0 rounded-full bg-[var(--acc)]/12" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{ind}</span>
               </button>
             ))}
           </div>
@@ -223,13 +225,13 @@ export default function Dashboard() {
             <div className="font-display text-xl">Try clearing filters or creating your first tenant.</div>
           </div>
         ) : view === "grid" ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5 fade-in">
+          <motion.div variants={stagger} initial="hidden" animate="show" className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filtered.map((a) => {
               const meta = STATUS_META[a.status] || STATUS_META.active;
               return (
-                <div key={a.app_id} data-testid={`app-card-${a.name.toLowerCase().replace(/\s+/g,'-')}`}
+                <motion.div variants={fadeUp} key={a.app_id} data-testid={`app-card-${a.name.toLowerCase().replace(/\s+/g,'-')}`}
                   onClick={() => nav(`/apps/${a.app_id}`)}
-                  className="card-surface overflow-hidden cursor-pointer group">
+                  className="card-surface card-lift overflow-hidden cursor-pointer group">
                   <div className="relative aspect-video overflow-hidden">
                     {a.video_url ? (
                       <video src={a.video_url} poster={a.thumbnail || undefined} autoPlay muted loop playsInline preload="metadata"
@@ -245,7 +247,7 @@ export default function Dashboard() {
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
                     </div>
                     <div className="absolute top-3 right-3">
-                      <span className={`chip ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
+                      <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
                     </div>
                     <div className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Play size={16} className="text-white ml-0.5" />
@@ -261,10 +263,10 @@ export default function Dashboard() {
                       <div><div className="text-[var(--dim)] uppercase">24h</div><div className="text-[var(--fg)]">{a.metrics?.visitors_24h?.toLocaleString()}</div></div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         ) : (
           <div className="card-surface divide-y divide-[var(--line)] fade-in">
             {filtered.map((a) => {
@@ -278,7 +280,7 @@ export default function Dashboard() {
                     <div className="font-display text-base">{a.name}</div>
                     <div className="text-xs text-[var(--mut)]">{a.industry} · {a.description?.slice(0, 60)}</div>
                   </div>
-                  <span className={`chip ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
+                  <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
                   <div className="font-mono text-xs text-[var(--mut)] w-24 text-right">{a.metrics?.uptime}%</div>
                 </div>
               );

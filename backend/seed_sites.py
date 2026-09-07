@@ -90,7 +90,9 @@ NICHES = {
 
 
 def _blk(t, props, style=None):
-    return {"id": _id("blk"), "type": t, "props": props, "style": style or {"bg": "default", "align": "left", "padding": "md"}}
+    st = dict(style or {"bg": "default", "align": "left", "padding": "md"})
+    st.setdefault("effects", {"reveal": True, "hover": t in ("features", "gallery", "testimonials", "pricing", "logos")})
+    return {"id": _id("blk"), "type": t, "props": props, "style": st}
 
 
 def build_pages(name, n):
