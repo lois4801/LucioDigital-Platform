@@ -1,4 +1,5 @@
-"""Import any public website: scrape its content, brand and colours, then rebuild it as editable Site Mode pages."""
+"""Full-site importer: crawls every internal page, downloads media into the tenant library,
+recreates forms (wired to the Inbox) and navigation, extracts the colour scheme, and reports back."""
 import os
 import re
 import json
@@ -7,7 +8,7 @@ import asyncio
 import logging
 from collections import Counter
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Optional, List, Callable
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -16,6 +17,8 @@ from fastapi import HTTPException, Depends
 from pydantic import BaseModel
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
+from storage import MIME, put_object
+from files_lib import usage_for, APP_NAME
 from studio import _parse_json, _ensure_ids, _clean_theme, BLOCK_SCHEMA, DEFAULT_THEME
 
 logger = logging.getLogger(__name__)
@@ -24,11 +27,20 @@ require_ai_access = None
 
 UA = "Mozilla/5.0 (compatible; OmniStackImporter/1.0; +https://omnistack.ai)"
 MAX_BYTES = 1_500_000
-EXTRA_HINTS = ("about", "service", "product", "pricing", "price", "contact", "team", "work", "portfolio", "menu")
+MAX_PAGES = 25
+MAX_DEPTH = 2
+MAX_IMAGES = 80
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+AI_CONCURRENCY = 4
+
+SKIP_PATH = re.compile(r"(/wp-(json|admin|login)|/feed|/tag/|/category/|/author/|/page/\d|/\d{4}/\d{2}/|\.(pdf|zip|docx?|xlsx?|jpe?g|png|gif|webp|svg|mp4|mp3|ico|css|js)$)", re.I)
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]{2,}")
 PHONE_RE = re.compile(r"(?:\+?\d{1,2}[\s.-])?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}")
 HEX_RE = re.compile(r"#(?:[0-9a-fA-F]{3}){1,2}\b")
-SKIP_HEX = {"#fff", "#ffffff", "#000", "#000000", "#fefefe", "#f9f9f9"}
+RGB_RE = re.compile(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})")
+CSS_RULE_RE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+NEUTRAL = {"#fff", "#ffffff", "#000", "#000000", "#fefefe", "#f9f9f9", "#fafafa", "#eee", "#eeeeee", "#ccc", "#cccccc", "#333", "#333333", "#666", "#666666", "#999", "#999999", "#f5f5f5", "#111", "#111111", "#222", "#222222"}
+FIELD_TYPES = {"text", "email", "tel", "number", "url", "date", "textarea", "select", "checkbox", "radio", "password"}
 
 
 def _now():
@@ -53,17 +65,24 @@ def _norm_url(url: str) -> str:
     return url
 
 
-async def _fetch(client: httpx.AsyncClient, url: str) -> Optional[str]:
+def _slugify(path: str) -> str:
+    s = re.sub(r"[^a-z0-9-]+", "-", (path or "").lower().strip("/ ")).strip("-")
+    return "/" + s if s else "/"
+
+
+async def _fetch(client: httpx.AsyncClient, url: str):
     try:
         r = await client.get(url)
-        if r.status_code >= 400 or "html" not in r.headers.get("content-type", "text/html"):
-            return None
-        return r.text[:MAX_BYTES]
-    except Exception:
-        return None
+        if r.status_code >= 400:
+            return None, f"HTTP {r.status_code}"
+        if "html" not in r.headers.get("content-type", "text/html"):
+            return None, "not an HTML page"
+        return r.text[:MAX_BYTES], None
+    except Exception as e:
+        return None, type(e).__name__
 
 
-def _text_of(soup: BeautifulSoup, sel: str, limit: int, cap: int = 220) -> List[str]:
+def _text_of(soup, sel: str, limit: int, cap: int = 240) -> List[str]:
     out, seen = [], set()
     for el in soup.select(sel):
         t = " ".join(el.get_text(" ", strip=True).split())[:cap]
@@ -75,95 +94,315 @@ def _text_of(soup: BeautifulSoup, sel: str, limit: int, cap: int = 220) -> List[
     return out
 
 
+def _label_for(soup, el) -> str:
+    fid = el.get("id")
+    if fid:
+        lab = soup.find("label", attrs={"for": fid})
+        if lab:
+            return " ".join(lab.get_text(" ", strip=True).split())[:80]
+    parent_lab = el.find_parent("label")
+    if parent_lab:
+        return " ".join(parent_lab.get_text(" ", strip=True).split())[:80]
+    return (el.get("aria-label") or el.get("placeholder") or (el.get("name") or "").replace("_", " ").replace("-", " ").title())[:80]
+
+
+def _parse_forms(soup) -> List[dict]:
+    forms = []
+    for f in soup.find_all("form"):
+        fields = []
+        for el in f.find_all(["input", "textarea", "select"]):
+            t = (el.get("type") or ("textarea" if el.name == "textarea" else "select" if el.name == "select" else "text")).lower()
+            if t in ("hidden", "submit", "button", "image", "reset"):
+                continue
+            if t not in FIELD_TYPES:
+                t = "text"
+            fld = {"name": (el.get("name") or el.get("id") or f"field{len(fields) + 1}")[:60],
+                   "label": _label_for(soup, el) or "Field", "type": t,
+                   "placeholder": (el.get("placeholder") or "")[:100],
+                   "required": el.has_attr("required") or "required" in (el.get("class") or [])}
+            if el.name == "select":
+                fld["options"] = [" ".join(o.get_text(" ", strip=True).split())[:60] for o in el.find_all("option") if o.get_text(strip=True)][:25]
+            fields.append(fld)
+            if len(fields) >= 20:
+                break
+        names = " ".join(x["name"].lower() for x in fields)
+        if not fields or (len(fields) <= 1 and re.search(r"\b(q|s|search|query|keyword)\b", names)):
+            continue
+        btn = f.find(["button", "input"], attrs={"type": re.compile("submit", re.I)}) or f.find("button")
+        heading = ""
+        for prev in f.find_all_previous(["h1", "h2", "h3"], limit=1):
+            heading = " ".join(prev.get_text(" ", strip=True).split())[:80]
+        forms.append({"heading": heading or "Get in touch", "fields": fields,
+                      "submit_label": (btn.get_text(" ", strip=True) if btn and btn.name == "button" else (btn.get("value") if btn else "") or "Send")[:40]})
+        if len(forms) >= 3:
+            break
+    return forms
+
+
+def _parse_nav(soup, url: str) -> List[dict]:
+    root = soup.select_one("header nav") or soup.select_one("nav") or soup.select_one("header")
+    if not root:
+        return []
+    items, seen = [], set()
+    host = urlparse(url).netloc
+    top = root.select("li") or root.find_all("a", href=True)
+    for li in top:
+        a = li if getattr(li, "name", "") == "a" else li.find("a", href=True)
+        if not a or li.find_parent("li") is not None:
+            continue
+        label = " ".join(a.get_text(" ", strip=True).split())[:40]
+        href = urljoin(url, a["href"]).split("#")[0]
+        if not label or label.lower() in seen:
+            continue
+        seen.add(label.lower())
+        kids = []
+        for sub in (li.select("li a[href]") if getattr(li, "name", "") == "li" else []):
+            sl = " ".join(sub.get_text(" ", strip=True).split())[:40]
+            sh = urljoin(url, sub["href"]).split("#")[0]
+            if sl and urlparse(sh).netloc == host:
+                kids.append({"label": sl, "href": _slugify(urlparse(sh).path)})
+            if len(kids) >= 8:
+                break
+        item = {"label": label, "href": _slugify(urlparse(href).path) if urlparse(href).netloc == host else href}
+        kids = [k for k in kids if k["href"] != item["href"] and k["label"].lower() != label.lower()]
+        if kids:
+            item["children"] = kids
+        items.append(item)
+        if len(items) >= 8:
+            break
+    return items
+
+
+def _colors_from_css(css: str) -> dict:
+    """Split declared colours into background / text / button buckets."""
+    bg, fg, btn = Counter(), Counter(), Counter()
+
+    def add(counter, val):
+        for h in HEX_RE.findall(val):
+            h = h.lower()
+            if len(h) == 4:
+                h = "#" + "".join(c * 2 for c in h[1:])
+            counter[h] += 1
+        for m in RGB_RE.finditer(val):
+            r, g, b = (min(255, int(x)) for x in m.groups())
+            counter["#%02x%02x%02x" % (r, g, b)] += 1
+    for sel, body in CSS_RULE_RE.findall(css or "")[:4000]:
+        s = sel.lower()
+        for decl in body.split(";"):
+            if ":" not in decl:
+                continue
+            prop, val = decl.split(":", 1)
+            prop = prop.strip().lower()
+            if "background" in prop:
+                add(btn if re.search(r"btn|button|cta|submit", s) else bg, val)
+            elif prop == "color":
+                add(btn if re.search(r"btn|button|cta|submit", s) else fg, val)
+            elif prop in ("border-color", "fill", "stroke"):
+                add(btn, val)
+    pick = lambda c, n=4: [h for h, _ in c.most_common(24) if h not in NEUTRAL][:n]
+    return {"background": pick(bg), "text": pick(fg), "button": pick(btn), "all": pick(bg + fg + btn, 8)}
+
+
 def _parse_page(html: str, url: str) -> dict:
     soup = BeautifulSoup(html, "lxml")
     for bad in soup(["script", "style", "noscript"]):
         bad.decompose()
-    meta = lambda n, a="name": (soup.find("meta", attrs={a: n}) or {}).get("content") if soup.find("meta", attrs={a: n}) else None
+
+    def meta(n, a="name"):
+        el = soup.find("meta", attrs={a: n})
+        return el.get("content") if el else None
     images, seen = [], set()
-    for im in soup.find_all("img"):
-        src = im.get("src") or im.get("data-src") or ""
-        if not src or src.startswith("data:"):
-            continue
-        full = urljoin(url, src)
+
+    def add_img(src, alt=""):
+        if not src or src.startswith("data:") or len(images) >= 40:
+            return
+        full = urljoin(url, src.strip()).split("?")[0]
         if full in seen or full.lower().endswith(".svg"):
-            continue
+            return
         seen.add(full)
-        images.append({"url": full, "alt": (im.get("alt") or "")[:120]})
-        if len(images) >= 24:
-            break
+        images.append({"url": full, "alt": (alt or "")[:120]})
+
+    def from_srcset(v):
+        best, best_w = None, -1
+        for part in (v or "").split(","):
+            bits = part.strip().split()
+            if not bits:
+                continue
+            w = int(re.sub(r"\D", "", bits[-1]) or 0) if len(bits) > 1 else 0
+            if w >= best_w:
+                best, best_w = bits[0], w
+        return best
+    for im in soup.find_all("img"):
+        add_img(im.get("src") or im.get("data-src") or im.get("data-lazy-src") or im.get("data-original") or from_srcset(im.get("srcset") or im.get("data-srcset")), im.get("alt"))
+    for so in soup.find_all("source"):
+        add_img(from_srcset(so.get("srcset") or so.get("data-srcset")))
+    for el in soup.find_all(style=True)[:300]:
+        for m in re.finditer(r"url\((['\"]?)([^'\")]+)\1\)", el.get("style", "")):
+            add_img(m.group(2))
+    if meta("og:image", "property"):
+        add_img(meta("og:image", "property"))
     logo = None
-    for im in soup.find_all("img")[:20]:
-        hay = f"{im.get('class','')} {im.get('id','')} {im.get('alt','')} {im.get('src','')}".lower()
+    for im in soup.find_all("img")[:25]:
+        hay = f"{im.get('class', '')} {im.get('id', '')} {im.get('alt', '')} {im.get('src', '')}".lower()
         if "logo" in hay and im.get("src") and not im["src"].startswith("data:"):
             logo = urljoin(url, im["src"])
             break
     links, lseen = [], set()
     host = urlparse(url).netloc
     for a in soup.find_all("a", href=True):
-        full = urljoin(url, a["href"]).split("#")[0]
-        if urlparse(full).netloc != host or full in lseen:
+        full = urljoin(url, a["href"]).split("#")[0].rstrip("/") or url
+        if urlparse(full).netloc != host or full in lseen or SKIP_PATH.search(urlparse(full).path or ""):
             continue
         lseen.add(full)
         label = " ".join(a.get_text(" ", strip=True).split())[:40]
-        if label:
-            links.append({"label": label, "url": full})
+        links.append({"label": label, "url": full})
     body = " ".join(soup.get_text(" ", strip=True).split())
-    hexes = [h.lower() for h in HEX_RE.findall(html) if h.lower() not in SKIP_HEX]
+    inline_css = " ".join(el.get("style", "") for el in soup.find_all(style=True)[:400])
+    path = urlparse(url).path
     return {
-        "url": url,
+        "url": url, "slug": _slugify(path),
         "title": (soup.title.string.strip() if soup.title and soup.title.string else None),
         "description": meta("description") or meta("og:description", "property"),
         "site_name": meta("og:site_name", "property"),
         "og_image": meta("og:image", "property"),
         "theme_color": meta("theme-color"),
         "logo": logo,
-        "h1": _text_of(soup, "h1", 4),
-        "h2": _text_of(soup, "h2", 14),
-        "h3": _text_of(soup, "h3", 20),
-        "paragraphs": _text_of(soup, "p", 40, 400),
-        "list_items": _text_of(soup, "li", 40, 160),
-        "images": images,
-        "links": links[:40],
-        "emails": list(dict.fromkeys(EMAIL_RE.findall(body)))[:4],
-        "phones": list(dict.fromkeys(PHONE_RE.findall(body)))[:4],
-        "colors": [c for c, _ in Counter(hexes).most_common(8)],
-        "text": body[:6000],
+        "h1": _text_of(soup, "h1", 4), "h2": _text_of(soup, "h2", 16), "h3": _text_of(soup, "h3", 24),
+        "paragraphs": _text_of(soup, "p", 45, 420),
+        "list_items": _text_of(soup, "li", 45, 160),
+        "buttons": _text_of(soup, "a.btn, button, .button, .cta, a[class*=button]", 14, 40),
+        "images": images, "links": links[:60],
+        "forms": _parse_forms(soup),
+        "nav": _parse_nav(soup, url),
+        "emails": list(dict.fromkeys(EMAIL_RE.findall(body)))[:5],
+        "phones": list(dict.fromkeys(PHONE_RE.findall(body)))[:5],
+        "addresses": _text_of(soup, "address", 3, 200),
+        "inline_css": inline_css[:40000],
+        "stylesheets": [urljoin(url, l["href"]) for l in soup.find_all("link", rel=lambda v: v and "stylesheet" in v, href=True)][:4],
+        "text": body[:5000],
     }
 
 
-async def scrape_site(url: str, on: Optional[callable] = None) -> dict:
+def _rank_links(home: dict, base: str) -> List[str]:
+    """Order internal links so the meaningful pages get crawled first."""
+    hints = ("service", "about", "product", "pricing", "price", "contact", "team", "work", "portfolio", "menu", "solution", "industr", "faq", "gallery", "book", "quote", "location")
+    scored = []
+    for l in home["links"]:
+        p = urlparse(l["url"]).path.lower()
+        if not p or p == "/" or SKIP_PATH.search(p):
+            continue
+        depth = len([x for x in p.split("/") if x])
+        score = (0 if any(h in p or h in l["label"].lower() for h in hints) else 1) + depth
+        scored.append((score, l["url"]))
+    out, seen = [], set()
+    for _, u in sorted(scored, key=lambda x: x[0]):
+        key = urlparse(u).path.rstrip("/").lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(u)
+    return out
+
+
+async def crawl_site(url: str, max_pages: int = MAX_PAGES, on: Optional[Callable] = None) -> dict:
     url = _norm_url(url)
 
     async def say(*a):
         if on:
             await on(*a)
+    failures = []
     async with httpx.AsyncClient(follow_redirects=True, timeout=25.0, headers={"User-Agent": UA, "Accept-Language": "en"}) as client:
         await say("scanning", f"Opening {urlparse(url).netloc}")
-        html = await _fetch(client, url)
+        html, err = await _fetch(client, url)
         if not html:
-            raise HTTPException(400, "Could not load that website (it may block bots or be offline)")
+            raise HTTPException(400, f"Could not load that website ({err or 'no response'}) — it may block bots or be offline")
         home = _parse_page(html, url)
-        picked, subs = [], []
-        for l in home["links"]:
-            path = urlparse(l["url"]).path.lower().strip("/")
-            if path and any(h in path or h in l["label"].lower() for h in EXTRA_HINTS) and l["url"] != url:
-                if path not in [urlparse(p).path.lower().strip("/") for p in picked]:
-                    picked.append(l["url"])
-            if len(picked) >= 4:
-                break
-        for i, u in enumerate(picked):
-            await say("reading", f"Reading page {i + 2} of {len(picked) + 1} — {urlparse(u).path}")
-            sub_html = await _fetch(client, u)
-            if sub_html:
-                subs.append(_parse_page(sub_html, u))
+        pages = [home]
+        seen = {urlparse(url).path.rstrip("/").lower() or "/"}
+        queue = [(u, 1) for u in _rank_links(home, url)]
+        while queue and len(pages) < max_pages:
+            u, depth = queue.pop(0)
+            key = urlparse(u).path.rstrip("/").lower() or "/"
+            if key in seen or depth > MAX_DEPTH:
+                continue
+            seen.add(key)
+            await say("reading", f"Crawling page {len(pages) + 1} — {urlparse(u).path or '/'}")
+            sub_html, err = await _fetch(client, u)
+            if not sub_html:
+                failures.append({"item": u, "reason": f"page skipped ({err})"})
+                continue
+            pg = _parse_page(sub_html, u)
+            pages.append(pg)
+            if depth < MAX_DEPTH:
+                for nxt in _rank_links(pg, u)[:10]:
+                    if (urlparse(nxt).path.rstrip("/").lower() or "/") not in seen:
+                        queue.append((nxt, depth + 1))
+        css = home["inline_css"]
+        for sheet in home["stylesheets"][:3]:
+            try:
+                r = await client.get(sheet)
+                if r.status_code < 400:
+                    css += "\n" + r.text[:400_000]
+            except Exception:
+                failures.append({"item": sheet, "reason": "stylesheet could not be read"})
+    colors = _colors_from_css(css)
+    if home.get("theme_color"):
+        colors["button"] = [home["theme_color"].lower()] + colors["button"]
     brand = home["site_name"] or (home["title"] or "").split("|")[0].split("–")[0].split("-")[0].strip() or urlparse(url).netloc
-    return {
-        "url": url, "brand": brand[:80], "home": home, "subpages": subs,
-        "found": {"pages": 1 + len(subs), "images": len(home["images"]) + sum(len(s["images"]) for s in subs),
-                  "emails": home["emails"], "phones": home["phones"], "colors": ([home["theme_color"]] if home["theme_color"] else []) + home["colors"][:4],
-                  "logo": home["logo"] or home["og_image"], "title": home["title"], "description": home["description"]},
-    }
+    return {"url": url, "brand": brand[:80], "pages": pages, "nav": home["nav"], "colors": colors, "failures": failures}
+
+
+async def save_images(db, app_id: str, urls: List[str], quota_mb: int, on: Optional[Callable] = None):
+    """Download every image into the tenant's media library so nothing is hotlinked."""
+    async def say(*a):
+        if on:
+            await on(*a)
+    mapping, failures, saved = {}, [], 0
+    urls = [u for u in dict.fromkeys(urls) if u][:MAX_IMAGES]
+    if not urls:
+        return mapping, saved, failures
+    usage = await usage_for(db, app_id, quota_mb)
+    budget = max(0, usage["quota_bytes"] - usage["used_bytes"])
+    async with httpx.AsyncClient(follow_redirects=True, timeout=30.0, headers={"User-Agent": UA}) as client:
+        for i, u in enumerate(urls):
+            if i % 8 == 0:
+                await say("media", f"Saving image {i + 1} of {len(urls)} to the media library")
+            try:
+                r = await client.get(u)
+                ctype = (r.headers.get("content-type") or "").split(";")[0].lower()
+                url_ext = (urlparse(u).path.rsplit(".", 1)[-1] or "").lower()
+                if ctype in ("application/octet-stream", "binary/octet-stream", "") and url_ext in ("jpg", "jpeg", "png", "webp", "gif"):
+                    ctype = f"image/{'jpeg' if url_ext in ('jpg', 'jpeg') else url_ext}"
+                if r.status_code >= 400 or not ctype.startswith("image/"):
+                    failures.append({"item": u, "reason": f"image not downloadable ({r.status_code}, {ctype or 'unknown type'})"})
+                    continue
+                data = r.content
+                if len(data) < 900:
+                    continue
+                if len(data) > MAX_IMAGE_BYTES:
+                    failures.append({"item": u, "reason": "image over 8 MB — add it manually"})
+                    continue
+                if len(data) > budget:
+                    failures.append({"item": u, "reason": "tenant storage quota reached"})
+                    break
+                ext = {"image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/svg+xml": "svg"}.get(ctype)
+                if not ext or ext not in MIME:
+                    failures.append({"item": u, "reason": f"unsupported image type ({ctype})"})
+                    continue
+                path = f"{APP_NAME}/library/{app_id}/{uuid.uuid4().hex}.{ext}"
+                res = put_object(path, data, MIME[ext])
+                await db.files.insert_one({
+                    "file_id": uuid.uuid4().hex, "app_id": app_id, "storage_path": res["path"],
+                    "original_filename": (urlparse(u).path.rsplit("/", 1)[-1] or f"image.{ext}")[:160],
+                    "content_type": MIME[ext], "size": res.get("size", len(data)), "is_deleted": False,
+                    "uploaded_by": "website import", "in_library": True, "private": False,
+                    "source_url": u, "created_at": _now()})
+                mapping[u] = f"/api/public/files/{res['path']}"
+                budget -= len(data)
+                saved += 1
+            except Exception as e:
+                failures.append({"item": u, "reason": f"download failed ({type(e).__name__})"})
+    return mapping, saved, failures
 
 
 async def _claude(system: str, prompt: str, session: str) -> str:
@@ -172,44 +411,168 @@ async def _claude(system: str, prompt: str, session: str) -> str:
     return reply if isinstance(reply, str) else str(reply)
 
 
-SYSTEM = (
-    "You rebuild a scraped website as a premium, editable page structure for a visual site builder. Return ONLY valid JSON (no markdown): "
-    "{\"business\": {\"name\", \"email\", \"phone\", \"address\", \"industry\"}, \"theme\": {mode, primary, secondary, bg, surface, border, font_heading, font_body, radius}, "
-    "\"pages\": [{\"name\", \"slug\", \"blocks\": [...]}]}. " + BLOCK_SCHEMA +
-    " Rules: use ONLY facts, names, services, prices, testimonials and contact details found in the scraped data — never invent a different company. "
-    "Keep the original wording where it is good, tighten it where it is bloated. Reuse the scraped image URLs exactly as given (they are absolute). "
-    "Build 3-5 pages: Home (slug '/', navbar first, 8-12 blocks including a hero with variant 'cover' using the best scraped image, then the site's real "
-    "services/features, stats or credentials, testimonials if any, pricing if any, FAQ if any, a cta and a footer) plus About / Services / Contact when the "
-    "scraped content supports them. Navbar links must point at the slugs you create. theme.primary and secondary must come from the scraped colours (pick the "
-    "two strongest brand colours, not black or white); mode 'dark' unless the scraped colours are clearly light — then use 'light' with bg #FFFFFF and "
-    "surface #F8FAFC. Omit block ids."
+GLOBAL_SYSTEM = (
+    "You analyse a crawled website and define its global identity for a visual site builder. Return ONLY valid JSON (no markdown): "
+    "{\"business\": {\"name\", \"email\", \"phone\", \"address\", \"industry\", \"tagline\"}, "
+    "\"theme\": {mode, primary, secondary, bg, surface, fg, muted, border, font_heading, font_body, radius}, "
+    "\"navbar\": {\"brand\", \"cta\", \"links\": [{\"label\", \"href\", \"children\": [{\"label\", \"href\"}]}]}, "
+    "\"footer\": {\"brand\", \"tagline\", \"columns\": [{\"title\", \"links\": [string]}]}}. "
+    "Use ONLY real scraped facts — never invent a different company. theme.primary/secondary must come from the scraped button and background colours "
+    "(never pure black or white); bg/surface/fg/muted/border must be consistent with the site's real light or dark scheme (mode 'light' → bg #FFFFFF, "
+    "surface #F8FAFC, fg #0F172A; mode 'dark' → dark bg and light fg). Keep the site's own navigation labels, order and dropdown children, and rewrite "
+    "hrefs to the given tenant slugs. All hex values must be 6-digit."
+)
+
+PAGE_SYSTEM = (
+    "You rebuild ONE crawled web page as premium editable blocks for a visual site builder. Return ONLY valid JSON (no markdown): "
+    "{\"name\": \"<short page name>\", \"blocks\": [...]}. " + BLOCK_SCHEMA +
+    " Rules: use ONLY the scraped text, services, prices, testimonials, FAQs, contact details and IMAGE URLS given (the image URLs are already local — "
+    "reuse them verbatim, never invent or hotlink other images). Keep the page's real wording and button labels; tighten only what is bloated. "
+    "Do NOT emit navbar or footer blocks — they are added globally. 5-11 blocks, ordered like the original page: lead with a hero (use variant 'cover' with "
+    "the best image when one exists), then the real sections. If the page has FORMS, recreate each one as a 'form' block preserving every field label, type, "
+    "placeholder, options and required flag exactly as scraped. If the page lists contact details, include a 'contact' block with the real email/phone/address. "
+    "Omit block ids."
 )
 
 
-async def build_import(url: str, on: Optional[callable] = None) -> dict:
+STRING_PROPS = ("cta", "cta2", "title", "subtitle", "heading", "subheading", "brand", "badge", "caption", "tagline",
+                "submit_label", "success_message", "email", "phone", "address", "value", "label", "name", "role",
+                "quote", "desc", "price", "period", "q", "a")
+
+
+def _sanitize(node):
+    """LLMs sometimes return {label, href} where a plain string belongs — flatten those."""
+    if isinstance(node, dict):
+        out = {}
+        for k, v in node.items():
+            if k in STRING_PROPS and isinstance(v, dict):
+                out[k] = str(v.get("label") or v.get("text") or v.get("title") or "")
+            elif k in ("names", "images", "features") and isinstance(v, list):
+                out[k] = [x if isinstance(x, str) else str((x or {}).get("label") or (x or {}).get("url") or (x or {}).get("title") or "") for x in v]
+            else:
+                out[k] = _sanitize(v)
+        return out
+    if isinstance(node, list):
+        return [_sanitize(x) for x in node]
+    return node
+
+
+def _localize(imgs: List[dict], mapping: dict) -> List[dict]:
+    return [{"url": mapping[i["url"]], "alt": i["alt"]} for i in imgs if i["url"] in mapping]
+
+
+FORM_PAGE_RE = re.compile(r"contact|schedule|quote|book|appointment|estimate|enquir|inquir|request|get-started|signup|sign-up", re.I)
+DEFAULT_FORM = {"heading": "Request a callback", "submit_label": "Send request", "fields": [
+    {"name": "name", "label": "Full name", "type": "text", "placeholder": "Jane Doe", "required": True},
+    {"name": "email", "label": "Email", "type": "email", "placeholder": "jane@company.com", "required": True},
+    {"name": "phone", "label": "Phone", "type": "tel", "placeholder": "(555) 010-2030", "required": False},
+    {"name": "message", "label": "How can we help?", "type": "textarea", "placeholder": "A few details…", "required": True}]}
+
+
+async def _build_page(pg: dict, mapping: dict, brand: str, industry: str, sem: asyncio.Semaphore, on) -> dict:
+    imgs = _localize(pg["images"], mapping)
+    payload = {k: pg[k] for k in ("url", "slug", "title", "description", "h1", "h2", "h3", "paragraphs", "list_items", "buttons", "forms", "emails", "phones", "addresses")}
+    payload["images"] = imgs[:14]
+    payload["business"] = {"name": brand, "industry": industry}
+    synth = False
+    if not pg["forms"] and FORM_PAGE_RE.search(f"{pg['slug']} {pg.get('title') or ''}"):
+        payload["forms"] = [DEFAULT_FORM]
+        payload["form_note"] = "The original form on this page is JavaScript-rendered and could not be read; rebuild this standard form instead."
+        synth = True
+    async with sem:
+        raw = await _claude(PAGE_SYSTEM, json.dumps(payload, default=str)[:24000], f"impg-{_uid('p')}")
+    data = _parse_json(raw)
+    blocks = _sanitize(data.get("blocks") or [])
+    if not blocks:
+        raise ValueError("no blocks returned")
+    name = (data.get("name") or pg["slug"].strip("/").replace("-", " ").title() or "Home")[:40]
+    return {"slug": pg["slug"], "name": name, "blocks": blocks, "forms": len(pg["forms"]), "synth_form": synth}
+
+
+async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id: Optional[str] = None,
+                       quota_mb: int = 500, max_pages: int = MAX_PAGES) -> dict:
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "LLM key missing")
 
     async def say(*a):
         if on:
             await on(*a)
-    src = await scrape_site(url, on)
-    payload = {"url": src["url"], "brand": src["brand"], "home": src["home"], "subpages": src["subpages"]}
-    await say("rebuilding", f"Rebuilding {src['brand']} as editable pages")
+    crawl = await crawl_site(url, max_pages, on)
+    failures = list(crawl["failures"])
+
+    mapping, saved_imgs = {}, 0
+    if db is not None and app_id:
+        all_imgs = [i["url"] for pg in crawl["pages"] for i in pg["images"]]
+        for pg in crawl["pages"]:
+            if pg.get("logo"):
+                all_imgs.insert(0, pg["logo"])
+        mapping, saved_imgs, img_fail = await save_images(db, app_id, all_imgs, quota_mb, on)
+        failures += img_fail
+
+    await say("rebuilding", f"Rebuilding {crawl['brand']} — global brand, colours and navigation")
+    g_payload = {"url": crawl["url"], "brand": crawl["brand"], "colors": crawl["colors"], "nav": crawl["nav"],
+                 "slugs": [p["slug"] for p in crawl["pages"]],
+                 "home": {k: crawl["pages"][0][k] for k in ("title", "description", "h1", "h2", "paragraphs", "emails", "phones", "addresses", "text")}}
     try:
-        data = _parse_json(await _claude(SYSTEM, json.dumps(payload, default=str)[:38000], f"import-{_uid('i')}"))
+        gdata = _parse_json(await _claude(GLOBAL_SYSTEM, json.dumps(g_payload, default=str)[:24000], f"imgl-{_uid('g')}"))
     except Exception as e:
-        logger.exception("website import failed")
-        raise HTTPException(500, f"Could not rebuild that site: {str(e)[:160]}")
-    pages = data.get("pages") or []
+        logger.exception("global import step failed")
+        raise HTTPException(500, f"Could not analyse that website: {str(e)[:150]}")
+    biz = gdata.get("business") or {"name": crawl["brand"]}
+    theme = {**DEFAULT_THEME, **_clean_theme(gdata.get("theme") or {})}
+    nav = gdata.get("navbar") or {"brand": crawl["brand"], "links": crawl["nav"]}
+    footer = gdata.get("footer") or {"brand": crawl["brand"], "tagline": biz.get("tagline", ""), "columns": []}
+    footer["columns"] = [{"title": str(c.get("title", ""))[:40],
+                          "links": [l if isinstance(l, str) else str((l or {}).get("label", "")) for l in (c.get("links") or [])][:8]}
+                         for c in (footer.get("columns") or []) if isinstance(c, dict)][:4]
+    logo_src = next((p["logo"] for p in crawl["pages"] if p.get("logo")), None)
+    logo = mapping.get(logo_src)
+
+    sem = asyncio.Semaphore(AI_CONCURRENCY)
+    total = len(crawl["pages"])
+    done = [0]
+
+    async def one(pg):
+        try:
+            res = await _build_page(pg, mapping, biz.get("name") or crawl["brand"], biz.get("industry", ""), sem, on)
+        except Exception as e:
+            logger.warning("page rebuild failed %s: %s", pg["slug"], e)
+            return {"slug": pg["slug"], "error": f"page could not be rebuilt ({type(e).__name__}) — add it manually"}
+        done[0] += 1
+        await say("rebuilding", f"Rebuilt {done[0]} of {total} pages — {res['name']}")
+        return res
+    results = await asyncio.gather(*[one(pg) for pg in crawl["pages"]])
+
+    pages, forms_total, seen_slugs = [], 0, set()
+    for pg, res in zip(crawl["pages"], results):
+        if res.get("error"):
+            failures.append({"item": pg["url"], "reason": res["error"]})
+            continue
+        if res.get("synth_form"):
+            failures.append({"item": pg["url"], "reason": "form was JavaScript-rendered — a standard contact form was rebuilt; check the fields"})
+        slug = res["slug"] if res["slug"] not in seen_slugs else f"{res['slug'].rstrip('/')}-{len(seen_slugs)}"
+        seen_slugs.add(slug)
+        nb = {"type": "navbar", "props": _sanitize({"brand": nav.get("brand") or crawl["brand"], "cta": nav.get("cta") or "Contact us",
+                                                    "links": nav.get("links") or crawl["nav"], **({"logo": logo} if logo else {})}), "style": {}}
+        ft = {"type": "footer", "props": _sanitize({**footer, **({"logo": logo} if logo else {})}), "style": {}}
+        blocks = _ensure_ids([nb] + [b for b in res["blocks"] if b.get("type") not in ("navbar", "footer")] + [ft])
+        forms_total += sum(1 for b in blocks if b.get("type") == "form")
+        pages.append({"name": res["name"], "slug": slug, "blocks": blocks})
     if not pages:
-        raise HTTPException(500, "Nothing usable was found on that website")
-    theme = {**DEFAULT_THEME, **_clean_theme(data.get("theme") or {})}
-    out = []
-    for i, pg in enumerate(pages):
-        slug = "/" if i == 0 else "/" + re.sub(r"[^a-z0-9-]+", "-", str(pg.get("slug") or pg.get("name") or f"page-{i}").lower().strip("/ ")).strip("-")
-        out.append({"name": pg.get("name") or slug.strip("/").title() or "Home", "slug": slug, "blocks": _ensure_ids(pg.get("blocks") or [])})
-    return {"source": src["found"], "url": src["url"], "business": data.get("business") or {"name": src["brand"]}, "theme": theme, "pages": out}
+        raise HTTPException(500, "Nothing usable could be rebuilt from that website")
+    pages.sort(key=lambda p: (p["slug"] != "/", p["slug"]))
+
+    report = {
+        "crawled": len(crawl["pages"]), "pages_imported": len(pages), "images_saved": saved_imgs,
+        "images_found": len({i["url"] for pg in crawl["pages"] for i in pg["images"]}),
+        "forms_detected": forms_total, "nav_items": len(nav.get("links") or []),
+        "dropdowns": sum(1 for l in (nav.get("links") or []) if l.get("children")),
+        "colors": crawl["colors"], "failures": failures[:40], "failed_count": len(failures),
+    }
+    return {"source": {"pages": len(crawl["pages"]), "images": report["images_found"], "emails": crawl["pages"][0]["emails"],
+                       "phones": crawl["pages"][0]["phones"], "colors": crawl["colors"]["all"][:5],
+                       "logo": logo, "title": crawl["pages"][0]["title"], "description": crawl["pages"][0]["description"]},
+            "url": crawl["url"], "business": biz, "theme": theme, "logo": logo, "pages": pages, "report": report}
 
 
 async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool, log_activity, user_id: str) -> dict:
@@ -221,32 +584,38 @@ async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool,
     else:
         start = await db.pages.count_documents({"app_id": app_id})
     created = []
-    existing_slugs = {p["slug"] for p in await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1}).to_list(60)}
+    existing_slugs = {p["slug"] for p in await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1}).to_list(80)}
     for i, pg in enumerate(pages):
         slug = pg["slug"]
-        if slug in existing_slugs or (mode != "replace" and slug == "/"):
-            slug = f"/imported-{re.sub(r'[^a-z0-9-]+', '-', pg['name'].lower()).strip('-') or i}"
+        if slug in existing_slugs:
+            slug = f"/imported-{re.sub(r'[^a-z0-9-]+', '-', pg['name'].lower()).strip('-') or f'page-{i + 1}'}"
         existing_slugs.add(slug)
-        doc = {"page_id": _uid("pg"), "app_id": app_id, "name": pg["name"], "slug": slug, "order": start + i,
-               "blocks": pg["blocks"], "updated_at": _now()}
-        await db.pages.insert_one(dict(doc))
-        created.append({"name": doc["name"], "slug": slug, "blocks": len(doc["blocks"])})
-    upd = {"updated_at": _now(), "imported_from": imp.get("url")}
+        await db.pages.insert_one({"page_id": _uid("pg"), "app_id": app_id, "name": pg["name"], "slug": slug,
+                                   "order": start + i, "blocks": pg["blocks"], "updated_at": _now()})
+        created.append({"name": pg["name"], "slug": slug, "blocks": len(pg["blocks"]),
+                        "forms": sum(1 for b in pg["blocks"] if b.get("type") == "form")})
+    upd = {"updated_at": _now(), "imported_from": imp.get("url"), "premium_site_v": 3}
     prof = {k: v for k, v in {"email": biz.get("email"), "phone": biz.get("phone"), "address": biz.get("address")}.items() if v}
     if prof:
         upd["brand_profile"] = prof
     if apply_theme:
         upd["theme"] = imp["theme"]
+    if imp.get("logo"):
+        upd["logo"] = imp["logo"]
     hero_img = next((b["props"].get("image") for p in pages for b in p["blocks"] if b.get("type") == "hero" and b.get("props", {}).get("image")), None)
     if hero_img:
         upd["thumbnail"] = hero_img
     await db.apps.update_one({"app_id": app_id}, {"$set": upd})
+    if not (await db.apps.find_one({"app_id": app_id}, {"_id": 0, "preview_token": 1}) or {}).get("preview_token"):
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"preview_token": _uid("pv"), "preview_enabled": True}})
     await log_activity(app_id, user_id, "site.imported", f"Imported {len(created)} page(s) from {imp.get('url')}")
-    return {"pages": created, "theme": imp["theme"] if apply_theme else None, "business": biz, "mode": mode}
+    return {"pages": created, "theme": imp["theme"] if apply_theme else None, "business": biz, "mode": mode,
+            "report": imp.get("report")}
 
 
 class UrlIn(BaseModel):
     url: str
+    max_pages: int = MAX_PAGES
 
 
 class ApplyIn(BaseModel):
@@ -259,20 +628,28 @@ class OneShotIn(BaseModel):
     url: str
     mode: str = "replace"
     apply_theme: bool = True
+    max_pages: int = MAX_PAGES
 
 
 def _summary(import_id: str, imp: dict) -> dict:
     return {"import_id": import_id, "source": imp["source"], "business": imp["business"], "theme": imp["theme"],
-            "pages": [{"name": p["name"], "slug": p["slug"], "blocks": len(p["blocks"]), "types": [b.get("type") for b in p["blocks"]]} for p in imp["pages"]]}
+            "report": imp["report"], "logo": imp.get("logo"),
+            "pages": [{"name": p["name"], "slug": p["slug"], "blocks": len(p["blocks"]),
+                       "forms": sum(1 for b in p["blocks"] if b.get("type") == "form"),
+                       "images": sum(1 for b in p["blocks"] for v in (b.get("props") or {}).values() if isinstance(v, str) and "/api/public/files/" in v),
+                       "types": [b.get("type") for b in p["blocks"]]} for p in imp["pages"]]}
 
 
 def register(api, db, get_current_user, get_user_app, log_activity):
-    async def _run_job(job_id: str, app_id: str, url: str, user_id: str, auto: Optional[dict]):
-        """Scrape + rebuild in the background — ingress caps requests at 60s, so the client polls."""
+    async def _quota(app_doc: dict) -> int:
+        return int(app_doc.get("storage_quota_mb") or os.environ.get("TENANT_STORAGE_QUOTA_MB", "500"))
+
+    async def _run_job(job_id: str, app_id: str, url: str, user_id: str, auto: Optional[dict], max_pages: int, quota_mb: int):
+        """Crawl + media + rebuild in the background — ingress caps requests at 60s, so the client polls."""
         async def say(stage: str, detail: str = ""):
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"stage": stage, "stage_detail": detail, "stage_at": _now()}})
         try:
-            imp = await build_import(url, say)
+            imp = await build_import(url, say, db, app_id, quota_mb, max_pages)
             import_id = _uid("imp")
             await db.site_imports.insert_one({"import_id": import_id, "app_id": app_id, "created_at": _now(), **imp})
             result = _summary(import_id, imp)
@@ -286,18 +663,18 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             logger.exception("import job failed")
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e)[:180], "finished_at": _now()}})
 
-    async def _start(app_id: str, url: str, user: dict, auto: Optional[dict]):
-        await require_ai_access(app_id, user)
+    async def _start(app_id: str, url: str, user: dict, auto: Optional[dict], max_pages: int):
+        app_doc = await require_ai_access(app_id, user)
         _norm_url(url)
         job_id = _uid("job")
         await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": url, "status": "running",
-                                         "stage": "queued", "stage_detail": "Starting import", "created_at": _now()})
-        asyncio.create_task(_run_job(job_id, app_id, url, user["user_id"], auto))
+                                         "stage": "queued", "stage_detail": "Starting full-site crawl", "created_at": _now()})
+        asyncio.create_task(_run_job(job_id, app_id, url, user["user_id"], auto, max(1, min(MAX_PAGES, max_pages)), await _quota(app_doc)))
         return {"job_id": job_id, "status": "running"}
 
     @api.post("/apps/{app_id}/site/import-preview")
     async def import_preview(app_id: str, body: UrlIn, user: dict = Depends(get_current_user)):
-        return await _start(app_id, body.url, user, None)
+        return await _start(app_id, body.url, user, None, body.max_pages)
 
     @api.get("/apps/{app_id}/site/import-job/{job_id}")
     async def import_job(app_id: str, job_id: str, user: dict = Depends(get_current_user)):
@@ -319,4 +696,4 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.post("/apps/{app_id}/site/import")
     async def import_now(app_id: str, body: OneShotIn, user: dict = Depends(get_current_user)):
         mode = body.mode if body.mode in ("replace", "append") else "replace"
-        return await _start(app_id, body.url, user, {"mode": mode, "apply_theme": body.apply_theme})
+        return await _start(app_id, body.url, user, {"mode": mode, "apply_theme": body.apply_theme}, body.max_pages)

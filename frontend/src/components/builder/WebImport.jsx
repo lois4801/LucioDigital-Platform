@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Globe, Loader2, Link2, Check } from "lucide-react";
+import { Globe, Loader2, Link2, Check, AlertTriangle, Image as ImageIcon, FileText, Layers, Upload, X } from "lucide-react";
 
-// Imports run as a backend job (scrape + AI rebuild takes longer than the 60s request cap).
-export const IMPORT_STAGES = [["scanning", "Scanning site"], ["reading", "Reading pages"], ["rebuilding", "Rebuilding with AI"], ["applying", "Applying pages"]];
+// Imports run as a backend job (crawl + media + AI rebuild takes far longer than the 60s request cap).
+export const IMPORT_STAGES = [["scanning", "Scanning site"], ["reading", "Crawling pages"], ["media", "Saving images"], ["rebuilding", "Rebuilding with AI"], ["applying", "Applying pages"]];
 
 export function ImportProgress({ stage, started, testid = "import-progress" }) {
   const [secs, setSecs] = useState(0);
@@ -33,7 +33,7 @@ export function ImportProgress({ stage, started, testid = "import-progress" }) {
   );
 }
 
-export async function pollImport(appId, jobId, { tries = 100, every = 4000, onStage } = {}) {
+export async function pollImport(appId, jobId, { tries = 160, every = 4000, onStage } = {}) {
   for (let i = 0; i < tries; i++) {
     await new Promise(r => setTimeout(r, every));
     const { data } = await api.get(`/apps/${appId}/site/import-job/${jobId}`);
@@ -44,59 +44,131 @@ export async function pollImport(appId, jobId, { tries = 100, every = 4000, onSt
   throw new Error("Import timed out — try again");
 }
 
+const Stat = ({ icon: Icon, value, label, testid }) => (
+  <div data-testid={testid} className="card-surface p-3 text-center">
+    <Icon size={14} className="mx-auto text-[var(--acc)]" />
+    <div className="font-display text-xl font-bold mt-1">{value}</div>
+    <div className="text-[10px] uppercase tracking-wider text-[var(--mut)]">{label}</div>
+  </div>
+);
+
+export function ImportReport({ report, testid = "import-report" }) {
+  if (!report) return null;
+  return (
+    <div data-testid={testid} className="space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Stat icon={Layers} value={report.pages_imported} label="Pages imported" testid="report-pages" />
+        <Stat icon={ImageIcon} value={`${report.images_saved}/${report.images_found}`} label="Images saved" testid="report-images" />
+        <Stat icon={FileText} value={report.forms_detected} label="Forms rebuilt" testid="report-forms" />
+        <Stat icon={Link2} value={`${report.nav_items}${report.dropdowns ? ` · ${report.dropdowns}▾` : ""}`} label="Nav items" testid="report-nav" />
+      </div>
+      {report.failures?.length > 0 && (
+        <div data-testid="report-failures" className="card-surface p-3">
+          <div className="flex items-center gap-2 mb-2"><AlertTriangle size={13} className="text-amber-400" /><span className="overline">{report.failed_count} item(s) need you to fill them in manually</span></div>
+          <div className="max-h-40 overflow-y-auto scrollbar-thin space-y-1">
+            {report.failures.map((f, i) => (
+              <div key={i} className="text-[11px] flex gap-2"><span className="font-mono text-[var(--dim)] truncate max-w-[55%]">{f.item}</span><span className="text-[var(--mut)]">{f.reason}</span></div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
   const [url, setUrl] = useState("");
+  const [maxPages, setMaxPages] = useState(25);
   const [scanning, setScanning] = useState(false);
-  const [stage, setStage] = useState(null);
-  const [startedAt, setStartedAt] = useState(0);
   const [applying, setApplying] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [stage, setStage] = useState(null);
+  const [startedAt, setStartedAt] = useState(0);
   const [mode, setMode] = useState("replace");
   const [applyTheme, setApplyTheme] = useState(true);
+  const [uploads, setUploads] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
 
-  function reset() { setPreview(null); setUrl(""); setScanning(false); setApplying(false); }
+  function reset() { setPreview(null); setUrl(""); setScanning(false); setApplying(false); setStage(null); setUploads([]); }
 
   async function scan() {
     if (!url.trim()) return;
-    setScanning(true); setPreview(null); setStage({ stage: "scanning", stage_detail: "Starting import" });
+    setScanning(true); setPreview(null); setStage({ stage: "scanning", stage_detail: "Starting full-site crawl" });
     const started = Date.now(); setStartedAt(started);
     try {
-      const { data: job } = await api.post(`/apps/${appId}/site/import-preview`, { url });
+      const { data: job } = await api.post(`/apps/${appId}/site/import-preview`, { url, max_pages: Number(maxPages) || 25 });
       const res = await pollImport(appId, job.job_id, { onStage: setStage });
       setPreview(res);
-      toast.success(`Scanned ${res.source?.pages || 1} page(s) in ${Math.round((Date.now() - started) / 1000)}s`);
+      toast.success(`Crawled ${res.report.crawled} page(s) in ${Math.round((Date.now() - started) / 1000)}s`);
     } catch (e) { toast.error(e.response?.data?.detail || e.message || "Scan failed"); } finally { setScanning(false); setStage(null); }
   }
 
   async function apply() {
     setApplying(true);
     try {
-      const { data } = await api.post(`/apps/${appId}/site/import-apply`, { import_id: preview.import_id, mode, apply_theme: applyTheme }, { timeout: 120000 });
+      const { data } = await api.post(`/apps/${appId}/site/import-apply`, { import_id: preview.import_id, mode, apply_theme: applyTheme }, { timeout: 180000 });
       toast.success(`${mode === "replace" ? "Replaced" : "Added"} ${data.pages.length} page(s) from the website`);
       onOpenChange(false); reset(); onDone?.();
     } catch (e) { toast.error(e.response?.data?.detail || "Apply failed"); } finally { setApplying(false); }
   }
 
+  async function addFiles(list) {
+    const files = Array.from(list || []);
+    if (!files.length) return;
+    setUploading(true);
+    for (const f of files) {
+      const fd = new FormData(); fd.append("file", f);
+      try {
+        const { data } = await api.post(`/apps/${appId}/files`, fd, { headers: { "Content-Type": "multipart/form-data" }, timeout: 240000 });
+        setUploads(u => [...u, { name: data.original_filename, url: data.url, type: data.content_type }]);
+      } catch (e) { toast.error(`${f.name}: ${e.response?.data?.detail || "upload failed"}`); }
+    }
+    setUploading(false);
+    toast.success("Added to this tenant's media library — pick them from any image or video block");
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-3xl max-h-[88vh] overflow-y-auto">
-        <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><Globe size={16} className="text-[var(--acc)]" /> Import from a website</DialogTitle></DialogHeader>
-        <p className="text-sm text-[var(--mut)]">Paste any public website address. We read its pages, copy, images, contact details and brand colours, then rebuild it as editable pages for this tenant.</p>
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3">
+        <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><Globe size={16} className="text-[var(--acc)]" /> Import a whole website</DialogTitle></DialogHeader>
+        <p className="text-sm text-[var(--mut)]">We crawl every internal page, download all images into this tenant's media library, rebuild each form field-by-field (wired to your Inbox), recreate the navigation and dropdowns, and pull the site's colour scheme.</p>
+        <div className="flex flex-wrap gap-2">
+          <div className="flex-1 min-w-[240px] flex items-center gap-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3">
             <Link2 size={14} className="text-[var(--dim)]" />
             <input data-testid="web-import-url-input" value={url} onChange={e => setUrl(e.target.value)} onKeyDown={e => e.key === "Enter" && scan()}
               placeholder="acmeplumbing.com" className="flex-1 bg-transparent py-3 text-sm outline-none" />
           </div>
+          <div className="flex items-center gap-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3">
+            <span className="text-[11px] text-[var(--mut)]">Max pages</span>
+            <input data-testid="web-import-maxpages-input" type="number" min={1} max={25} value={maxPages} onChange={e => setMaxPages(e.target.value)} className="w-14 bg-transparent py-3 text-sm font-mono outline-none" />
+          </div>
           <button data-testid="web-import-scan-btn" onClick={scan} disabled={scanning || !url.trim()} className="btn-primary flex items-center gap-2 disabled:opacity-50">
-            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Reading site…" : "Scan website"}
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Crawling…" : "Crawl website"}
           </button>
         </div>
 
         {scanning && stage && <ImportProgress stage={stage} started={startedAt} testid="web-import-progress" />}
 
+        <div className="card-surface p-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Upload size={13} className="text-[var(--acc)]" />
+            <span className="text-sm">Add your own images, videos or documents to use while building</span>
+            <input ref={fileRef} data-testid="web-import-file-input" type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.csv,.txt,.zip,.mp3,.wav" onChange={e => { addFiles(e.target.files); e.target.value = ""; }} className="hidden" />
+            <button data-testid="web-import-upload-btn" onClick={() => fileRef.current?.click()} disabled={uploading} className="btn-ghost text-xs !py-1.5 ml-auto flex items-center gap-1.5 disabled:opacity-50">
+              {uploading ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} {uploading ? "Uploading…" : "Choose files"}
+            </button>
+          </div>
+          {uploads.length > 0 && (
+            <div data-testid="web-import-uploads" className="mt-2 flex flex-wrap gap-2">
+              {uploads.map(u => <span key={u.url} className="chip text-[10px] flex items-center gap-1">{u.type?.startsWith("video") ? "▶" : u.type?.startsWith("image") ? "🖼" : "📄"} {u.name}</span>)}
+            </div>
+          )}
+        </div>
+
         {preview && (
           <div data-testid="web-import-preview" className="space-y-4 mt-2">
+            <ImportReport report={preview.report} testid="web-import-report" />
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="card-surface p-4">
                 <div className="overline mb-2">Business found</div>
@@ -109,23 +181,23 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
                 </div>
               </div>
               <div className="card-surface p-4">
-                <div className="overline mb-2">Brand & media</div>
-                <div className="flex items-center gap-2">
-                  {[preview.theme?.primary, preview.theme?.secondary].filter(Boolean).map(c => <span key={c} className="w-6 h-6 rounded-lg border border-white/15" style={{ background: c }} title={c} />)}
+                <div className="overline mb-2">Colour scheme</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[preview.theme?.primary, preview.theme?.secondary, preview.theme?.bg, preview.theme?.fg].filter(Boolean).map((c, i) => <span key={i} className="w-6 h-6 rounded-lg border border-white/15" style={{ background: c }} title={c} />)}
                   <span className="text-xs font-mono text-[var(--dim)]">{preview.theme?.mode} · {preview.theme?.font_heading}</span>
                 </div>
-                <div className="text-xs text-[var(--mut)] mt-2">{preview.source?.pages} page(s) read · {preview.source?.images} image(s) found</div>
+                {preview.logo && <div className="mt-3 flex items-center gap-2 text-xs text-[var(--mut)]"><Check size={12} className="text-[var(--acc)]" /> Logo saved to library</div>}
               </div>
             </div>
             <div className="card-surface p-4">
               <div className="overline mb-2">Pages to create</div>
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-56 overflow-y-auto scrollbar-thin">
                 {preview.pages.map(p => (
                   <div key={p.slug} data-testid={`web-import-page-${p.slug}`} className="flex items-center gap-2 text-sm">
                     <Check size={13} className="text-[var(--acc)]" />
-                    <span className="font-medium">{p.name}</span>
-                    <span className="font-mono text-[11px] text-[var(--dim)]">{p.slug}</span>
-                    <span className="ml-auto font-mono text-[11px] text-[var(--mut)]">{p.blocks} sections</span>
+                    <span className="font-medium truncate">{p.name}</span>
+                    <span className="font-mono text-[11px] text-[var(--dim)] truncate">{p.slug}</span>
+                    <span className="ml-auto font-mono text-[11px] text-[var(--mut)] whitespace-nowrap">{p.blocks} sections{p.forms ? ` · ${p.forms} form${p.forms > 1 ? "s" : ""}` : ""}{p.images ? ` · ${p.images} img` : ""}</span>
                   </div>
                 ))}
               </div>
@@ -141,7 +213,7 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
                 Use the website's colours & fonts
               </label>
               <button data-testid="web-import-apply-btn" onClick={apply} disabled={applying} className="btn-primary ml-auto flex items-center gap-2 disabled:opacity-50">
-                {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}{applying ? "Applying…" : "Apply to this tenant"}
+                {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}{applying ? "Applying…" : `Apply ${preview.pages.length} page(s)`}
               </button>
             </div>
           </div>

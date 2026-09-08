@@ -9,7 +9,7 @@ import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
-import { pollImport, ImportProgress } from "@/components/builder/WebImport";
+import { pollImport, ImportProgress, ImportReport } from "@/components/builder/WebImport";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [importing, setImporting] = useState(false);
   const [impStage, setImpStage] = useState(null);
   const [impStarted, setImpStarted] = useState(0);
+  const [impReport, setImpReport] = useState(null);
 
   useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); }, []);
 
@@ -60,17 +61,20 @@ export default function Dashboard() {
     try {
       const { name, industry, description, kind, url } = newApp;
       const { data } = await api.post("/apps", { name, industry, description, kind, status: "active" });
-      setApps([data, ...apps]); setNewOpen(false);
+      setApps([data, ...apps]);
       setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
       if (url?.trim()) {
-        setImporting(true); setImpStage({ stage: "scanning", stage_detail: "Starting import" }); setImpStarted(Date.now());
+        setImporting(true); setImpStage({ stage: "scanning", stage_detail: "Starting full-site crawl" }); setImpStarted(Date.now());
         try {
           const { data: job } = await api.post(`/apps/${data.app_id}/site/import`, { url, mode: "replace", apply_theme: true });
           const res = await pollImport(data.app_id, job.job_id, { onStage: setImpStage });
+          setImpReport({ ...res.report, app_id: data.app_id });
           toast.success(`Imported ${res.pages.length} page(s) from ${url}`);
+          return;
         } catch (e) { toast.error(e.response?.data?.detail || e.message || "Website import failed — the project was still created"); }
         finally { setImporting(false); setImpStage(null); }
       } else toast.success("Project created");
+      setNewOpen(false);
       nav(`/apps/${data.app_id}`);
     } catch (e) { toast.error("Create failed"); }
   }
@@ -224,9 +228,13 @@ export default function Dashboard() {
                 <label className="block"><span className="overline block mb-1">Import from a website (optional)</span>
                   <input data-testid="new-app-url-input" value={newApp.url} onChange={(e) => setNewApp({ ...newApp, url: e.target.value })} placeholder="acmeplumbing.com"
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" />
-                  <span className="text-[11px] text-[var(--mut)] mt-1 block">We'll copy its pages, copy, images, contact details and brand colours into this project.</span></label>
+                  <span className="text-[11px] text-[var(--mut)] mt-1 block">We crawl every page, save all images to the media library, rebuild the forms and nav, and copy the colour scheme.</span></label>
                 {importing && impStage && <ImportProgress stage={impStage} started={impStarted} testid="new-app-import-progress" />}
-                <button data-testid="new-app-create-btn" onClick={createApp} disabled={importing} className="btn-primary w-full disabled:opacity-60">{importing ? "Importing website…" : `Create ${newApp.kind === "app" ? "app" : "website"}`}</button>
+                {impReport && <div className="space-y-3">
+                  <ImportReport report={impReport} testid="new-app-import-report" />
+                  <button data-testid="new-app-open-project-btn" onClick={() => { const id = impReport.app_id; setImpReport(null); setNewOpen(false); nav(`/apps/${id}`); }} className="btn-primary w-full">Open the imported project</button>
+                </div>}
+                {!impReport && <button data-testid="new-app-create-btn" onClick={createApp} disabled={importing} className="btn-primary w-full disabled:opacity-60">{importing ? "Importing website…" : `Create ${newApp.kind === "app" ? "app" : "website"}`}</button>}
               </div>
             </DialogContent>
           </Dialog>

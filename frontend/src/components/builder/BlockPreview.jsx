@@ -9,10 +9,11 @@ const styleKey = (path) => `_styles.${String(path).replace(/\./g, "__")}`;
 function T({ as: Tag = "span", value, path, onEdit, className, style, styles }) {
   const editable = !!onEdit;
   const st = styles?.[String(path).replace(/\./g, "__")] || {};
+  const safe = value && typeof value === "object" ? (value.label ?? value.text ?? value.title ?? "") : value;
   return (
     <EditableText
       as={Tag}
-      value={value}
+      value={safe}
       className={className}
       style={style}
       editable={editable}
@@ -46,6 +47,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   const E = (path, extra = {}) => ({ path, onEdit, styles: p._styles, ...extra });
   const Swap = ({ path, current }) => onImage ? <SwapOverlay testid={`image-swap-${path}`} onSwap={() => onImage(path, current)} /> : null;
   const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
+  const [form, setForm] = useState({});
+  const [sent, setSent] = useState(false);
   const [openItem, setOpenItem] = useState(null);
   async function submitLead(e) { e.preventDefault(); if (!onLead) return; try { await onLead(lead); setLead({ name: "", email: "", message: "", sent: true }); } catch { } }
 
@@ -80,7 +83,25 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       <T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-xl flex items-center gap-2" />
       {p.logo && <img data-testid="navbar-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain order-first" />}
       <div className="hidden md:flex gap-6 text-sm font-medium text-[var(--tmut)]">
-        {(p.links || []).map((l, i) => <button key={i} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className="hover:text-[var(--tfg)]"><T value={l.label} {...E(`links.${i}.label`)} /></button>)}
+        {(p.links || []).map((l, i) => (
+          <span key={i} className="relative group">
+            <button data-testid={`nav-link-${i}`} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className="hover:text-[var(--tfg)] flex items-center gap-1">
+              <T value={l.label} {...E(`links.${i}.label`)} />
+              {l.children?.length > 0 && <Icons.ChevronDown size={12} />}
+            </button>
+            {l.children?.length > 0 && (
+              <span data-testid={`nav-dropdown-${i}`} className="absolute left-0 top-full pt-3 hidden group-hover:block z-30">
+                <span className="block min-w-[190px] rounded-xl border border-[var(--tbd)] bg-[var(--tsf)] shadow-xl p-2">
+                  {l.children.map((c, k) => (
+                    <button key={k} data-testid={`nav-dropdown-item-${i}-${k}`} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(c.href); }} className="block w-full text-left px-3 py-2 rounded-lg text-sm hover:bg-[var(--tp)]/10 hover:text-[var(--tfg)]">
+                      <T value={c.label} {...E(`links.${i}.children.${k}.label`)} />
+                    </button>
+                  ))}
+                </span>
+              </span>
+            )}
+          </span>
+        ))}
       </div>
       <Btn><T value={p.cta || "Get started"} {...E("cta")} /></Btn>
     </nav>
@@ -96,7 +117,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
         <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-6 text-lg lg:text-xl ${cover ? "text-white/80" : m}`} />
         <div className="mt-8 flex flex-wrap gap-3" style={{ justifyContent: centered ? "center" : "flex-start" }}>
           <Btn><T value={p.cta || "Get started"} {...E("cta")} /></Btn>
-          {p.cta2 && <Btn ghost><T value={p.cta2} {...E("cta2")} /></Btn>}
+          {String(p.cta2 || "").trim() && <Btn ghost><T value={p.cta2} {...E("cta2")} /></Btn>}
         </div>
       </div>
     );
@@ -225,10 +246,58 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       </form>
     </div></section>
   );
+  if (block.type === "form") {
+    const fields = p.fields || [];
+    const inputCls = "w-full border border-[var(--tbd)] rounded-xl px-4 py-3 text-sm bg-[var(--tbg)] outline-none";
+    async function submitForm(e) {
+      e.preventDefault();
+      if (!onLead) return;
+      const emailF = fields.find(f => f.type === "email");
+      const nameF = fields.find(f => /name/i.test(f.name) || /name/i.test(f.label));
+      const lines = fields.map(f => `${f.label}: ${form[f.name] ?? ""}`).join("\n");
+      try {
+        await onLead({ name: (nameF && form[nameF.name]) || "Website visitor", email: (emailF && form[emailF.name]) || "", message: `${p.heading || "Form submission"}\n\n${lines}` });
+        setForm({}); setSent(true);
+      } catch { }
+    }
+    return (
+      <section className={cls} data-testid="form-block">
+        <div className="max-w-2xl mx-auto text-left">
+          <H2 value={p.heading} {...E("heading")} />
+          {p.subtitle && <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-3 ${m}`} />}
+          <form onSubmit={submitForm} className={`${card} mt-8 space-y-4`} data-testid="custom-form">
+            {sent ? <div data-testid="custom-form-sent" className="text-center py-8 text-[var(--ts)] font-semibold">{p.success_message || "Thanks — we'll be in touch shortly."}</div> : <>
+              {fields.map((f, i) => (
+                <label key={f.name || i} className="block">
+                  <span className="block text-xs font-semibold mb-1.5"><T value={f.label} {...E(`fields.${i}.label`)} />{f.required && <span className="text-[var(--tp)]"> *</span>}</span>
+                  {f.type === "textarea" ? (
+                    <textarea data-testid={`form-field-${f.name}`} required={!!f.required} rows={4} placeholder={f.placeholder || ""} value={form[f.name] || ""} onChange={e => setForm({ ...form, [f.name]: e.target.value })} className={inputCls} />
+                  ) : f.type === "select" ? (
+                    <select data-testid={`form-field-${f.name}`} required={!!f.required} value={form[f.name] || ""} onChange={e => setForm({ ...form, [f.name]: e.target.value })} className={inputCls}>
+                      <option value="">{f.placeholder || "Select…"}</option>
+                      {(f.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  ) : f.type === "radio" ? (
+                    <span className="flex flex-wrap gap-4 pt-1">{(f.options || []).map(o => (
+                      <span key={o} className="flex items-center gap-1.5 text-sm"><input type="radio" name={f.name} value={o} checked={form[f.name] === o} onChange={() => setForm({ ...form, [f.name]: o })} className="accent-[var(--tp)]" />{o}</span>))}</span>
+                  ) : f.type === "checkbox" ? (
+                    <span className="flex items-center gap-2 text-sm"><input data-testid={`form-field-${f.name}`} type="checkbox" checked={!!form[f.name]} onChange={e => setForm({ ...form, [f.name]: e.target.checked ? "Yes" : "" })} className="accent-[var(--tp)]" />{f.placeholder || "Yes"}</span>
+                  ) : (
+                    <input data-testid={`form-field-${f.name}`} type={f.type || "text"} required={!!f.required} placeholder={f.placeholder || ""} value={form[f.name] || ""} onChange={e => setForm({ ...form, [f.name]: e.target.value })} className={inputCls} />
+                  )}
+                </label>
+              ))}
+              <button type="submit" data-testid="custom-form-submit" disabled={!onLead} className="inline-block px-6 py-3 rounded-full font-semibold text-sm bg-[var(--tp)] text-white disabled:opacity-70"><T value={p.submit_label || "Send"} {...E("submit_label")} /></button>
+            </>}
+          </form>
+        </div>
+      </section>
+    );
+  }
   if (block.type === "footer") return (
     <footer className="px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
       <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
-      {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={l} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
+      {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={typeof l === "string" ? l : (l?.label || "")} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
     </footer>
   );
   return <div className="p-6 text-sm text-[var(--tmut)]">Unknown block: {block.type}</div>;

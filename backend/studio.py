@@ -48,6 +48,7 @@ Block types and props (every block: {"id": string, "type": string, "props": {...
 - chart: {heading, caption, series:[{m, v}]}
 - cta: {title, subtitle, cta}
 - contact: {heading, subtitle, email, phone, address}
+- form: {heading, subtitle, fields:[{name, label, type: "text|email|tel|number|url|date|textarea|select|checkbox|radio", placeholder, required: bool, options:[string] (select/radio only)}], submit_label, success_message}  (submissions land in the tenant's Lead Inbox)
 - footer: {brand, tagline, columns:[{title, links:[string]}]}
 - collection_list: {heading, collection: "blog|case-studies", limit: 6}  (auto-fills from the CMS)
 Hrefs for links must be page slugs like "/", "/about", "/pricing" or "#section".

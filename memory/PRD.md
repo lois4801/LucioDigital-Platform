@@ -81,6 +81,32 @@ App Mode, multi-tenant with client portals.
 - Testing: iteration_28.json — backend 12/12 pytest, frontend verified; the one reported issue
   (unobservable `applying` stage) was fixed by awaiting the stage callbacks.
 
+### Jun 2026 (v20) — Full-site crawl importer (iter 29)
+- `web_import.py` rewritten from a single-page scrape into a **full crawl**: BFS over internal links
+  (25 pages max, depth 2, skipping blog archives/pagination/assets), ranked so real pages
+  (services/about/pricing/contact) come first. Each crawled page becomes its own tenant page.
+- **Media**: every image (incl. `srcset`, `<source>`, CSS `url()`, `og:image`, logo) is downloaded
+  into the tenant's library via Emergent Object Storage (80 images / 8 MB each, quota-aware,
+  `uploaded_by: website import`, public) and page blocks reference only `/api/public/files/...` —
+  nothing is hotlinked. Admins can also upload their own images/videos/docs from the import dialog.
+- **Forms**: every `<form>` is parsed field-by-field (label via `for`/aria/placeholder, type, options,
+  required) and rebuilt as a new **`form` block type** (renderer in `BlockPreview.jsx`, palette entry in
+  `Builder.jsx`, schema entry in `studio.py`) whose submissions post to `/api/public/contact/{token}`
+  and land in the tenant Inbox. JS-rendered forms fall back to a standard contact form and are listed
+  in the report.
+- **Navigation**: header nav is recreated with dropdown `children` (rendered on hover), shared across
+  every imported page, with a footer block on each page.
+- **Colours**: inline styles + up to 3 stylesheets are parsed into background / text / button colour
+  buckets (hex + rgb) and turned into the tenant theme.
+- **Report**: pages crawled/imported, images saved vs found, forms rebuilt, nav items + dropdowns, and
+  a failure list with reasons (unreachable page, oversized image, quota reached, JS-rendered form) —
+  shown in the import dialog and after a new-project import.
+- Fixes found while building: LLMs returning `{label, href}` where a string belongs (now sanitised
+  server-side + defensively in `T()`), footer link objects crashing the canvas, and the startup
+  premium-redesign migration wiping imported pages (imports now set `premium_site_v: 3`).
+- Testing: iteration_29.json — backend 16/16 pytest, frontend verified (no canvas crash, dropdowns,
+  form render + Inbox wiring).
+
 ## Backlog (P1/P2)
 - P1: Real GitHub push — waiting on the user's Personal Access Token (currently MOCKED without one).
 - P1: ElevenLabs voice — waiting on the user's API key (falls back to OpenAI TTS).
@@ -93,6 +119,8 @@ App Mode, multi-tenant with client portals.
 - P2: Edit-mode on/off switch for the landing page admin CMS.
 - P2: Remember the last-selected tenant tab across reloads (Inbox/Site Mode resets to Overview).
 - P2: Second follow-up in the sequence (a third touch) + a per-tenant follow-up delay setting.
+- P2: Crawl deeper than depth 2 / more than 25 pages for large sites (currently capped).
+- P2: Import undo — snapshot pages before a 'replace' import.
 - P2: Real CI/CD for mobile builds; Stripe customer portal; audit-log CSV export.
 
 ## Notes
