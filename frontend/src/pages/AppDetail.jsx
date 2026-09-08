@@ -23,6 +23,8 @@ import { CursorFXPicker } from "@/components/CursorFX";
 import FilesPanel from "@/components/FilesPanel";
 import DataDestinationPanel from "@/components/DataDestinationPanel";
 import { LocksProvider, MasterLockButton, LockStateBadge } from "@/components/locks/LockContext";
+import ConvertToWebApp from "@/components/ConvertToWebApp";
+import SubmissionsPanel from "@/components/SubmissionsPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -103,6 +105,7 @@ export default function AppDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <ConvertToWebApp appId={appId} appName={appDoc?.name} inline />
             <LockStateBadge />
             <MasterLockButton />
             <CursorFXPicker />
@@ -140,7 +143,7 @@ export default function AppDetail() {
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "videos" && <VideoStudio appId={appId} appDoc={appDoc} />}
         {tab === "files" && <FilesPanel appId={appId} />}
-        {tab === "data" && <DataDestinationPanel appId={appId} />}
+        {tab === "data" && <div className="space-y-8"><SubmissionsPanel appId={appId} /><DataDestinationPanel appId={appId} /></div>}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
         {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} setAppDoc={setAppDoc} />}

@@ -424,7 +424,9 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
         cols = await hooks["public_collections"](doc["app_id"]) if hooks.get("public_collections") else []
         return {"app": {k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
-                "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True}
+                "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True,
+                "webapp": {"converted": bool((doc.get("webapp") or {}).get("converted")),
+                           "signup_mode": (doc.get("webapp") or {}).get("signup_mode", "open")}}
 
     # ===== PUBLIC AI CHATBOT (text + voice) =====
     STUDIO_CONTEXT = ("OmniStack AI is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "

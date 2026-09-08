@@ -59,6 +59,15 @@ const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACK
 export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [] }) {
   const v2 = useV2();
   const p = block.props || {}, s = block.style || {};
+  // Database-driven sections: after "Convert to Web App" the items live in a collection.
+  const dyn = (key) => {
+    if (!p.dynamic || !p.collection) return p[key];
+    const col = collections.find(c => c.slug === p.collection);
+    const items = (col?.items || []).filter(i => i.published !== false);
+    if (!items.length) return p[key];
+    if (key === "images") return items.map(i => i.fields?.image || i.cover).filter(Boolean);
+    return items.map(i => ({ ...(i.fields || {}), title: i.title, name: i.fields?.name || i.title, desc: i.excerpt, quote: i.fields?.quote || i.excerpt, photo: i.cover || i.fields?.photo, image: i.cover || i.fields?.image }));
+  };
   const cls = sectionCls(s, v2), m = mut(s);
   const card = cardCls(v2);
   const stag = v2 ? "tstagger" : "";
@@ -162,7 +171,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "team") return (
     <section className={cls} data-testid="block-team"><H2 value={p.heading} {...E("heading")} />
-      <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left ${stag}`}>{(p.members || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" loading="lazy" decoding="async" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
+      <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left ${stag}`}>{(dyn("members") || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" loading="lazy" decoding="async" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "logos") return (
@@ -176,7 +185,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       <H2 value={p.heading} {...E("heading")} />
       {p.subheading !== undefined && <T as="p" value={p.subheading} {...E("subheading")} className={`block mt-3 text-lg max-w-xl ${m} ${s.align === "center" ? "mx-auto" : ""}`} />}
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
-        {(p.items || []).map((it, i) => (
+        {(dyn("items") || []).map((it, i) => (
           <div key={i} className={card}>
             <div className="w-11 h-11 rounded-xl bg-[var(--tp)]/15 text-[var(--tp)] flex items-center justify-center mb-4 shadow-[0_0_24px_-6px_var(--tp)]"><Icon name={it.icon} /></div>
             <T as="h3" value={it.title} {...E(`items.${i}.title`)} className={`block font-[var(--tfh)] ${v2 ? "t-h3" : "text-lg"} font-bold`} />
@@ -188,7 +197,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "gallery") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
-      <div className={`grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8 ${stag}`}>{(p.images || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
+      <div className={`grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8 ${stag}`}>{(dyn("images") || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
     </section>
   );
   if (block.type === "video") return (
@@ -200,7 +209,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   if (block.type === "testimonials") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
-        {(p.items || []).map((it, i) => (
+        {(dyn("items") || []).map((it, i) => (
           <div key={i} className={card}>
             <div className="flex gap-0.5 text-[var(--tp)] mb-3">{[...Array(5)].map((_, k) => <Icons.Star key={k} size={14} fill="currentColor" />)}</div>
             <T as="p" value={`“${it.quote}”`} {...E(`items.${i}.quote`)} className="block text-base leading-relaxed" />
@@ -213,7 +222,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   if (block.type === "pricing") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} className="text-center block" />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
-        {(p.plans || []).map((pl, i) => (
+        {(dyn("plans") || []).map((pl, i) => (
           <div key={i} className={`${card} ${pl.highlight ? "!border-[var(--tp)] shadow-[0_24px_60px_-30px_var(--tp)]" : ""}`}>
             <T value={pl.name} {...E(`plans.${i}.name`)} className="text-sm font-semibold text-[var(--tmut)]" />
             <div className="font-[var(--tfh)] text-4xl font-extrabold mt-2"><T value={pl.price} {...E(`plans.${i}.price`)} /><span className="text-sm text-[var(--tmut)] font-medium">/{pl.period || "mo"}</span></div>
@@ -227,7 +236,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   if (block.type === "faq") return (
     <section className={cls}><div className="max-w-3xl mx-auto text-left"><H2 value={p.heading} {...E("heading")} />
       <div className="mt-6 divide-y divide-[var(--tbd)]">
-        {(p.items || []).map((it, i) => (
+        {(dyn("items") || []).map((it, i) => (
           <details key={i} className="py-4 group"><summary className="font-semibold cursor-pointer list-none flex justify-between items-center"><T value={it.q} {...E(`items.${i}.q`)} /><Icons.ChevronDown size={16} className="group-open:rotate-180 transition-transform" /></summary>
             <T as="p" value={it.a} {...E(`items.${i}.a`)} className="block text-[var(--tmut)] mt-2 text-sm leading-relaxed" /></details>
         ))}

@@ -1,0 +1,42 @@
+{
+  "summary": "Iteration 38 — Convert to Web App backend + frontend. Backend pytest suite: 24 passed, 4 skipped (xdist cross-worker state), 1 failure (login lockout does not trigger — real bug). All conversion, content-preservation, repeated-section collection copy, tenant visitor auth (register/login/me/forgot/reset), signup mode switching (open/approval/invite), invite flow, protected-page gate, submissions/CSV, admin panel API, content CRUD and analytics endpoints work. Frontend: convert-webapp-header-btn + convert-webapp-card visible on both a converted tenant (Northwind) and an unconverted legacy tenant (Aura); open-admin-panel-link visible after conversion. /site-admin/{token} renders site-admin-page with all 4 tabs (Submissions/Users/Content/Analytics), Analytics bars render, Users tab shows invite bar + suspend/promote buttons, Content tab lists all collections. Live site /p/{token} shows themed data-testid=member-gate on a protected /about page with Create-account and Forgot-password links; member-signout appears after member login. Content preservation VERIFIED on a fresh Aura Wellness conversion — every block prop matches pre-conversion snapshot; only added keys are props.collection / props.dynamic. Cross-tenant token isolation verified: tenant JWT → 401 on /api/apps and 401 on another tenant's /auth/me.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/site/{token}/auth/login", "issue": "Brute-force lockout (5 fails → 429) never triggers. Confirmed with curl (7 consecutive wrong-password attempts return 401, never 429). Root cause: identifier keys off request.client.host, which behind the Kubernetes ingress is the pod IP (or is even sticky per replica). Attempts distributed across replicas (or absent Client info) prevent count from ever reaching 5. Should key off X-Forwarded-For / X-Real-IP.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "GET /api/apps/{id}/webapp", "issue": "Returns pages array with keys page_id/name/slug/protected only. Protected flag is None (not false) for pages never touched — cosmetic but forces null-checks on client."},
+      {"endpoint": "POST /api/apps/{id}/convert-to-webapp", "issue": "For tenants with only the four default pages (/, /about, /services, /contact) protected_pages is [] and admin_panel_url returned in body — that's expected, but summary.protected_pages = [] may look empty to end-users. Consider surfacing 'members-only pages: 0 (toggle any page after conversion)'."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter38_webapp_conversion.py",
+    "/app/test_reports/pytest/iter38.xml"
+  ],
+  "action_items": [
+    "Fix brute-force lockout on POST /api/site/{token}/auth/login by keying rate-limit identifier off X-Forwarded-For (or app_id+email only) so a distributed pod set actually counts to 5. Currently the review requirement 'wrong password 401, 5 failures then 429 lockout' is NOT met.",
+    "(Optional) initialise pages.protected = false at conversion time so consumers don't see mixed null/true/false."
+  ],
+  "critical_code_review_comments": [
+    "site_app.py line 413-419: rate-limit identifier uses request.client.host which behind K8s ingress is the pod IP; multi-replica deployments will not observe cumulative count. Switch to request.headers.get('x-forwarded-for','').split(',')[0].strip() or drop IP from the key entirely (app_id+email is enough).",
+    "site_app.py convert() line 274: `token = doc.get('preview_token') or _uid('pv').replace('pv_', 'pv_')` — the .replace is a no-op leftover; harmless but delete it.",
+    "site_app.py current_site_user() ignores audience mismatch by returning None (correct) but relies on jwt.decode with audience=SITE_AUD to reject agency tokens — verified working (agency JWT → 401 on tenant /auth/me).",
+    "PublicPreview.jsx line 45: `gated` becomes false while `member.loading` is true, so protected page blocks briefly flash before the gate mounts. Suggest inverting to `gated = converted && page.protected && !member.user` and showing a skeleton while loading.",
+    "site_app.py admin_user_patch() line 588: self-demotion check compares site_user_id, but when an agency owner acts through the panel me.site_user_id is their agency user_id (see require_panel line 180) — matches, so demotion via panel works, but if the same agency user_id happens to equal a tenant site_user_id we could falsely block. Very unlikely (different prefixes) but worth an explicit source check."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter38_webapp_conversion.py"
+  ],
+  "success_rate": {"backend": "96% (24/25 non-skipped tests + manual token-isolation + manual Aura content-preservation all pass; 1 lockout test fails as real bug)", "frontend": "100% for the flows exercised (convert buttons on converted + legacy tenants, admin panel tabs, member gate, member sign-in)"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026!; Editor client.editor@example.com / ClientEdit2026!; Member1 member1@example.com / MemberPass123",
+  "seed_data_creation": "Created disposable tenant users prefixed TEST_ in Northwind Roofing (site_users) during backend tests. Also converted app_abc693a75574 (Aura Wellness) with signup_mode=open — collections created: Services/Services 2/Plans/Plans 2/Team/Team 2/Testimonials/Testimonials 2/Gallery. No tenants, pages, forms, or existing users were deleted.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The Aura Wellness tenant (app_abc693a75574) is now converted (signup_mode=open); its content preservation was verified diff-clean. Northwind Roofing signup_mode was toggled through approval → invite → back to open by the tests; ends in 'open'. /about page protected flag was toggled true→false during tests, ends false. TEST_-prefixed disposable site_users remain in Northwind. Skip-worthy items: TestTokenIsolation is skipped by pytest-xdist because pytest attribute state doesn't cross workers — manually verified with curl (tenant JWT → 401 on /api/apps and other-tenant /auth/me). TestContentPreservation is skipped for app_c18671970769 because it was already converted before the run; instead content preservation was verified against a fresh Aura conversion. Main outstanding bug: brute-force lockout (see backend_issues).",
+  "rca of the issue": "Login lockout: site_app.site_login builds identifier=f'{request.client.host}:{app_id}:{email}'. In this K8s ingress, request.client.host varies per proxy hop / replica, so the counter never accumulates to 5 in a single row. Fix: use X-Forwarded-For header (or drop the host component entirely — app_id+email is a sufficient key for tenant login abuse protection)."
+}

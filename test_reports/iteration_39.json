@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 39 — Focused retest of the two iter-38 fixes on Convert-to-Web-App. Both fixes verified. Backend: 8/8 pytest cases pass in /app/backend/tests/test_iter39_lockout_fix.py. (1) Brute-force lockout on POST /api/site/{token}/auth/login now correctly keys off X-Forwarded-For: with a unique X-Forwarded-For IP the sequence is 401,401,401,401,429 (lockout triggers inline on the 5th failure) and stays 429 on subsequent wrong attempts AND on the correct password until the 15-min window elapses. (2) A DIFFERENT email on the same site+IP is unaffected — it still gets 401 on wrong password and 200 on correct password, confirming per-email keying. (3) Conversion now writes protected=false on the four public pages ('/', '/about', '/services', '/contact'); GET /api/apps/{id}/webapp returns a proper boolean (never null) for every page. Full end-to-end regression on a freshly-created throwaway tenant (app created via POST /api/apps → converted): summary payload complete, block props preserved (only props.collection / props.dynamic added), collections endpoint returns a valid list per repeated section, /apps/{id}/webapp/pages/{page_id}/access marks a page protected, /site/{token}/page/{slug} returns requires_login=true anon and full content with a member bearer token, /site/{token}/submit stores a submission, /admin/summary /admin/submissions /admin/users /admin/collections all 200 for the agency owner, and a standard (role='user') member gets 403 on all four /admin/* endpoints. Frontend UI smoke: /site-admin/pv_15f7e07b2d724b452e2a loads for agency owner with all 4 tabs (Submissions, Users, Content, Analytics); tenant header convert-webapp-header-btn and Overview convert-webapp-card still render on app_6663b5de0007.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter39_lockout_fix.py",
+    "/app/test_reports/pytest/iter39.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "site_app.py lines 414-427 (site_login): identifier now correctly resolves X-Forwarded-For (comma-split, first hop) with fallback to X-Real-IP then request.client.host, and uses find_one_and_update with $inc + return_document=True so the incremented count is inspected atomically → 429 is raised inline on the 5th failure (no off-by-one). Correct pw during window also short-circuits at the guard check on line 418 → returns 429, matching the requirement. Good fix.",
+    "site_app.py _protect_pages (line 247): now explicitly writes protected=False for public slugs, so GET /webapp never returns null. Confirmed via test.",
+    "Minor: the lockout counter never expires per-record on success (unless the correct pw is accepted, which clears via db.site_login_attempts.delete_one). Attempts rows accumulate; consider a TTL index on site_login_attempts.until for cleanup — cosmetic only."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter39_lockout_fix.py"
+  ],
+  "success_rate": {"backend": "100% (8/8 iter39 tests pass)", "frontend": "100% for the smoke checks (all 4 site-admin tabs, header + overview cards)"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026!; Member1 member1@example.com / MemberPass123 (per /app/memory/test_credentials.md).",
+  "seed_data_creation": "Created one throwaway tenant per pytest run via POST /api/apps (name prefix TEST_iter39_*) with pages /, /about, /services, /contact, /members. Converted it with signup_mode=open. Also created TEST_ prefixed site_users on Northwind (pv_15f7e07b2d724b452e2a) for lockout tests (unique X-Forwarded-For per test to avoid cross-run collisions). No tenants/pages/users deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Both iter-38 bugs are fixed and stable. Lockout keys on (x-forwarded-for, app_id, email) with 15-min window; use a unique X-Forwarded-For header per test to isolate rate-limit state. GET /api/apps/{id}/webapp.pages[].protected is now always bool. Northwind (app_6663b5de0007 / pv_15f7e07b2d724b452e2a): during this run I did not observe any Northwind page marked protected (iter-38 toggled /about back to false at teardown), so the member-gate flow was verified end-to-end on a fresh throwaway tenant rather than on Northwind — the gate itself is proven to work. The throwaway TEST_iter39_* tenants I created are safe to ignore or delete; they were made only for regression, not shared state.",
+  "rca of the issue": "Prior bug: identifier used request.client.host which behind K8s ingress was the pod-facing IP and varied per replica, so 5 fails were never counted on one row. Fix in site_app.py: fwd = (request.headers.get('x-forwarded-for') or request.headers.get('x-real-ip') or ''); ip = fwd.split(',')[0].strip() or client.host; ident = f'{ip}:{app_id}:{email}'. Also switched to find_one_and_update({...}, {$inc:{count:1}, $set:{until:_now+15m}}, upsert=True, return_document=True) so the returned count reflects the post-increment value and the 5th failure triggers 429 inline. Verified: 401×4, then 429 on the 5th (still wrong pw), 429 on 6th, and 429 even on correct pw until window passes. Per-email keying verified: a second email on the same X-Forwarded-For still authenticates cleanly."
+}

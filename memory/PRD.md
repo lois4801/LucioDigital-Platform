@@ -68,8 +68,29 @@ Respond to the user in **English** only.
      Site Mode style panel, plus "Apply to every section on this page"; disabled on locked sections;
      rendered as `.pr-*` classes in the canvas, the live site and the exported `styles.css`/HTML
 
-## Testing note
-A testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
+6. **Convert to Web App** (iter 38 → 39, all green — 24/25 then 8/8 after the lockout fix):
+   - `POST /api/apps/{id}/convert-to-webapp {signup_mode}` — one automated pass, idempotent, owner/admin only.
+     **Content preservation verified**: block props are untouched apart from added `props.collection` / `props.dynamic`
+   - Tenant visitor auth (`/api/site/{token}/auth/register|login|me|forgot|reset`) — bcrypt + JWT with
+     audience `site-user`, so tenant tokens are rejected by agency endpoints; per-email brute-force
+     lockout keyed off `X-Forwarded-For` (5 fails → 429 / 15 min); hashed single-use reset tokens
+   - Signup modes: `open` (default) | `approval` | `invite`, switchable via `PATCH /api/apps/{id}/webapp/settings`
+   - Protected pages: everything except `/`, `/about`, `/services`, `/contact`; per-page toggle via
+     `POST /api/apps/{id}/webapp/pages/{page_id}/access`; `GET /api/site/{token}/page/{slug}` leaks no
+     content to anonymous visitors; themed `MemberGate` wall on the live site
+   - Repeated sections (services, products, team, testimonials, pricing, gallery) copied verbatim into
+     per-section CMS collections and re-bound (`dyn()` in BlockPreview) — a second section of the same
+     kind gets its own `-2` collection, so no cross-contamination
+   - Submissions: `POST /api/site/{token}/submit` → `submissions` collection, shown in Data & Storage
+     (`SubmissionsPanel`, search + CSV export) with confirmation email to the submitter and notification to the owner
+   - Admin panel `/site-admin/{token}` (`SiteAdmin.jsx`): submissions triage, user invite/approve/suspend/
+     promote, content CRUD, 30-day analytics. Agency owner enters with their platform session; site admins
+     sign in with email/password; standard users get 403 on every `/admin/*` route
+   - Roles: `admin` | `user`; agency owner is seeded as the first panel admin
+   - Button on **every** tenant: `convert-webapp-header-btn` in the tenant header (all tabs) and
+     `convert-webapp-card` in Overview, with a post-conversion summary + panel link
+
+## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.
 - **P1** Real GitHub push (currently MOCKED — needs a user PAT)

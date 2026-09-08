@@ -897,6 +897,11 @@ async def startup():
         await db.media_assets.create_index("app_id")
         await db.data_destinations.create_index("app_id", unique=True)
         await db.payment_transactions.create_index("session_id", unique=True)
+        await db.site_users.create_index([("app_id", 1), ("email", 1)], unique=True)
+        await db.site_users.create_index("site_user_id")
+        await db.site_resets.create_index("token_hash")
+        await db.submissions.create_index([("app_id", 1), ("created_at", -1)])
+        await db.item_locks.create_index([("app_id", 1), ("kind", 1), ("item_id", 1)], unique=True)
         await db.apps.create_index("preview_token")
     except Exception as e:
         logger.warning(f"index create warning: {e}")
@@ -1004,6 +1009,8 @@ from edit_requests import register as register_edit_requests
 register_edit_requests(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
 from locks import register as register_locks
 register_locks(api, db, get_current_user, get_user_app, log_activity)
+from site_app import register as register_site_app
+register_site_app(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
 from zip_import import register as register_zip_import
 import zip_import as _zip_import
 _zip_import.require_ai_access = GROWTH["require_ai_access"]

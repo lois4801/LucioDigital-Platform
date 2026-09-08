@@ -8,6 +8,8 @@ import { useTenantCursorFX } from "@/components/CursorFX";
 import ChatWidget from "@/components/ChatWidget";
 import { themeVars, loadFonts, isV2 } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
+import MemberGate, { useMember } from "@/components/MemberGate";
+import { LogOut } from "lucide-react";
 import { Layers, Eye } from "lucide-react";
 
 export default function PublicPreview() {
@@ -15,6 +17,7 @@ export default function PublicPreview() {
   const [site, setSite] = useState(null);
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
+  const member = useMember(token);
   useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
   useEffect(() => {
@@ -39,6 +42,16 @@ export default function PublicPreview() {
   const navigate = (href) => { if (href?.startsWith("/")) { setSlug(href); window.scrollTo(0, 0); } };
 
   const v2 = isV2(site.theme);
+  const gated = !!(site.webapp?.converted && page?.protected && !member.user && !member.loading);
+  const submitLead = async (l) => {
+    await api.post(`/public/contact/${token}`, l);
+    if (site.webapp?.converted) {
+      await api.post(`/site/${token}/submit`, {
+        form_id: l.form_id, form_name: l.form_name, name: l.name, email: l.email || null,
+        fields: { message: l.message, page: page?.slug || "/" },
+      }, member.jwt ? { headers: { Authorization: `Bearer ${member.jwt}` } } : undefined).catch(() => { });
+    }
+  };
   return (
     <DesignCtx.Provider value={v2}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" style={{ ...themeVars(site.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
@@ -51,6 +64,9 @@ export default function PublicPreview() {
           </div>
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {site.webapp?.converted && (member.user
+            ? <button data-testid="member-signout" onClick={member.signOut} className="flex items-center gap-1.5 text-white/60 hover:text-white"><LogOut size={11} /> {member.user.name || "Sign out"}</button>
+            : <span data-testid="member-status" className="chip">Members area</span>)}
           <span className="chip chip-handover"><Eye size={11} /> Preview</span>
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">OmniStack AI</span></Link>
         </div>
@@ -59,9 +75,13 @@ export default function PublicPreview() {
       <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
-          {(page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
-            <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}><BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={async (l) => { await api.post(`/public/contact/${token}`, l); }} /></EffectWrap>
-          ))}
+          {gated
+            ? <MemberGate token={token} pageName={page?.name} signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} />
+            : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
+              <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
+                <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} />
+              </EffectWrap>
+            ))}
         </motion.div>
       </AnimatePresence>
       {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
