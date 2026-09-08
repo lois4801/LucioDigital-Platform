@@ -256,7 +256,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       const nameF = fields.find(f => /name/i.test(f.name) || /name/i.test(f.label));
       const lines = fields.map(f => `${f.label}: ${form[f.name] ?? ""}`).join("\n");
       try {
-        await onLead({ name: (nameF && form[nameF.name]) || "Website visitor", email: (emailF && form[emailF.name]) || "", message: `${p.heading || "Form submission"}\n\n${lines}` });
+        await onLead({ name: (nameF && form[nameF.name]) || "Website visitor", email: (emailF && form[emailF.name]) || "", message: `${p.heading || "Form submission"}\n\n${lines}`, form_id: block.id });
         setForm({}); setSent(true);
       } catch { }
     }

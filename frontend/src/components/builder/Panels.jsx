@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
 import { FONTS } from "@/lib/theme";
 import { CURSOR_EFFECTS } from "@/lib/cursorEffects";
 import { Sun, Moon } from "lucide-react";
@@ -50,7 +52,27 @@ export function ThemePanel({ theme, onChange }) {
   );
 }
 
-export function StylePanel({ block, onChange }) {
+function FormRouting({ block, onChange, appId }) {
+  const [members, setMembers] = useState([]);
+  const p = block.props || {};
+  useEffect(() => { if (appId) api.get(`/apps/${appId}/members`).then(r => setMembers(r.data.members || r.data || [])).catch(() => { }); }, [appId]);
+  const set = (patch) => onChange(block.style || {}, patch);
+  return (
+    <div className="space-y-2 border-t border-[var(--line)] pt-2" data-testid="form-routing-panel">
+      <div className="overline">Where this form goes (optional)</div>
+      <p className="text-[10px] text-[var(--dim)] leading-relaxed">Every submission still lands in the Inbox. Add a recipient here and that person also gets it by email.</p>
+      <select data-testid="form-assignee-select" value={p.assignee || ""} onChange={e => set({ assignee: e.target.value || undefined })}
+        className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-2 text-xs outline-none">
+        <option value="">Shared inbox only</option>
+        {members.map(m => <option key={m.user_id} value={m.user_id}>{m.name || m.email} ({m.role})</option>)}
+      </select>
+      <input data-testid="form-notify-email-input" value={p.notify_email || ""} onChange={e => set({ notify_email: e.target.value || undefined })}
+        placeholder="or any email — careers@acme.com" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-2 text-xs font-mono outline-none" />
+    </div>
+  );
+}
+
+export function StylePanel({ block, onChange, appId }) {
   const s = block.style || { bg: "default", align: "left", padding: "md" };
   const set = (k, v) => onChange({ ...s, [k]: v });
   const Seg = ({ k, opts }) => (
@@ -68,6 +90,7 @@ export function StylePanel({ block, onChange }) {
       </div>
       {block.type === "hero" && <div><div className="text-[10px] text-[var(--dim)] mb-1">Hero variant</div>
         <div className="flex rounded-lg border border-[var(--line)] overflow-hidden text-[11px]">{["cover", "left", "centered", "split"].map(o => <button key={o} data-testid={`hero-variant-${o}`} onClick={() => onChange(s, { variant: o })} className={`flex-1 py-1.5 capitalize ${block.props.variant === o ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>{o}</button>)}</div></div>}
+      {block.type === "form" && <FormRouting block={block} onChange={onChange} appId={appId} />}
       <div><div className="text-[10px] text-[var(--dim)] mb-1">Effects (one toggle each)</div>
         <div className="grid grid-cols-2 gap-1">{[["reveal", "Scroll reveal"], ["parallax", "Parallax"], ["hover", "Hover lift"], ["float", "Floating"]].map(([k, l]) => {
           const on = k === "reveal" ? (s.effects?.reveal !== false) : !!s.effects?.[k];

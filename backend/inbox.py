@@ -30,6 +30,7 @@ class ContactIn(BaseModel):
     email: EmailStr
     message: str
     subject: Optional[str] = None
+    form_id: Optional[str] = None
 
 
 class InboxPatch(BaseModel):
@@ -121,10 +122,35 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         app_doc = await db.apps.find_one({"preview_token": token, "preview_enabled": True}, {"_id": 0})
         if not app_doc:
             raise HTTPException(404, "Site not found")
-        doc = await _new_message(app_doc["app_id"], "contact", body.name.strip()[:120], body.email.lower(), (body.subject or f"Website inquiry from {body.name.strip()}")[:160], body.message.strip()[:4000])
+        app_id = app_doc["app_id"]
+        route = {}
+        if body.form_id:
+            # Routing is resolved from the stored block, never from the public payload.
+            page = await db.pages.find_one({"app_id": app_id, "blocks.id": body.form_id}, {"_id": 0, "blocks": 1, "slug": 1})
+            block = next((b for b in (page or {}).get("blocks", []) if b.get("id") == body.form_id), None)
+            props = (block or {}).get("props") or {}
+            if block:
+                route = {"form_id": body.form_id, "form_name": str(props.get("heading") or "Form")[:80],
+                         "form_page": (page or {}).get("slug"),
+                         "notify_email": (props.get("notify_email") or "").strip().lower() or None,
+                         "assignee_id": props.get("assignee") or None}
+                if route["assignee_id"] and not route["notify_email"]:
+                    member = await db.users.find_one({"user_id": route["assignee_id"]}, {"_id": 0, "email": 1, "name": 1})
+                    if member:
+                        route["notify_email"] = member["email"]
+                        route["assignee_name"] = member.get("name")
+        doc = await _new_message(app_id, "contact", body.name.strip()[:120], body.email.lower(), (body.subject or f"Website inquiry from {body.name.strip()}")[:160], body.message.strip()[:4000])
+        if route.get("form_id"):
+            await db.messages.update_one({"message_id": doc["message_id"]}, {"$set": {"routing": route}})
+        if route.get("notify_email") and wf.get("send_email"):
+            try:
+                await wf["send_email"](route["notify_email"], f"[{route['form_name']}] {doc['subject']}",
+                                       f"New submission from {doc['from_name']} <{doc['from_email']}>\nForm: {route['form_name']} ({route.get('form_page') or ''})\n\n{doc['body']}")
+            except Exception:
+                logger.exception("form routing email failed")
         if wf.get("fire_event"):
-            await wf["fire_event"](app_doc["app_id"], "form_submitted", {"name": body.name.strip(), "email": body.email.lower(), "message": body.message.strip()[:500], "subject": doc["subject"]})
-        return {"ok": True, "message_id": doc["message_id"]}
+            await wf["fire_event"](app_id, "form_submitted", {"name": body.name.strip(), "email": body.email.lower(), "message": body.message.strip()[:500], "subject": doc["subject"], **{k: v for k, v in route.items() if v}})
+        return {"ok": True, "message_id": doc["message_id"], "routed_to": route.get("notify_email")}
 
     async def upsert_chat_lead(app_id: str, session_id: str, user_msg: str, reply: str):
         existing = await db.messages.find_one({"app_id": app_id, "session_id": session_id})

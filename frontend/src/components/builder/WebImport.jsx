@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Globe, Loader2, Link2, Check, AlertTriangle, Image as ImageIcon, FileText, Layers, Upload, X } from "lucide-react";
 
 // Imports run as a backend job (crawl + media + AI rebuild takes far longer than the 60s request cap).
-export const IMPORT_STAGES = [["scanning", "Scanning site"], ["reading", "Crawling pages"], ["media", "Saving images"], ["rebuilding", "Rebuilding with AI"], ["applying", "Applying pages"]];
+export const IMPORT_STAGES = [["scanning", "Scanning site"], ["reading", "Crawling pages"], ["media", "Saving images"], ["rebuilding", "Rebuilding with AI"], ["applying", "Applying pages"], ["videos", "Sourcing videos"]];
 
 export function ImportProgress({ stage, started, testid = "import-progress" }) {
   const [secs, setSecs] = useState(0);
@@ -61,6 +61,7 @@ export function ImportReport({ report, testid = "import-report" }) {
         <Stat icon={ImageIcon} value={`${report.images_saved}/${report.images_found}`} label="Images saved" testid="report-images" />
         <Stat icon={FileText} value={report.forms_detected} label="Forms rebuilt" testid="report-forms" />
         <Stat icon={Link2} value={`${report.nav_items}${report.dropdowns ? ` · ${report.dropdowns}▾` : ""}`} label="Nav items" testid="report-nav" />
+        {report.videos_found > 0 && <Stat icon={Layers} value={`${report.videos_embedded}/${report.videos_found}`} label="Videos" testid="report-videos" />}
       </div>
       {report.failures?.length > 0 && (
         <div data-testid="report-failures" className="card-surface p-3">
@@ -78,7 +79,7 @@ export function ImportReport({ report, testid = "import-report" }) {
 
 export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
   const [url, setUrl] = useState("");
-  const [maxPages, setMaxPages] = useState(25);
+  const [maxPages, setMaxPages] = useState(100);
   const [scanning, setScanning] = useState(false);
   const [applying, setApplying] = useState(false);
   const [preview, setPreview] = useState(null);
@@ -87,10 +88,39 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
   const [mode, setMode] = useState("replace");
   const [applyTheme, setApplyTheme] = useState(true);
   const [uploads, setUploads] = useState([]);
+  const [discovery, setDiscovery] = useState(null);
+  const [picked, setPicked] = useState({});
+  const [sourceVideos, setSourceVideos] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
 
-  function reset() { setPreview(null); setUrl(""); setScanning(false); setApplying(false); setStage(null); setUploads([]); }
+  function reset() { setPreview(null); setUrl(""); setScanning(false); setApplying(false); setStage(null); setUploads([]); setDiscovery(null); setPicked({}); }
+
+  async function discover() {
+    if (!url.trim()) return;
+    setScanning(true); setPreview(null); setDiscovery(null); setStage({ stage: "scanning", stage_detail: "Discovering pages" });
+    const started = Date.now(); setStartedAt(started);
+    try {
+      const { data: job } = await api.post(`/apps/${appId}/site/discover`, { url, max_pages: Number(maxPages) || 100 });
+      const res = await pollImport(appId, job.job_id, { onStage: setStage, every: 3000 });
+      setDiscovery(res);
+      setPicked(Object.fromEntries(res.pages.map(p => [p.slug, p.important])));
+      toast.success(`Found ${res.totals.pages} page(s) in ${Math.round((Date.now() - started) / 1000)}s — ${res.totals.important} look important`);
+    } catch (e) { toast.error(e.response?.data?.detail || e.message || "Discovery failed"); } finally { setScanning(false); setStage(null); }
+  }
+
+  async function importSelected() {
+    const slugs = Object.entries(picked).filter(([, v]) => v).map(([k]) => k);
+    if (!slugs.length) return toast.error("Tick at least one page");
+    setApplying(true); setStage({ stage: "media", stage_detail: `Rebuilding ${slugs.length} page(s)` }); setStartedAt(Date.now());
+    try {
+      const { data: job } = await api.post(`/apps/${appId}/site/import-selected`, { discovery_id: discovery.discovery_id, slugs, mode, apply_theme: applyTheme, source_videos: sourceVideos });
+      const res = await pollImport(appId, job.job_id, { onStage: setStage });
+      setPreview(res);
+      toast.success(`Imported ${res.applied?.pages?.length || res.pages.length} page(s)${res.videos?.saved ? ` + ${res.videos.saved} video(s)` : ""}`);
+      onDone?.();
+    } catch (e) { toast.error(e.response?.data?.detail || e.message || "Import failed"); } finally { setApplying(false); setStage(null); }
+  }
 
   async function scan() {
     if (!url.trim()) return;
@@ -132,7 +162,7 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) reset(); }}>
       <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-3xl max-h-[88vh] overflow-y-auto">
         <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><Globe size={16} className="text-[var(--acc)]" /> Import a whole website</DialogTitle></DialogHeader>
-        <p className="text-sm text-[var(--mut)]">We crawl every internal page, download all images into this tenant's media library, rebuild each form field-by-field (wired to your Inbox), recreate the navigation and dropdowns, and pull the site's colour scheme.</p>
+        <p className="text-sm text-[var(--mut)]">Paste a website, hit <strong>Find pages</strong> to see everything it has, then tick the pages you want. We download all images and videos, rebuild every form (wired to your Inbox), recreate the navigation and dropdowns, and pull the colour scheme.</p>
         <div className="flex flex-wrap gap-2">
           <div className="flex-1 min-w-[240px] flex items-center gap-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3">
             <Link2 size={14} className="text-[var(--dim)]" />
@@ -141,14 +171,58 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
           </div>
           <div className="flex items-center gap-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3">
             <span className="text-[11px] text-[var(--mut)]">Max pages</span>
-            <input data-testid="web-import-maxpages-input" type="number" min={1} max={25} value={maxPages} onChange={e => setMaxPages(e.target.value)} className="w-14 bg-transparent py-3 text-sm font-mono outline-none" />
+            <input data-testid="web-import-maxpages-input" type="number" min={1} max={100} value={maxPages} onChange={e => setMaxPages(e.target.value)} className="w-14 bg-transparent py-3 text-sm font-mono outline-none" />
           </div>
-          <button data-testid="web-import-scan-btn" onClick={scan} disabled={scanning || !url.trim()} className="btn-primary flex items-center gap-2 disabled:opacity-50">
-            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Crawling…" : "Crawl website"}
+          <button data-testid="web-import-discover-btn" onClick={discover} disabled={scanning || applying || !url.trim()} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Discovering…" : "Find pages"}
+          </button>
+          <button data-testid="web-import-scan-btn" onClick={scan} disabled={scanning || applying || !url.trim()} className="btn-ghost text-sm flex items-center gap-2 disabled:opacity-50">
+            Crawl everything
           </button>
         </div>
 
-        {scanning && stage && <ImportProgress stage={stage} started={startedAt} testid="web-import-progress" />}
+        {(scanning || applying) && stage && <ImportProgress stage={stage} started={startedAt} testid="web-import-progress" />}
+
+        {discovery && !preview && (
+          <div data-testid="web-import-discovery" className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="overline">{discovery.totals.pages} pages found on {discovery.brand}</span>
+              <span className="text-[11px] text-[var(--mut)]">{discovery.totals.images} images · {discovery.totals.forms} forms · {discovery.totals.videos} videos</span>
+              <div className="ml-auto flex gap-1.5">
+                <button data-testid="pick-important-btn" onClick={() => setPicked(Object.fromEntries(discovery.pages.map(p => [p.slug, p.important])))} className="btn-ghost !py-1.5 text-[11px]">Important only</button>
+                <button data-testid="pick-all-btn" onClick={() => setPicked(Object.fromEntries(discovery.pages.map(p => [p.slug, true])))} className="btn-ghost !py-1.5 text-[11px]">Select all</button>
+                <button data-testid="pick-none-btn" onClick={() => setPicked({})} className="btn-ghost !py-1.5 text-[11px]">Clear</button>
+              </div>
+            </div>
+            <div className="card-surface p-3 max-h-72 overflow-y-auto scrollbar-thin space-y-1">
+              {discovery.pages.map(p => (
+                <label key={p.slug} data-testid={`discovery-page-${p.slug}`} className="flex items-center gap-2 text-sm py-1 cursor-pointer">
+                  <input type="checkbox" data-testid={`discovery-check-${p.slug}`} checked={!!picked[p.slug]} onChange={e => setPicked({ ...picked, [p.slug]: e.target.checked })} className="accent-[var(--acc)]" />
+                  <span className="truncate max-w-[45%]">{p.title}</span>
+                  <span className="font-mono text-[11px] text-[var(--dim)] truncate">{p.slug}</span>
+                  {p.important && <span className="chip chip-active text-[9px]" style={{ padding: "0 5px" }}>key</span>}
+                  <span className="ml-auto font-mono text-[10px] text-[var(--mut)] whitespace-nowrap">{p.words}w · {p.images}img{p.forms ? ` · ${p.forms}form` : ""}{p.videos ? ` · ${p.videos}vid` : ""}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex card-surface !p-0.5 rounded-full">
+                {[["replace", "Replace my pages"], ["append", "Add alongside"]].map(([k, l]) => (
+                  <button key={k} data-testid={`discovery-mode-${k}`} onClick={() => setMode(k)} className={`px-4 py-2 rounded-full text-xs ${mode === k ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>{l}</button>
+                ))}
+              </div>
+              <label className="flex items-center gap-2 text-xs text-[var(--mut)] cursor-pointer">
+                <input type="checkbox" checked={applyTheme} onChange={e => setApplyTheme(e.target.checked)} className="accent-[var(--acc)]" /> Use their colours
+              </label>
+              <label className="flex items-center gap-2 text-xs text-[var(--mut)] cursor-pointer">
+                <input data-testid="discovery-videos-toggle" type="checkbox" checked={sourceVideos} onChange={e => setSourceVideos(e.target.checked)} className="accent-[var(--acc)]" /> Add matching free videos
+              </label>
+              <button data-testid="discovery-import-btn" onClick={importSelected} disabled={applying} className="btn-primary ml-auto flex items-center gap-2 disabled:opacity-50">
+                {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />} Import {Object.values(picked).filter(Boolean).length} page(s)
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="card-surface p-3">
           <div className="flex items-center gap-2 flex-wrap">

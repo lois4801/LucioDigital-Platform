@@ -9,6 +9,7 @@ import Builder from "@/components/builder/Builder";
 import HandoffPanel from "@/components/HandoffPanel";
 import ActivityLog from "@/components/ActivityLog";
 import MembersPanel from "@/components/MembersPanel";
+import VideoStudio from "@/components/VideoStudio";
 import OverviewPanel from "@/components/OverviewPanel";
 import MediaStudio from "@/components/MediaStudio";
 import BillingPanel from "@/components/BillingPanel";
@@ -30,6 +31,7 @@ const TABS = [
   { key: "workflows", label: "Workflows" },
   { key: "inbox", label: "Inbox" },
   { key: "media", label: "AI Media" },
+  { key: "videos", label: "Videos" },
   { key: "files", label: "Files" },
   { key: "data", label: "Data & Storage" },
   { key: "billing", label: "Billing" },
@@ -132,6 +134,7 @@ export default function AppDetail() {
         {tab === "workflows" && <WorkflowsPanel appId={appId} />}
         {tab === "inbox" && <InboxPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
+        {tab === "videos" && <VideoStudio appId={appId} appDoc={appDoc} />}
         {tab === "files" && <FilesPanel appId={appId} />}
         {tab === "data" && <DataDestinationPanel appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}

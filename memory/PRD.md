@@ -107,8 +107,36 @@ App Mode, multi-tenant with client portals.
 - Testing: iteration_29.json — backend 16/16 pytest, frontend verified (no canvas crash, dropdowns,
   form render + Inbox wiring).
 
+### Jun 2026 (v21) — Form routing, 100-page crawl with page picking, Video Studio (iter 30)
+- **Optional per-form routing**: each Form block can name a team member (from `/apps/{id}/members`) or
+  any email in the Site Mode panel (`FormRouting` in `Panels.jsx`). Submissions always land in the Lead
+  Inbox; when a recipient is set that person also gets the submission by email and the lead carries a
+  `routing` object (form_id, form_name, form_page, notify_email, assignee). Routing is resolved from
+  the STORED block only — the public payload just carries `form_id`, so no open relay and no
+  cross-tenant leak (page lookup is app-scoped; unresolvable form ids attach no routing).
+- **Deeper crawl + page picking**: `MAX_PAGES` 100 / `MAX_DEPTH` 3. New `POST /site/discover` runs a
+  fast crawl with NO AI and NO downloads and returns every page found (title, words, images, forms,
+  videos, `important` flag) plus totals; the dialog shows a checklist (Important only / Select all /
+  Clear) and `POST /site/import-selected {discovery_id, slugs[]}` rebuilds only the ticked pages.
+  The old one-shot "Crawl everything" flow remains for the new-project modal.
+- **Video Studio** (`/app/backend/videos.py`, `VideoStudio.jsx`, new "Videos" tab):
+  - Free stock sourcing from **Pexels + Pixabay** — search, auto-source by the tenant's niche,
+    download and self-host in the tenant library (no hotlinking, 60 MB cap, quota-aware, provenance
+    kept: provider, source_url, contributor, license_review_required). Needs `PEXELS_API_KEY` and/or
+    `PIXABAY_API_KEY` in backend/.env — **not yet supplied**, so those endpoints return a friendly 400.
+  - **AI video generation** via fal.ai on the Emergent Universal Key: `fal-ai/veo3.1` and
+    `fal-ai/kling-video/o3/pro/text-to-video` (queue submit → poll → download → library → placed on
+    the site). Verified live: a 13.8 MB Kling O3 Pro clip generated and placed on the home page.
+  - Upload your own videos, and one-click "Place on the site" (idempotent video block after the hero).
+  - Imports now also embed YouTube/Vimeo videos found on the crawled site and, when stock keys exist,
+    auto-source 1-2 niche-matched clips (`_auto_videos`) as part of the import job.
+- Testing: iteration_30.json — backend 23/23 pytest, frontend smoke 100%; the reported routing
+  metadata-pollution nit was fixed (no routing object for unresolvable form ids).
+
 ## Backlog (P1/P2)
 - P1: Real GitHub push — waiting on the user's Personal Access Token (currently MOCKED without one).
+- P1: Add `PEXELS_API_KEY` / `PIXABAY_API_KEY` to backend/.env to switch on free stock video sourcing
+  (UI and backend are complete and degrade gracefully until then).
 - P1: ElevenLabs voice — waiting on the user's API key (falls back to OpenAI TTS).
 - P1: Resend email — Emergent managed email is live; switch to the managed Resend playbook if the
   user wants Resend branding/domains.

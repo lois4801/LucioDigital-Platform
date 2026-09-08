@@ -24,11 +24,16 @@ from studio import _parse_json, _ensure_ids, _clean_theme, BLOCK_SCHEMA, DEFAULT
 logger = logging.getLogger(__name__)
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 require_ai_access = None
+place_video = None
+search_stock = None
+store_video = None
+IMPORTANT_RE = re.compile(r"service|about|product|pricing|price|contact|team|work|portfolio|menu|solution|industr|faq|gallery|book|quote|location|schedule|career", re.I)
+EMBED_RE = re.compile(r"(youtube\.com|youtu\.be|player\.vimeo\.com|vimeo\.com|wistia|loom\.com)", re.I)
 
 UA = "Mozilla/5.0 (compatible; OmniStackImporter/1.0; +https://omnistack.ai)"
 MAX_BYTES = 1_500_000
-MAX_PAGES = 25
-MAX_DEPTH = 2
+MAX_PAGES = 100
+MAX_DEPTH = 3
 MAX_IMAGES = 80
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 AI_CONCURRENCY = 4
@@ -278,6 +283,7 @@ def _parse_page(html: str, url: str) -> dict:
         "phones": list(dict.fromkeys(PHONE_RE.findall(body)))[:5],
         "addresses": _text_of(soup, "address", 3, 200),
         "inline_css": inline_css[:40000],
+        "embeds": list(dict.fromkeys([urljoin(url, (f.get("src") or "")) for f in soup.find_all("iframe") if EMBED_RE.search(f.get("src") or "")]))[:6],
         "stylesheets": [urljoin(url, l["href"]) for l in soup.find_all("link", rel=lambda v: v and "stylesheet" in v, href=True)][:4],
         "text": body[:5000],
     }
@@ -490,20 +496,28 @@ async def _build_page(pg: dict, mapping: dict, brand: str, industry: str, sem: a
 
 
 async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id: Optional[str] = None,
-                       quota_mb: int = 500, max_pages: int = MAX_PAGES) -> dict:
+                       quota_mb: int = 500, max_pages: int = MAX_PAGES, crawl: Optional[dict] = None,
+                       keep_slugs: Optional[List[str]] = None) -> dict:
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "LLM key missing")
 
     async def say(*a):
         if on:
             await on(*a)
-    crawl = await crawl_site(url, max_pages, on)
+    crawl = crawl or await crawl_site(url, max_pages, on)
     failures = list(crawl["failures"])
+    all_pages = crawl["pages"]
+    if keep_slugs:
+        wanted = set(keep_slugs)
+        chosen = [p for p in all_pages if p["slug"] in wanted] or all_pages[:1]
+    else:
+        chosen = all_pages
+    home = all_pages[0]
 
     mapping, saved_imgs = {}, 0
     if db is not None and app_id:
-        all_imgs = [i["url"] for pg in crawl["pages"] for i in pg["images"]]
-        for pg in crawl["pages"]:
+        all_imgs = [i["url"] for pg in chosen for i in pg["images"]]
+        for pg in chosen + [home]:
             if pg.get("logo"):
                 all_imgs.insert(0, pg["logo"])
         mapping, saved_imgs, img_fail = await save_images(db, app_id, all_imgs, quota_mb, on)
@@ -511,8 +525,8 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
 
     await say("rebuilding", f"Rebuilding {crawl['brand']} — global brand, colours and navigation")
     g_payload = {"url": crawl["url"], "brand": crawl["brand"], "colors": crawl["colors"], "nav": crawl["nav"],
-                 "slugs": [p["slug"] for p in crawl["pages"]],
-                 "home": {k: crawl["pages"][0][k] for k in ("title", "description", "h1", "h2", "paragraphs", "emails", "phones", "addresses", "text")}}
+                 "slugs": [p["slug"] for p in chosen],
+                 "home": {k: home[k] for k in ("title", "description", "h1", "h2", "paragraphs", "emails", "phones", "addresses", "text")}}
     try:
         gdata = _parse_json(await _claude(GLOBAL_SYSTEM, json.dumps(g_payload, default=str)[:24000], f"imgl-{_uid('g')}"))
     except Exception as e:
@@ -525,11 +539,11 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
     footer["columns"] = [{"title": str(c.get("title", ""))[:40],
                           "links": [l if isinstance(l, str) else str((l or {}).get("label", "")) for l in (c.get("links") or [])][:8]}
                          for c in (footer.get("columns") or []) if isinstance(c, dict)][:4]
-    logo_src = next((p["logo"] for p in crawl["pages"] if p.get("logo")), None)
+    logo_src = next((p["logo"] for p in chosen + [home] if p.get("logo")), None)
     logo = mapping.get(logo_src)
 
     sem = asyncio.Semaphore(AI_CONCURRENCY)
-    total = len(crawl["pages"])
+    total = len(chosen)
     done = [0]
 
     async def one(pg):
@@ -541,10 +555,11 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
         done[0] += 1
         await say("rebuilding", f"Rebuilt {done[0]} of {total} pages — {res['name']}")
         return res
-    results = await asyncio.gather(*[one(pg) for pg in crawl["pages"]])
+    results = await asyncio.gather(*[one(pg) for pg in chosen])
 
+    embeds = list(dict.fromkeys([e for pg in chosen for e in (pg.get("embeds") or [])]))
     pages, forms_total, seen_slugs = [], 0, set()
-    for pg, res in zip(crawl["pages"], results):
+    for pg, res in zip(chosen, results):
         if res.get("error"):
             failures.append({"item": pg["url"], "reason": res["error"]})
             continue
@@ -555,7 +570,13 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
         nb = {"type": "navbar", "props": _sanitize({"brand": nav.get("brand") or crawl["brand"], "cta": nav.get("cta") or "Contact us",
                                                     "links": nav.get("links") or crawl["nav"], **({"logo": logo} if logo else {})}), "style": {}}
         ft = {"type": "footer", "props": _sanitize({**footer, **({"logo": logo} if logo else {})}), "style": {}}
-        blocks = _ensure_ids([nb] + [b for b in res["blocks"] if b.get("type") not in ("navbar", "footer")] + [ft])
+        body_blocks = [b for b in res["blocks"] if b.get("type") not in ("navbar", "footer")]
+        body_blocks = [b for b in body_blocks if b.get("type") != "video" or str((b.get("props") or {}).get("url") or "").strip()]
+        page_embeds = pg.get("embeds") or []
+        if page_embeds and not any(b.get("type") == "video" for b in body_blocks):
+            body_blocks.insert(min(2, len(body_blocks)), {"type": "video", "props": {"heading": "Watch", "url": page_embeds[0], "caption": ""},
+                                                          "style": {"bg": "muted", "align": "center", "padding": "md"}})
+        blocks = _ensure_ids([nb] + body_blocks + [ft])
         forms_total += sum(1 for b in blocks if b.get("type") == "form")
         pages.append({"name": res["name"], "slug": slug, "blocks": blocks})
     if not pages:
@@ -563,15 +584,17 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
     pages.sort(key=lambda p: (p["slug"] != "/", p["slug"]))
 
     report = {
-        "crawled": len(crawl["pages"]), "pages_imported": len(pages), "images_saved": saved_imgs,
-        "images_found": len({i["url"] for pg in crawl["pages"] for i in pg["images"]}),
+        "crawled": len(all_pages), "pages_imported": len(pages), "images_saved": saved_imgs,
+        "images_found": len({i["url"] for pg in chosen for i in pg["images"]}),
         "forms_detected": forms_total, "nav_items": len(nav.get("links") or []),
+        "videos_embedded": sum(1 for p in pages for b in p["blocks"] if b.get("type") == "video"),
+        "videos_found": len(embeds),
         "dropdowns": sum(1 for l in (nav.get("links") or []) if l.get("children")),
         "colors": crawl["colors"], "failures": failures[:40], "failed_count": len(failures),
     }
-    return {"source": {"pages": len(crawl["pages"]), "images": report["images_found"], "emails": crawl["pages"][0]["emails"],
-                       "phones": crawl["pages"][0]["phones"], "colors": crawl["colors"]["all"][:5],
-                       "logo": logo, "title": crawl["pages"][0]["title"], "description": crawl["pages"][0]["description"]},
+    return {"source": {"pages": len(all_pages), "images": report["images_found"], "emails": home["emails"],
+                       "phones": home["phones"], "colors": crawl["colors"]["all"][:5],
+                       "logo": logo, "title": home["title"], "description": home["description"]},
             "url": crawl["url"], "business": biz, "theme": theme, "logo": logo, "pages": pages, "report": report}
 
 
@@ -613,9 +636,22 @@ async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool,
             "report": imp.get("report")}
 
 
-class UrlIn(BaseModel):
+class DiscoverIn(BaseModel):
     url: str
     max_pages: int = MAX_PAGES
+
+
+class SelectedIn(BaseModel):
+    discovery_id: str
+    slugs: List[str] = []
+    mode: str = "replace"
+    apply_theme: bool = True
+    source_videos: bool = True
+
+
+class UrlIn(BaseModel):
+    url: str
+    max_pages: int = 25
 
 
 class ApplyIn(BaseModel):
@@ -628,7 +664,8 @@ class OneShotIn(BaseModel):
     url: str
     mode: str = "replace"
     apply_theme: bool = True
-    max_pages: int = MAX_PAGES
+    max_pages: int = 25
+    source_videos: bool = True
 
 
 def _summary(import_id: str, imp: dict) -> dict:
@@ -644,18 +681,26 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def _quota(app_doc: dict) -> int:
         return int(app_doc.get("storage_quota_mb") or os.environ.get("TENANT_STORAGE_QUOTA_MB", "500"))
 
-    async def _run_job(job_id: str, app_id: str, url: str, user_id: str, auto: Optional[dict], max_pages: int, quota_mb: int):
+    async def _run_job(job_id: str, app_id: str, url: str, user_id: str, auto: Optional[dict], max_pages: int, quota_mb: int,
+                       crawl: Optional[dict] = None, keep_slugs: Optional[List[str]] = None):
         """Crawl + media + rebuild in the background — ingress caps requests at 60s, so the client polls."""
         async def say(stage: str, detail: str = ""):
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"stage": stage, "stage_detail": detail, "stage_at": _now()}})
         try:
-            imp = await build_import(url, say, db, app_id, quota_mb, max_pages)
+            imp = await build_import(url, say, db, app_id, quota_mb, max_pages, crawl, keep_slugs)
             import_id = _uid("imp")
             await db.site_imports.insert_one({"import_id": import_id, "app_id": app_id, "created_at": _now(), **imp})
             result = _summary(import_id, imp)
             if auto:
                 await say("applying", f"Adding {len(imp['pages'])} page(s) to the project")
                 result["applied"] = await apply_import(db, app_id, imp, auto["mode"], auto["apply_theme"], log_activity, user_id)
+                if auto.get("source_videos") and search_stock and store_video and place_video:
+                    await say("videos", "Sourcing free videos that match this business")
+                    try:
+                        result["videos"] = await _auto_videos(app_id, imp, quota_mb)
+                    except Exception as e:
+                        logger.warning("auto video sourcing skipped: %s", e)
+                        result["videos"] = {"saved": 0, "reason": str(e)[:140]}
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "done", "stage": "done", "stage_detail": "", "result": result, "finished_at": _now()}})
         except HTTPException as e:
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e.detail), "finished_at": _now()}})
@@ -663,14 +708,83 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             logger.exception("import job failed")
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e)[:180], "finished_at": _now()}})
 
-    async def _start(app_id: str, url: str, user: dict, auto: Optional[dict], max_pages: int):
+    async def _auto_videos(app_id: str, imp: dict, quota_mb: int) -> dict:
+        """After an import, pull 1-2 free niche-matched videos into the library and place one on the home page."""
+        biz = imp.get("business") or {}
+        query = " ".join(filter(None, [biz.get("industry"), (biz.get("name") or "").split()[0]]))[:60] or "business team"
+        found = await search_stock(query, 6)
+        saved = []
+        for item in found[:2]:
+            try:
+                v = await store_video(db, app_id, item["download_url"], quota_mb, item.get("title") or query,
+                                      {"kind": "video", "uploaded_by": f"{item['provider']} stock", "source_url": item.get("source_url"),
+                                       "provider": item["provider"], "contributor": item.get("contributor"),
+                                       "license_review_required": True, "search_query": query})
+                saved.append(v)
+            except Exception as e:
+                logger.info("video skipped: %s", e)
+        placed = None
+        if saved:
+            placed = await place_video(app_id, saved[0]["url"], f"{biz.get('name') or 'We'} in action",
+                                       f"Video by {saved[0].get('contributor') or saved[0].get('provider')}")
+        return {"saved": len(saved), "query": query, "placed": placed, "videos": saved}
+
+    async def _start(app_id: str, url: str, user: dict, auto: Optional[dict], max_pages: int,
+                     crawl: Optional[dict] = None, keep_slugs: Optional[List[str]] = None):
         app_doc = await require_ai_access(app_id, user)
         _norm_url(url)
         job_id = _uid("job")
         await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": url, "status": "running",
                                          "stage": "queued", "stage_detail": "Starting full-site crawl", "created_at": _now()})
-        asyncio.create_task(_run_job(job_id, app_id, url, user["user_id"], auto, max(1, min(MAX_PAGES, max_pages)), await _quota(app_doc)))
+        asyncio.create_task(_run_job(job_id, app_id, url, user["user_id"], auto, max(1, min(MAX_PAGES, max_pages)),
+                                     await _quota(app_doc), crawl, keep_slugs))
         return {"job_id": job_id, "status": "running"}
+
+    async def _run_discover(job_id: str, app_id: str, url: str, max_pages: int):
+        async def say(stage: str, detail: str = ""):
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"stage": stage, "stage_detail": detail, "stage_at": _now()}})
+        try:
+            crawl = await crawl_site(url, max_pages, say)
+            discovery_id = _uid("disc")
+            await db.site_discoveries.insert_one({"discovery_id": discovery_id, "app_id": app_id, "url": url,
+                                                  "created_at": _now(), "crawl": crawl})
+            pages = [{"slug": p["slug"], "url": p["url"], "title": (p.get("title") or p["slug"]).strip()[:90],
+                      "words": len((p.get("text") or "").split()), "images": len(p["images"]), "forms": len(p["forms"]),
+                      "videos": len(p.get("embeds") or []),
+                      "important": p["slug"] == "/" or bool(IMPORTANT_RE.search(p["slug"]))} for p in crawl["pages"]]
+            result = {"discovery_id": discovery_id, "brand": crawl["brand"], "url": crawl["url"], "pages": pages,
+                      "colors": crawl["colors"]["all"][:6], "failures": crawl["failures"][:20],
+                      "totals": {"pages": len(pages), "images": sum(p["images"] for p in pages),
+                                 "forms": sum(p["forms"] for p in pages), "videos": sum(p["videos"] for p in pages),
+                                 "important": sum(1 for p in pages if p["important"])}}
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "done", "stage": "done", "result": result, "finished_at": _now()}})
+        except HTTPException as e:
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e.detail), "finished_at": _now()}})
+        except Exception as e:
+            logger.exception("discover failed")
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e)[:180], "finished_at": _now()}})
+
+    @api.post("/apps/{app_id}/site/discover")
+    async def discover(app_id: str, body: DiscoverIn, user: dict = Depends(get_current_user)):
+        """Fast crawl with no AI and no downloads — lists every page found so the admin can pick."""
+        await require_ai_access(app_id, user)
+        _norm_url(body.url)
+        job_id = _uid("job")
+        await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": body.url, "status": "running",
+                                         "kind": "discover", "stage": "queued", "stage_detail": "Discovering pages", "created_at": _now()})
+        asyncio.create_task(_run_discover(job_id, app_id, body.url, max(1, min(MAX_PAGES, body.max_pages))))
+        return {"job_id": job_id, "status": "running"}
+
+    @api.post("/apps/{app_id}/site/import-selected")
+    async def import_selected(app_id: str, body: SelectedIn, user: dict = Depends(get_current_user)):
+        disc = await db.site_discoveries.find_one({"discovery_id": body.discovery_id, "app_id": app_id}, {"_id": 0})
+        if not disc:
+            raise HTTPException(404, "Discovery expired — scan the website again")
+        if not body.slugs:
+            raise HTTPException(400, "Pick at least one page to import")
+        mode = body.mode if body.mode in ("replace", "append") else "replace"
+        return await _start(app_id, disc["url"], user, {"mode": mode, "apply_theme": body.apply_theme, "source_videos": body.source_videos},
+                            MAX_PAGES, disc["crawl"], body.slugs)
 
     @api.post("/apps/{app_id}/site/import-preview")
     async def import_preview(app_id: str, body: UrlIn, user: dict = Depends(get_current_user)):
@@ -696,4 +810,4 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.post("/apps/{app_id}/site/import")
     async def import_now(app_id: str, body: OneShotIn, user: dict = Depends(get_current_user)):
         mode = body.mode if body.mode in ("replace", "append") else "replace"
-        return await _start(app_id, body.url, user, {"mode": mode, "apply_theme": body.apply_theme}, body.max_pages)
+        return await _start(app_id, body.url, user, {"mode": mode, "apply_theme": body.apply_theme, "source_videos": body.source_videos}, body.max_pages)

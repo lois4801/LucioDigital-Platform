@@ -346,7 +346,7 @@ export default function Builder({ appId, appDoc }) {
           </div>
           {sel && (
             <div className="card-surface p-4 space-y-4">
-              <StylePanel block={sel} onChange={(style, propsPatch) => editStyle(sel.id, style, propsPatch)} />
+              <StylePanel block={sel} appId={appId} onChange={(style, propsPatch) => editStyle(sel.id, style, propsPatch)} />
               <div>
                 <div className="overline mb-2">{sel.type} content</div>
                 <div className="space-y-3 max-h-[36vh] overflow-y-auto scrollbar-thin pr-1">

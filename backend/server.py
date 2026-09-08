@@ -1013,6 +1013,13 @@ _web_import.require_ai_access = GROWTH["require_ai_access"]
 register_web_import(api, db, get_current_user, get_user_app, log_activity)
 from followups import register as register_followups
 register_followups(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
+from videos import register as register_videos
+import videos as _videos
+_videos.require_ai_access = GROWTH["require_ai_access"]
+VIDEO_HOOKS = register_videos(api, db, get_current_user, get_user_app, log_activity)
+_web_import.place_video = VIDEO_HOOKS["place_video"]
+_web_import.search_stock = VIDEO_HOOKS["search_stock"]
+_web_import.store_video = VIDEO_HOOKS["store_video"]
 
 app.include_router(api)
 
