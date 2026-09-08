@@ -5,6 +5,7 @@ import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck,
 import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 import { LeadReply } from "@/components/LeadReply";
 import LeadSummaryCard from "@/components/LeadSummaryCard";
+import LeadInsights from "@/components/LeadInsights";
 
 const TABS = [["real", "Real Leads"], ["test", "Test Leads"], ["archived", "Archived"]];
 const CHIPS = [["all", "All"], ["hot", "Hot"], ["unread", "Unread"], ["starred", "Starred"]];
@@ -112,6 +113,7 @@ export default function InboxPanel({ appId }) {
   return (
     <div data-testid="inbox-panel" className="space-y-4">
     <LeadSummaryCard appId={appId} />
+    <LeadInsights appId={appId} />
     <div data-testid="inbox-tabs" className="card-surface p-2 flex flex-wrap items-center gap-2">
       {TABS.map(([k, label]) => (
         <button key={k} data-testid={`inbox-tab-${k}`} onClick={() => { setTab(k); setSel(null); }}
@@ -141,6 +143,9 @@ export default function InboxPanel({ appId }) {
         <button data-testid="inbox-score-btn" onClick={scoreAll} disabled={scoring || unscored === 0} className="mt-2 w-full btn-ghost text-xs !py-1.5 flex items-center justify-center gap-1 disabled:opacity-40">{scoring ? <Loader2 size={11} className="animate-spin" /> : <Flame size={11} />} {unscored ? `Score ${unscored} leads` : "All leads scored"}</button>
         <button data-testid="inbox-reclassify-btn" onClick={async () => { try { const { data } = await api.post(`/apps/${appId}/inbox/classify?rerun=true`); toast.success(`Re-sorted: ${data.real} real · ${data.test} test`); load(); } catch { toast.error("Could not re-sort"); } }}
           className="mt-1 w-full btn-ghost text-xs !py-1.5">Re-sort real vs test</button>
+        <button data-testid="inbox-archive-test-btn" onClick={async () => { try { const { data } = await api.post(`/apps/${appId}/inbox/archive-test?days=30`); toast.success(data.archived ? `Archived ${data.archived} old test lead(s)` : "No test leads older than 30 days"); load(); } catch { toast.error("Could not archive"); } }}
+          className="mt-1 w-full btn-ghost text-xs !py-1.5">Archive old test leads</button>
+        <div className="px-3 pt-2 text-[10px] text-[var(--dim)] leading-relaxed">Test leads older than 30 days are archived automatically every night.</div>
         <div className="px-3 pt-4 text-[10px] text-[var(--dim)] leading-relaxed">Leads are scored 0–100 by AI on intent, budget and urgency; hottest first.</div>
         <div className="mt-3 border-t border-[var(--line)] pt-3 px-3">
           <label className="flex items-start gap-2 text-[11px] cursor-pointer">

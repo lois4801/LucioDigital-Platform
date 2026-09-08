@@ -185,6 +185,19 @@ Respond to the user in **English** only.
      chips, `inbox-section-priority` (score > 60, flame) pinned above the list, `inbox-section-review`
      (score < 30 or flagged) below it, per-row move button and detail-pane lane badge + invite button
 
+13. **Live email · test-lead auto-archive · lead source insights** (iter 46, 14/14 backend + frontend green):
+   - **Live email delivery** confirmed through the Emergent-managed Resend proxy in `workflows.py`
+     (`EMAIL_BASE_URL` constant, `X-Email-Key`, required `from_name` = `EMAIL_FROM_NAME` "OmniStack AI",
+     `EMAIL_REPLY_TO` as Reply-To, `_assert_safe_email` gate on every send). Verified 202 + message id;
+     digests, booking confirmations, follow-ups, lead replies and booking invites all deliver for real
+   - **Spam auto-archive**: `_archive_stale_test()` archives `lane=test` leads older than N days;
+     `POST /apps/{id}/inbox/archive-test?days=30` (manual, "Archive old test leads" in the Inbox sidebar)
+     and `POST /cron/archive-test-leads` (bearer `WEBHOOK_CRON_SECRET`, platform-wide, `0 3 * * *`
+     in `.emergent/crons.yml`)
+   - **Lead source insights**: `GET /apps/{id}/inbox/insights?days=90` buckets real leads (test excluded)
+     by page, form and channel with lead count, hot count, average/best score, reply rate and invites sent,
+     plus the five highest-scoring leads. UI: collapsible `lead-insights-card` at the top of the Inbox
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

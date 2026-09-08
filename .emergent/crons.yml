@@ -13,3 +13,10 @@ crons:
     endpoint: "{{BASE_URL}}/api/cron/weekly-digest"
     method: POST
     enabled: true
+  - name: archive-test-leads
+    description: "Auto-archives test/dummy leads older than 30 days so the Test tab stays tidy"
+    cron: "0 3 * * *"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/cron/archive-test-leads"
+    method: POST
+    enabled: true

@@ -4,11 +4,12 @@ import json
 import base64
 import asyncio
 import logging
-from datetime import datetime, timezone
+import hmac
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import HTTPException, Depends, Request
+from fastapi import HTTPException, Depends, Request, BackgroundTasks
 from fastapi.responses import Response
 from pydantic import BaseModel, EmailStr
 
@@ -215,6 +216,89 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                 "real": await db.messages.count_documents({"app_id": app_id, "lane": "real"}),
                 "test": await db.messages.count_documents({"app_id": app_id, "lane": "test"})}
 
+    @api.get("/apps/{app_id}/inbox/insights")
+    async def lead_insights(app_id: str, days: int = 90, user: dict = Depends(get_current_user)):
+        """Which pages, forms and channels produce the highest-scoring real leads."""
+        await get_user_app(app_id, user)
+        await _classify_pending(app_id)
+        days = max(1, min(365, days))
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        rows = await db.messages.find({"app_id": app_id, "lane": {"$ne": "test"},
+                                       "kind": {"$ne": "edit_request"},
+                                       "created_at": {"$gte": since}}, {"_id": 0}).to_list(2000)
+
+        def bucket(rows_, key):
+            out = {}
+            for m in rows_:
+                k = key(m) or "—"
+                b = out.setdefault(k, {"key": k, "leads": 0, "scored": 0, "score_total": 0,
+                                       "hot": 0, "replied": 0, "best": 0, "invites": 0})
+                b["leads"] += 1
+                if m.get("score") is not None:
+                    b["scored"] += 1
+                    b["score_total"] += m["score"]
+                    b["best"] = max(b["best"], m["score"])
+                if m.get("hot"):
+                    b["hot"] += 1
+                if m.get("replies"):
+                    b["replied"] += 1
+                if m.get("booking_invite"):
+                    b["invites"] += 1
+            for b in out.values():
+                b["avg_score"] = round(b["score_total"] / b["scored"]) if b["scored"] else None
+                b["reply_rate"] = round(100 * b["replied"] / b["leads"]) if b["leads"] else 0
+                b.pop("score_total")
+            return sorted(out.values(), key=lambda b: (b["avg_score"] or -1, b["leads"]), reverse=True)[:12]
+
+        pages = bucket(rows, lambda m: (m.get("routing") or {}).get("form_page"))
+        forms = bucket(rows, lambda m: (m.get("routing") or {}).get("form_name"))
+        sources = bucket(rows, lambda m: m.get("source"))
+        scored = [m for m in rows if m.get("score") is not None]
+        return {"days": days, "leads": len(rows), "hot": sum(1 for m in rows if m.get("hot")),
+                "avg_score": round(sum(m["score"] for m in scored) / len(scored)) if scored else None,
+                "pages": pages, "forms": forms, "sources": sources,
+                "best": sorted(scored, key=lambda m: m["score"], reverse=True)[:5] and [
+                    {"name": m.get("from_name") or m.get("from_email"), "score": m["score"],
+                     "page": (m.get("routing") or {}).get("form_page") or m.get("source"),
+                     "message_id": m["message_id"]}
+                    for m in sorted(scored, key=lambda m: m["score"], reverse=True)[:5]]}
+
+    async def _archive_stale_test(app_id: Optional[str] = None, days: int = 30) -> int:
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        q = {"lane": "test", "status": {"$ne": "archived"},
+             "$or": [{"updated_at": {"$lt": cutoff}}, {"created_at": {"$lt": cutoff}}]}
+        if app_id:
+            q["app_id"] = app_id
+        res = await db.messages.update_many(q, {"$set": {"status": "archived", "auto_archived_at": now_iso()}})
+        return res.modified_count
+
+    @api.post("/apps/{app_id}/inbox/archive-test")
+    async def archive_test_leads(app_id: str, days: int = 30, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        days = max(1, min(365, days))
+        n = await _archive_stale_test(app_id, days)
+        if n:
+            await log_activity(app_id, user["user_id"], "lead.autoarchive",
+                               f"Archived {n} test lead(s) older than {days} days")
+        return {"archived": n, "days": days}
+
+    async def _run_archive_all(days: int):
+        try:
+            n = await _archive_stale_test(None, days)
+            logger.info("auto-archived %s stale test lead(s) across all tenants", n)
+        except Exception:
+            logger.exception("test lead auto-archive failed")
+
+    @api.post("/cron/archive-test-leads")
+    async def cron_archive_test_leads(request: Request, tasks: BackgroundTasks, days: int = 30):
+        # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+        secret = os.environ.get("WEBHOOK_CRON_SECRET", "")
+        auth = request.headers.get("Authorization", "")
+        if not secret or not auth.startswith("Bearer ") or not hmac.compare_digest(auth[7:], secret):
+            raise HTTPException(401, "Unauthorized")
+        tasks.add_task(_run_archive_all, max(1, min(365, days)))
+        return {"accepted": True, "run_id": request.headers.get("X-Webhook-Id") or uid("run")}
+
     @api.patch("/apps/{app_id}/inbox/{message_id}/lane")
     async def set_lane(app_id: str, message_id: str, body: LaneIn, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
@@ -248,6 +332,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                 f"If none of the slots work, just reply to this email.\n\n{app_doc.get('name')}")
         subject = f"Book a time with {app_doc.get('name')}"
         sent_to, copies = None, []
+        if not wf.get("send_email"):
+            raise HTTPException(503, "Email delivery is not configured on this workspace")
         if wf.get("send_email"):
             try:
                 await wf["send_email"](msg["from_email"], subject, body)
