@@ -50,9 +50,19 @@ function SiteSnapshot({ appDoc }) {
       {snap && (
         <div className="rounded-xl border border-[var(--line)] bg-white/[0.03] p-4">
           <div className="overline mb-2">Live site (from Site Mode)</div>
+          <div className="text-[10px] text-[var(--dim)] mb-2">Synced from Site Mode — the tenant name follows the Navbar brand, so edit it there.</div>
           <div data-testid="snapshot-headline" className="font-display font-semibold">{snap.headline || "—"}</div>
           {snap.subtitle && <div data-testid="snapshot-subtitle" className="text-sm text-[var(--mut)] mt-1">{snap.subtitle}</div>}
-          <div className="font-mono text-[10px] text-[var(--dim)] mt-2">{snap.pages} page(s) · {snap.sections} sections on home · updated {new Date(snap.updated_at).toLocaleString()}</div>
+          {snap.description && <div data-testid="snapshot-description" className="text-xs text-[var(--mut)] mt-2 leading-relaxed line-clamp-3">{snap.description}</div>}
+          {(snap.thumbnail || appDoc.thumbnail) && (
+            <img data-testid="snapshot-thumbnail" src={snap.thumbnail || appDoc.thumbnail} alt=""
+              key={snap.thumbnail || appDoc.thumbnail}
+              onError={e => { e.currentTarget.style.display = "none"; }}
+              className="mt-3 w-full max-h-40 object-cover rounded-lg border border-[var(--line)]" />
+          )}
+          <div className="font-mono text-[10px] text-[var(--dim)] mt-2" data-testid="snapshot-meta">
+            {snap.pages} page(s) · {snap.sections} sections on home{snap.total_sections ? ` · ${snap.total_sections} total` : ""} · updated {new Date(snap.updated_at).toLocaleString()}
+          </div>
         </div>
       )}
       <div className="group flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">

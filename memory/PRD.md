@@ -243,6 +243,22 @@ Respond to the user in **English** only.
    - Known trade-off (flagged twice in review, intentional): `/api/public/landing/tenants` exposes the preview
      token of preview-enabled tenants, so live preview URLs are publicly enumerable
 
+17. **Overview ⇄ Site Mode live sync** (iter 53, 12/12 backend + frontend green):
+   - `content_lock.sync_overview()` rebuilt: captures the home hero **headline, subheadline and description**,
+     the navbar **brand**, real **page / home-section / total-section counts**, a fresh **thumbnail**
+     (hero artwork preferred) and `updated_at` — and mirrors the navbar brand onto `apps.name`, so the
+     Overview header follows Site Mode. Called on every mutation: page PATCH, page create, page delete,
+     theme save, design upgrade, premium rebuild, web import and plugin restore
+   - `sync_all_overviews(db)` runs at startup (batched via `asyncio.gather`) so every tenant is backfilled;
+     `POST /api/apps/{id}/site/sync-overview` forces a manual re-read
+   - Overview card shows headline / subheadline / description / thumbnail / meta line
+     (`snapshot-headline|subtitle|description|thumbnail|meta`); `AppDetail` refreshes the tenant doc on an
+     8s poll, on window focus and when switching back to the Overview tab — no manual reload
+   - Removed a stale `ui_overrides.header_tenant_name` label that was shadowing the synced name; the header
+     now renders `appDoc.name` directly
+   - **Behaviour note**: renaming a tenant via `PATCH /api/apps/{id}` is overwritten by the next Site Mode
+     save — the Navbar brand is the source of truth (stated in the Overview card copy)
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

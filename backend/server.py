@@ -969,8 +969,9 @@ async def startup():
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
     await reseed_demo_sites(db, admin_id)
     # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
-    from content_lock import lock_all_existing
+    from content_lock import lock_all_existing, sync_all_overviews
     logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
+    logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
     try:
         init_storage()
         logger.info("Object storage initialized")

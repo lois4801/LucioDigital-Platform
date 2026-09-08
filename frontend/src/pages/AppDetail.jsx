@@ -56,6 +56,19 @@ export default function AppDetail() {
 
   useEffect(() => { load(); }, [appId]);
 
+  // Site Mode edits, look switches and rebuilds all refresh the tenant doc, so the header name and
+  // the Overview "Live site" card stay in step without a manual reload.
+  useEffect(() => {
+    const quiet = async () => {
+      try { const { data } = await api.get(`/apps/${appId}`); setAppDoc(data); } catch { /* transient */ }
+    };
+    const timer = setInterval(quiet, 8000);
+    window.addEventListener("focus", quiet);
+    return () => { clearInterval(timer); window.removeEventListener("focus", quiet); };
+  }, [appId]);
+
+  useEffect(() => { if (tab === "overview") api.get(`/apps/${appId}`).then(r => setAppDoc(r.data)).catch(() => {}); }, [tab, appId]);
+
   async function load() {
     setLoading(true);
     try { const { data } = await api.get(`/apps/${appId}`); setAppDoc(data); }
@@ -99,7 +112,7 @@ export default function AppDetail() {
               <L k="header_tenant_overline" d="Tenant" as="div" className="overline" testid="label-header-overline" />
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
-                <L k="header_tenant_name" d={appDoc.name} testid="label-tenant-name" />
+                <span data-testid="label-tenant-name">{appDoc.name}</span>
                 <span data-testid="header-kind-chip" className={`chip ${appDoc.kind === "app" ? "chip-handover" : ""}`} style={{ padding: "2px 8px" }}>{appDoc.kind === "app" ? "App" : "Website"}</span>
                 {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
                 {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}

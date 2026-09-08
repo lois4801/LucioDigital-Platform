@@ -184,6 +184,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         theme = {**DEFAULT_THEME, **_clean_theme(body.theme)}
         await db.apps.update_one({"app_id": app_id}, {"$set": {"theme": theme, "updated_at": now_iso()}})
         await log_activity(app_id, user["user_id"], "theme.saved", "Design theme updated")
+        from content_lock import sync_overview
+        await sync_overview(db, app_id)
         return theme
 
     @api.post("/apps/{app_id}/site/upgrade-design")
@@ -204,6 +206,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         await db.apps.update_one({"app_id": app_id}, {"$set": {"theme": theme, "updated_at": now_iso()}})
         await log_activity(app_id, user["user_id"], "design.upgraded",
                            "Upgraded to the current design standard — content unchanged")
+        from content_lock import sync_overview
+        await sync_overview(db, app_id)
         return {"already": False, "theme": theme, "restore_point": snap}
 
     @api.post("/site/upgrade-design-all")
@@ -249,6 +253,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
                "updated_at": now_iso()}
         await db.pages.insert_one(dict(doc))
         await log_activity(app_id, user["user_id"], "page.created", f"Page '{body.name}' created")
+        from content_lock import sync_overview
+        await sync_overview(db, app_id)
         return doc
 
     @api.patch("/apps/{app_id}/pages/{page_id}")
@@ -302,6 +308,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if pg.get("slug") == "/":
             raise HTTPException(400, "Home page cannot be deleted")
         await db.pages.delete_one({"page_id": page_id})
+        from content_lock import sync_overview
+        await sync_overview(db, app_id)
         return {"ok": True}
 
     # ===== AI: PROMPT-TO-SITE =====

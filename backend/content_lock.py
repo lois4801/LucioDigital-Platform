@@ -32,22 +32,43 @@ async def lock_all_existing(db) -> int:
 
 
 async def sync_overview(db, app_id: str):
-    """Keep the Overview snapshot in step with whatever Site Mode currently holds."""
-    home = await db.pages.find_one({"app_id": app_id, "slug": "/"}, {"_id": 0, "blocks": 1}) \
-        or await db.pages.find_one({"app_id": app_id}, {"_id": 0, "blocks": 1})
-    if not home:
+    """Keep the Overview snapshot in step with whatever Site Mode currently holds.
+
+    Captures the live hero headline/subheadline/description, the real page and section counts,
+    a fresh thumbnail, and mirrors the Navbar brand name onto the tenant name.
+    """
+    pages = await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1, "blocks": 1, "updated_at": 1}).to_list(80)
+    if not pages:
         return None
+    pages.sort(key=lambda p: p.get("slug") != "/")
+    home = next((p for p in pages if p.get("slug") == "/"), pages[0])
     blocks = home.get("blocks") or []
     hero = next((b for b in blocks if b.get("type") == "hero"), None)
     props = (hero or {}).get("props") or {}
-    img = next((v for b in blocks for k, v in ((b.get("props") or {}).items())
-                if k in ("image", "bg", "background") and isinstance(v, str) and v.strip()), None)
-    snap = {"headline": str(props.get("title") or "")[:160], "subtitle": str(props.get("subtitle") or "")[:240],
-            "pages": await db.pages.count_documents({"app_id": app_id}),
-            "sections": len(blocks), "updated_at": _now()}
-    upd = {"site_snapshot": snap}
+    nav = next((b for b in blocks if b.get("type") == "navbar"), None)
+    brand = str(((nav or {}).get("props") or {}).get("brand") or "").strip()[:120]
+    description = next((str(props.get(k)).strip() for k in ("description", "body", "text", "lead", "blurb")
+                        if isinstance(props.get(k), str) and props.get(k).strip()), "")
+    # Prefer the hero's own artwork so the thumbnail stays visually stable across builders.
+    img = next((props.get(k) for k in ("image", "bg", "background")
+                if isinstance(props.get(k), str) and props.get(k).strip()), None) \
+        or next((v for b in blocks for k, v in ((b.get("props") or {}).items())
+                 if k in ("image", "bg", "background") and isinstance(v, str) and v.strip()), None)
+    snap = {"headline": str(props.get("title") or "")[:160],
+            "subtitle": str(props.get("subtitle") or "")[:240],
+            "description": description[:400],
+            "brand": brand,
+            "pages": len(pages),
+            "sections": len(blocks),
+            "total_sections": sum(len(p.get("blocks") or []) for p in pages),
+            "thumbnail": img,
+            "updated_at": _now()}
+    upd = {"site_snapshot": snap, "updated_at": _now()}
     if img:
         upd["thumbnail"] = img
+    if brand:
+        # The Navbar brand is the tenant's public name — keep the workspace header in step with it.
+        upd["name"] = brand
     await db.apps.update_one({"app_id": app_id}, {"$set": upd})
     return snap
 
@@ -56,7 +77,33 @@ class LockIn(BaseModel):
     locked: bool
 
 
+async def sync_all_overviews(db) -> int:
+    """Bring every tenant's Overview snapshot in step with its current Site Mode content."""
+    import asyncio
+    ids = [a["app_id"] async for a in db.apps.find({"is_deleted": {"$ne": True}}, {"_id": 0, "app_id": 1})]
+
+    async def one(app_id):
+        try:
+            return bool(await sync_overview(db, app_id))
+        except Exception:
+            return False
+
+    done = 0
+    for i in range(0, len(ids), 10):
+        done += sum(await asyncio.gather(*(one(a) for a in ids[i:i + 10])))
+    return done
+
+
 def register(api, db, get_current_user, get_user_app, log_activity):
+    @api.post("/apps/{app_id}/site/sync-overview")
+    async def resync_overview(app_id: str, user: dict = Depends(get_current_user)):
+        """Force a re-read of Site Mode into the Overview card (normally automatic on every save)."""
+        await get_user_app(app_id, user)
+        snap = await sync_overview(db, app_id)
+        if not snap:
+            raise HTTPException(400, "This tenant has no Site Mode pages yet")
+        return snap
+
     @api.get("/apps/{app_id}/content-lock")
     async def get_lock(app_id: str, user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
@@ -70,4 +117,5 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await log_activity(app_id, user["user_id"], "content.lock", f"Site content {'locked' if body.locked else 'unlocked'}")
         return {"locked": body.locked}
 
-    return {"assert_unlocked": assert_unlocked, "lock_after_build": lock_after_build, "sync_overview": sync_overview}
+    return {"assert_unlocked": assert_unlocked, "lock_after_build": lock_after_build,
+            "sync_overview": sync_overview, "sync_all_overviews": sync_all_overviews}
