@@ -291,7 +291,7 @@ async def logout(request: Request, response: Response):
 
 @api.get("/auth/me")
 async def me(user: dict = Depends(get_current_user)):
-    return {**user, "is_admin": (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()}
+    return {**user, "is_admin": (user.get("email") or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()}
 
 
 CURSOR_EFFECTS = {"none", "fairy", "bubbles", "smoke", "fire", "wind", "frost", "plasma", "ink", "comet", "matrix"}
@@ -910,8 +910,15 @@ async def startup():
         logger.warning(f"index create warning: {e}")
 
     # seed admin user
-    admin_email = os.environ["ADMIN_EMAIL"].lower().strip()
-    admin_password = os.environ["ADMIN_PASSWORD"]
+    admin_email = (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
+    admin_password = os.environ.get("ADMIN_PASSWORD") or ""
+    if not admin_email or not admin_password:
+        logger.warning("ADMIN_EMAIL/ADMIN_PASSWORD not set: skipping admin + demo seeding")
+        try:
+            init_storage()
+        except Exception as e:
+            logger.error(f"Storage init failed: {e}")
+        return
     admin = await db.users.find_one({"email": admin_email})
     if not admin:
         admin_id = new_id("user")
@@ -967,14 +974,17 @@ async def startup():
                     "created_at": (now_utc() - timedelta(hours=i * 3 + 1)).isoformat(),
                 })
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
-    await reseed_demo_sites(db, admin_id)
-    from seed_sites import ensure_editor_tenant
-    await ensure_editor_tenant(db, admin_id, hash_password)
-    # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
-    from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
-    logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
-    logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
-    await clear_synced_label_overrides(db)
+    try:
+        await reseed_demo_sites(db, admin_id)
+        from seed_sites import ensure_editor_tenant
+        await ensure_editor_tenant(db, admin_id, hash_password)
+        # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
+        from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
+        logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
+        logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
+        await clear_synced_label_overrides(db)
+    except Exception as e:
+        logger.error(f"demo site bootstrap skipped: {e}")
     try:
         init_storage()
         logger.info("Object storage initialized")
@@ -1060,12 +1070,20 @@ _web_import.place_video = VIDEO_HOOKS["place_video"]
 _web_import.search_stock = VIDEO_HOOKS["search_stock"]
 _web_import.store_video = VIDEO_HOOKS["store_video"]
 
+@app.get("/health")
+@api.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 app.include_router(api)
 
+_CORS = [o.strip() for o in os.environ.get('CORS_ORIGINS', FRONTEND_URL).split(',') if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=[o.strip() for o in os.environ.get('CORS_ORIGINS', FRONTEND_URL).split(',')],
+    # cookie auth needs the exact origin echoed back, so "*" is expressed as a reflecting regex
+    **({"allow_origin_regex": ".*"} if _CORS == ["*"] else {"allow_origins": _CORS}),
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["Content-Disposition"],

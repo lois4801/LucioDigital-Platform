@@ -14,7 +14,7 @@ class LabelsPatch(BaseModel):
 
 
 def _is_platform_admin(user: dict) -> bool:
-    return (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()
+    return (user.get("email") or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
 
 
 def _key(k: str) -> str:

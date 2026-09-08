@@ -147,7 +147,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         app_doc = await get_user_app(app_id, user)
         is_platform_admin = (
             (user.get("email") or "").lower().strip()
-            == os.environ["ADMIN_EMAIL"].lower().strip()
+            == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
         )
         if app_doc["owner_id"] == user["user_id"] or is_platform_admin:
             return app_doc

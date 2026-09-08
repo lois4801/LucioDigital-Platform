@@ -37,7 +37,7 @@ class LandingPatch(BaseModel):
 
 
 def is_admin(user: dict) -> bool:
-    return (user.get("email") or "").lower().strip() == os.environ["ADMIN_EMAIL"].lower().strip()
+    return (user.get("email") or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
 
 
 def register(api, db, get_current_user, get_user_app=None, log_activity=None):
@@ -118,7 +118,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
     async def public_tenants():
         """Real tenants in the platform admin's workspace, with their live deployment state."""
         from site_content import NICHES, niche_for
-        admin = await db.users.find_one({"email": os.environ["ADMIN_EMAIL"].lower().strip()}, {"_id": 0, "user_id": 1})
+        admin = await db.users.find_one({"email": (os.environ.get("ADMIN_EMAIL") or "").lower().strip()}, {"_id": 0, "user_id": 1})
         if not admin:
             return {"tenants": [], "count": 0, "live": 0}
         apps = await db.apps.find({"owner_id": admin["user_id"], "is_deleted": {"$ne": True}},
