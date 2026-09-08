@@ -1,5 +1,8 @@
 import AnalyticsCard from "@/components/AnalyticsCard";
-import { Activity, Cpu, HardDrive, Timer, Users } from "lucide-react";
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import { Activity, Cpu, HardDrive, Timer, Users, Lock, Unlock } from "lucide-react";
 import { L, UiLabelsToolbar } from "@/components/UiLabels";
 
 const STATUS_OPTIONS = [
@@ -14,6 +17,40 @@ const HOST_METRICS = [
   { icon: HardDrive, k: "metric_ram", label: "RAM", fmt: (m) => `${m.ram}%` },
   { icon: Timer, k: "metric_response", label: "Response", fmt: (m) => `${m.response_ms}ms` },
 ];
+
+function SiteSnapshot({ appDoc }) {
+  const [lock, setLock] = useState({ locked: true, snapshot: null });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api.get(`/apps/${appDoc.app_id}/content-lock`).then(r => setLock(r.data)).catch(() => { }); }, [appDoc.app_id, appDoc.updated_at]);
+  const snap = lock.snapshot || appDoc.site_snapshot;
+  async function toggle() {
+    const next = !lock.locked;
+    if (next === false && !window.confirm("Unlock this tenant's site content? AI rebuilds and website imports will then be allowed to replace the saved pages.")) return;
+    setBusy(true);
+    try { await api.post(`/apps/${appDoc.app_id}/content-lock`, { locked: next }); setLock(l => ({ ...l, locked: next })); toast.success(next ? "Site content locked" : "Unlocked — remember to lock it again"); }
+    catch { toast.error("Failed"); } finally { setBusy(false); }
+  }
+  return (
+    <div className="mt-5 space-y-3" data-testid="site-snapshot">
+      {snap && (
+        <div className="rounded-xl border border-[var(--line)] bg-white/[0.03] p-4">
+          <div className="overline mb-2">Live site (from Site Mode)</div>
+          <div data-testid="snapshot-headline" className="font-display font-semibold">{snap.headline || "—"}</div>
+          {snap.subtitle && <div data-testid="snapshot-subtitle" className="text-sm text-[var(--mut)] mt-1">{snap.subtitle}</div>}
+          <div className="font-mono text-[10px] text-[var(--dim)] mt-2">{snap.pages} page(s) · {snap.sections} sections on home · updated {new Date(snap.updated_at).toLocaleString()}</div>
+        </div>
+      )}
+      <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
+        {lock.locked ? <Lock size={14} className="text-[var(--acc)]" /> : <Unlock size={14} className="text-amber-400" />}
+        <div className="text-xs">
+          <div className="font-semibold">{lock.locked ? "Content locked" : "Content unlocked"}</div>
+          <div className="text-[var(--mut)]">{lock.locked ? "AI rebuilds and imports cannot replace this saved site. Manual edits still work." : "AI rebuilds and imports can overwrite this site."}</div>
+        </div>
+        <button data-testid="content-lock-toggle" onClick={toggle} disabled={busy} className="btn-ghost !py-1.5 text-[11px] ml-auto disabled:opacity-50">{lock.locked ? "Unlock" : "Lock"}</button>
+      </div>
+    </div>
+  );
+}
 
 export default function OverviewPanel({ appDoc, patch }) {
   const m = appDoc.metrics || {};
@@ -38,6 +75,7 @@ export default function OverviewPanel({ appDoc, patch }) {
             </div>
             <L k="overview_card_title" d={appDoc.name} as="h2" className="font-display text-2xl font-semibold tracking-tight mt-4 block" testid="label-overview-card-title" />
             <L k="overview_card_description" d={appDoc.description || "—"} as="p" className="text-[var(--mut)] mt-2 block" testid="label-overview-card-desc" />
+            <SiteSnapshot appDoc={appDoc} />
           </div>
         </div>
 

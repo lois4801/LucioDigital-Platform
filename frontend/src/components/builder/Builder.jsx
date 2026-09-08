@@ -191,11 +191,6 @@ export default function Builder({ appId, appDoc }) {
   }
   const editProps = (id, path, value) => mutate(blocks.map(b => b.id === id ? { ...b, props: setPath(b.props, path, value) } : b));
   const editStyle = (id, style, propsPatch) => mutate(blocks.map(b => b.id === id ? { ...b, style, props: { ...b.props, ...(propsPatch || {}) } } : b));
-  async function premiumRedesign() {
-    if (!window.confirm("Rebuild this site with the premium dark design system and full niche content? Current pages will be replaced.")) return;
-    try { const { data } = await api.post(`/apps/${appId}/site/premium-rebuild`, {}); toast.success(`Premium site built (${data.niche}, ${data.pages} pages)`); await load(); }
-    catch (e) { toast.error(e.response?.data?.detail || "Redesign failed"); }
-  }
   async function save() {
     setSaving(true);
     try {
@@ -264,7 +259,6 @@ export default function Builder({ appId, appDoc }) {
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
           <button data-testid="web-import-btn" onClick={() => setImportOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Globe size={14} /> Import from URL</button>
-          <button data-testid="premium-redesign-btn" onClick={premiumRedesign} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Sparkles size={14} /> Premium redesign</button>
           <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
           <LogoUpload appId={appId} logo={logo} onChange={(u) => { setLogo(u); load(); }} />
           <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>

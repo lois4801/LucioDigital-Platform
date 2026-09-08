@@ -133,6 +133,29 @@ App Mode, multi-tenant with client portals.
 - Testing: iteration_30.json — backend 23/23 pytest, frontend smoke 100%; the reported routing
   metadata-pollution nit was fixed (no routing object for unresolvable form ids).
 
+### Jun 2026 (v22) — Tenant content lock (iter 31)
+**User directive: tenant site content is locked to its saved DB state and must never be regenerated
+or overwritten by a builder prompt.** Implemented in `/app/backend/content_lock.py`:
+- **The retroactive premium-redesign startup migration is gone.** `migrate_premium_sites()` is no
+  longer called anywhere; a backend restart can never rewrite tenant pages again (proven in tests:
+  page/blocks digests are byte-identical across a restart). `reseed_demo_sites()` no longer deletes
+  pages and only writes to tenants that have ZERO pages.
+- **Per-tenant `content_locked` flag, default LOCKED** — every existing tenant was locked at startup
+  (`lock_all_existing`), and any tenant is auto-locked again as soon as a build/import gives it a
+  site (`lock_after_build`).
+- **Guarded (423 + "unlock it in Overview") while locked**: `ai/generate-site` (guard runs before the
+  LLM call), `site/premium-rebuild` (incl. the niche/"Try another look" flow), `site/import`,
+  `site/import-selected`, `site/import-apply` — all in `replace` mode. Manual work is untouched:
+  block edits, adding/deleting pages, theme changes, `append` imports, App Mode sync, AI block editor,
+  video placement, CMS/Files/Inbox.
+- **Premium redesign button removed** from Site Mode entirely (per the user's request).
+- **Overview stays in step with Site Mode**: `sync_overview()` runs on every page save and writes an
+  `apps.site_snapshot` (home headline, subtitle, page count, section count, timestamp) plus the hero
+  thumbnail; nothing else on the tenant document is touched. Shown in Overview with the padlock
+  toggle (`site-snapshot`, `snapshot-headline`, `content-lock-toggle`).
+- Testing: iteration_31.json — backend 17/17 pytest, frontend smoke 100%; the reported 404-before-423
+  ordering nit on `import-selected` was fixed.
+
 ## Backlog (P1/P2)
 - P1: Real GitHub push — waiting on the user's Personal Access Token (currently MOCKED without one).
 - P1: Add `PEXELS_API_KEY` / `PIXABAY_API_KEY` to backend/.env to switch on free stock video sourcing
@@ -152,6 +175,9 @@ App Mode, multi-tenant with client portals.
 - P2: Real CI/CD for mobile builds; Stripe customer portal; audit-log CSV export.
 
 ## Notes
+- **Tenant content is locked by default.** Never add a startup migration or bulk job that rewrites
+  `pages`. Any new wholesale-rewrite path MUST call `content_lock.assert_unlocked()` first and
+  `lock_after_build()` + `sync_overview()` after.
 - Cloudflare ingress kills requests at 60s → every scrape/LLM pipeline must be a polled job.
 - Cursor: dot + particle trails only. Never reintroduce the outer cursor ring.
 - All uploads go through Emergent Object Storage (`backend/storage.py`, `files_lib.py`).

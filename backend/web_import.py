@@ -601,7 +601,9 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
 async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool, log_activity, user_id: str) -> dict:
     biz = imp.get("business") or {}
     pages = imp["pages"]
+    from content_lock import assert_unlocked, lock_after_build, sync_overview
     if mode == "replace":
+        await assert_unlocked(db, app_id, "replace the saved pages")
         await db.pages.delete_many({"app_id": app_id})
         start = 0
     else:
@@ -632,6 +634,8 @@ async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool,
     if not (await db.apps.find_one({"app_id": app_id}, {"_id": 0, "preview_token": 1}) or {}).get("preview_token"):
         await db.apps.update_one({"app_id": app_id}, {"$set": {"preview_token": _uid("pv"), "preview_enabled": True}})
     await log_activity(app_id, user_id, "site.imported", f"Imported {len(created)} page(s) from {imp.get('url')}")
+    await lock_after_build(db, app_id)
+    await sync_overview(db, app_id)
     return {"pages": created, "theme": imp["theme"] if apply_theme else None, "business": biz, "mode": mode,
             "report": imp.get("report")}
 
@@ -732,6 +736,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def _start(app_id: str, url: str, user: dict, auto: Optional[dict], max_pages: int,
                      crawl: Optional[dict] = None, keep_slugs: Optional[List[str]] = None):
         app_doc = await require_ai_access(app_id, user)
+        if auto and auto.get("mode") == "replace":
+            from content_lock import assert_unlocked as _au
+            await _au(db, app_id, "replace the saved pages")
         _norm_url(url)
         job_id = _uid("job")
         await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": url, "status": "running",
@@ -777,6 +784,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/site/import-selected")
     async def import_selected(app_id: str, body: SelectedIn, user: dict = Depends(get_current_user)):
+        if body.mode != "append":
+            from content_lock import assert_unlocked as _au
+            await _au(db, app_id, "replace the saved pages")
         disc = await db.site_discoveries.find_one({"discovery_id": body.discovery_id, "app_id": app_id}, {"_id": 0})
         if not disc:
             raise HTTPException(404, "Discovery expired — scan the website again")
@@ -801,10 +811,13 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.post("/apps/{app_id}/site/import-apply")
     async def import_apply(app_id: str, body: ApplyIn, user: dict = Depends(get_current_user)):
         await require_ai_access(app_id, user)
+        mode = body.mode if body.mode in ("replace", "append") else "replace"
+        if mode == "replace":
+            from content_lock import assert_unlocked as _au
+            await _au(db, app_id, "replace the saved pages")
         imp = await db.site_imports.find_one({"import_id": body.import_id, "app_id": app_id}, {"_id": 0})
         if not imp:
             raise HTTPException(404, "Import not found — scan the website again")
-        mode = body.mode if body.mode in ("replace", "append") else "replace"
         return await apply_import(db, app_id, imp, mode, body.apply_theme, log_activity, user["user_id"])
 
     @api.post("/apps/{app_id}/site/import")

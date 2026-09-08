@@ -1,0 +1,38 @@
+{
+  "summary": "Iter-31 end-to-end verification of the tenant content-lock feature. Backend: 17/17 pytest pass in ~48s (test_iter31_content_lock.py, serial). Verified (a) server.py startup has no migrate_all()/migrate_premium_sites() call; seed_sites.reseed_demo_sites contains no delete_many and gates on count_documents; a supervisorctl restart leaves the sorted-slug + blocks digest of three tenants (including TheCrawlSpace app_7035dfbf4a95) BYTE-IDENTICAL before/after. (b) All existing tenants report content_locked=true on GET /apps/{id}/content-lock. (c) POST /content-lock toggles both directions and writes two activity_logs entries with kind='content.lock'. (d) 423 lock enforcement on POST /ai/generate-site (guard runs before the LLM call — measured <1s), POST /site/premium-rebuild, POST /site/import (mode=replace), POST /site/import-selected (mode=replace, with a real discovery_id so the ordering check reaches the lock guard), POST /site/import-apply (mode=replace). Every 423 case is followed by a page digest reconfirmation — no pages were mutated. (e) Non-blocked while locked: PATCH page (block save), POST page, DELETE page, PUT theme all return 200. (f) Overview snapshot sync — PATCH a page's hero block on a fresh tenant flips site_snapshot.headline/subtitle/sections/pages/updated_at, thumbnail follows the hero image, and untouched fields (name, description, industry, status, tags, theme, metrics) are byte-identical. (g) Unlock → POST /site/import replace on example.com completes (job status=done) → GET /content-lock returns locked=true (auto re-lock). (h) New tenant defaults to locked, POST /ai/generate-site returns 423 until unlocked (friction confirmed as per spec). (i) grep proves the only pages.delete_many callsites are all preceded by assert_unlocked or delete_app / seeded routes. Frontend smoke on the preview URL: cookie login → tenant Overview shows data-testid=site-snapshot with snapshot-headline='The Plumbing Experts You've Trusted for Over 90 Years' and data-testid=content-lock-toggle labelled 'Unlock' (i.e. tenant is locked). Zero occurrences of premium-redesign-btn anywhere in the shipped bundle (grep of /app/frontend/src returns 0 hits for premium-redesign-btn / premiumRedesign / 'Premium redesign'). Zero 'Uncaught runtime error' overlays. Builder.jsx still calls /site/premium-rebuild only from applyNiche() which is wired to the 'Try another look' (niche-switcher-btn) flow and surfaces error.response.data.detail as a toast — the 423 friendly message will therefore reach the user.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /apps/{id}/site/import-selected", "issue": "The endpoint checks db.site_discoveries for discovery_id BEFORE calling assert_unlocked. If a caller passes a bogus discovery_id on a locked tenant, the server responds 404 'Discovery expired' rather than the specified 423 lock message. No mutation happens either way (nothing to import), so this is contract-only, not a safety issue. Consider moving the assert_unlocked call to the top of import_selected for a more consistent 423 surface."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter31_content_lock.py",
+    "/app/test_reports/pytest/iter31.xml"
+  ],
+  "action_items": [
+    "Optional (contract-only): in web_import.import_selected, call assert_unlocked BEFORE looking up the discovery so a bogus discovery_id on a locked tenant surfaces 423 with the friendly 'unlock it in Overview' message instead of 404 'Discovery expired'."
+  ],
+  "critical_code_review_comments": [
+    "content_lock.assert_unlocked defaults to locked=True when the app doc has no explicit content_locked field — that is what makes lock_all_existing safe, but it also means the very first line of any new register_content_lock endpoint or new callsite silently assumes 'locked' for docs that skipped the migration. Non-blocking; document this default at the top of content_lock.py.",
+    "content_lock.sync_overview uses the first block-props value found among ('image','bg','background') as the thumbnail. For pages whose hero uses e.g. 'video' or 'poster' the thumbnail will remain whatever apps.thumbnail was before. Minor — worth adding 'poster' and 'cover' to the accepted keys.",
+    "OverviewPanel.jsx SiteSnapshot: the initial state hard-codes locked:true and only reads api.get response into 'lock'. If the tenant is currently unlocked but the API call fails silently, the UI will keep showing 'Content locked' which is misleading. Prefer showing a loading state or fall back to appDoc.content_locked.",
+    "seed_sites.reseed_demo_sites is idempotent for tenants with existing pages but still WRITES demo_site_v=2 & theme/thumbnail/video_url on tenants matching a NICHES name that happen to have zero pages. In practice that only fires for freshly seeded admins on first login, but it means adopting a NICHES name for a real customer tenant could clobber that tenant's theme. Consider matching on demo_owner + name, not just name.",
+    "studio.py generate_site runs assert_unlocked twice (line 244 and line 267). The second call is defensive but wastes an extra Mongo round-trip — it can be removed once the first-guard invariant is documented."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter31_content_lock.py"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% smoke — site-snapshot, snapshot-headline, content-lock-toggle rendered, no premium-redesign button, no runtime errors"},
+  "test_credentials": "admin cookie login: jaybernabe@luciodigital.com / Lucio2026!",
+  "seed_data_creation": "Throwaway TEST_iter31_* tenants (auto-deleted in fixture teardown). One import job on example.com fired against a locked seeded tenant for the import-selected 423 test — it only writes to db.site_discoveries (no page changes) and expires on its own. TheCrawlSpace (app_7035dfbf4a95) was never mutated (page digest is byte-identical after the full test run).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Single new test file: /app/backend/tests/test_iter31_content_lock.py (17 tests, ~48s serial). Uses -n 0 because one test does `sudo supervisorctl restart backend` which would race with xdist workers. If you re-run under xdist, that class will fail — either always run this file serial or split the restart test into its own file with a marker. Also note that test_import_selected_replace_423 runs a live discover on example.com — if network is offline, it will pytest.skip. The frontend Site Mode 'Try another look' toast surfacing the 423 lock message was NOT clicked through in this iteration (the niche modal opens niche-preview flow first, which would call /site/niche-preview, not /site/premium-rebuild); to force the toast you have to actually pick a niche and click Apply. Consider a targeted playwright test if you want to exercise that error branch.",
+  "rca of the issue": "Only minor contract-order finding: /site/import-selected checks discovery lookup before the lock guard, so bogus discovery_ids on a locked tenant return 404 instead of the 423 friendly message. Verified with a real discovery that the lock guard IS hit and does return 423 with page digest unchanged, so there is no data-loss path. Reproduce: while a tenant is locked, POST /site/import-selected {discovery_id:'x', slugs:['/'], mode:'replace'} → 404 'Discovery expired'. Fix: move `await assert_unlocked(db, app_id, ...)` to line 787 (before the site_discoveries find_one call) in web_import.py."
+}

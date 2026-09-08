@@ -217,6 +217,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             raise HTTPException(404, "Page not found")
         if "blocks" in upd:
             await log_activity(app_id, user["user_id"], "page.saved", f"Saved {len(upd['blocks'])} blocks")
+            from content_lock import sync_overview
+            await sync_overview(db, app_id)
             if hooks.get("maybe_autosync"):
                 await hooks["maybe_autosync"](app_id, user["user_id"])
             if hooks.get("maybe_site_sync"):
@@ -238,6 +240,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
     @api.post("/apps/{app_id}/ai/generate-site")
     async def generate_site(app_id: str, body: BriefIn, user: dict = Depends(get_current_user)):
         doc = await require_ai_access(app_id, user)
+        from content_lock import assert_unlocked as _au
+        await _au(db, app_id, "replace the saved pages")
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         wanted = body.pages or ["Home", "About", "Pricing", "Contact"]
@@ -259,6 +263,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if not pages:
             raise HTTPException(500, "AI returned no pages. Try a more specific brief.")
         theme = {**DEFAULT_THEME, **_clean_theme(doc.get("theme")), **_clean_theme(data.get("theme")), "mode": "dark", "glass": True, "grain": True, "motion": True, "cursor": True}
+        from content_lock import assert_unlocked, lock_after_build, sync_overview
+        await assert_unlocked(db, app_id, "replace the saved pages")
         await db.pages.delete_many({"app_id": app_id})
         out = []
         for i, pg in enumerate(pages):
@@ -268,6 +274,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             await db.pages.insert_one(dict(d))
             out.append(d)
         await db.apps.update_one({"app_id": app_id}, {"$set": {"theme": theme, "site_brief": body.brief, "updated_at": now_iso()}})
+        await lock_after_build(db, app_id)
+        await sync_overview(db, app_id)
         await log_activity(app_id, user["user_id"], "ai.site", f"Generated {len(out)}-page site from brief")
         return {"theme": theme, "pages": out}
 

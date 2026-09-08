@@ -415,6 +415,8 @@ def build_premium_site(app, niche_key=None, brand=None):
 
 
 async def apply_premium(db, app, niche_key=None):
+    from content_lock import assert_unlocked, lock_after_build, sync_overview
+    await assert_unlocked(db, app["app_id"], "rebuild this site")
     existing = await db.pages.find({"app_id": app["app_id"]}, {"_id": 0, "blocks": 1}).to_list(50)
     brand = extract_brand(app, existing)
     pages, theme, n = build_premium_site(app, niche_key, brand)
@@ -425,6 +427,8 @@ async def apply_premium(db, app, niche_key=None):
     if not app.get("preview_token"):
         upd["preview_token"] = _id("pv") + uuid.uuid4().hex[:8]
     await db.apps.update_one({"app_id": app["app_id"]}, {"$set": upd})
+    await lock_after_build(db, app["app_id"])
+    await sync_overview(db, app["app_id"])
     return {"pages": len(pages), "theme": theme, "niche": upd["site_niche"], "preserved": {k: v for k, v in brand.items() if v}}
 
 
