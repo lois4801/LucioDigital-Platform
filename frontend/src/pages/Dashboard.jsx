@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
 import { pollImport, ImportProgress, ImportReport } from "@/components/builder/WebImport";
+import { LockStateBadge } from "@/components/locks/LockContext";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -36,8 +37,10 @@ export default function Dashboard() {
   const [impStage, setImpStage] = useState(null);
   const [impStarted, setImpStarted] = useState(0);
   const [impReport, setImpReport] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
+  const [lockStates, setLockStates] = useState({});
 
-  useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
 
   async function load() {
     setLoading(true);
@@ -63,6 +66,19 @@ export default function Dashboard() {
       const { data } = await api.post("/apps", { name, industry, description, kind, status: "active" });
       setApps([data, ...apps]);
       setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
+      if (zipFile) {
+        setImporting(true); setImpStage({ stage: "scanning", stage_detail: `Unpacking ${zipFile.name}` }); setImpStarted(Date.now());
+        try {
+          const fd = new FormData(); fd.append("file", zipFile); fd.append("mode", "replace"); fd.append("apply_theme", "true");
+          const { data: job } = await api.post(`/apps/${data.app_id}/site/import-zip`, fd, { headers: { "Content-Type": "multipart/form-data" }, timeout: 600000 });
+          const res = await pollImport(data.app_id, job.job_id, { onStage: setImpStage });
+          setImpReport({ ...res.report, app_id: data.app_id });
+          toast.success(`Imported ${res.applied?.pages?.length || res.pages.length} page(s) from ${zipFile.name}`);
+          setZipFile(null);
+          return;
+        } catch (e) { toast.error(e.response?.data?.detail || e.message || "ZIP import failed — the project was still created"); }
+        finally { setImporting(false); setImpStage(null); }
+      }
       if (url?.trim()) {
         setImporting(true); setImpStage({ stage: "scanning", stage_detail: "Starting full-site crawl" }); setImpStarted(Date.now());
         try {
@@ -229,6 +245,10 @@ export default function Dashboard() {
                   <input data-testid="new-app-url-input" value={newApp.url} onChange={(e) => setNewApp({ ...newApp, url: e.target.value })} placeholder="acmeplumbing.com"
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" />
                   <span className="text-[11px] text-[var(--mut)] mt-1 block">We crawl every page, save all images to the media library, rebuild the forms and nav, and copy the colour scheme.</span></label>
+                <label className="block"><span className="overline block mb-1">…or import a ZIP package</span>
+                  <input data-testid="new-app-zip-input" type="file" accept=".zip" onChange={(e) => setZipFile(e.target.files?.[0] || null)}
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-xs outline-none file:mr-3 file:rounded-md file:border-0 file:bg-[var(--acc)]/15 file:text-[var(--acc)] file:px-2 file:py-1" />
+                  <span className="text-[11px] text-[var(--mut)] mt-1 block">HTML, CSS, images and assets — each page becomes its own tenant page.</span></label>
                 {importing && impStage && <ImportProgress stage={impStage} started={impStarted} testid="new-app-import-progress" />}
                 {impReport && <div className="space-y-3">
                   <ImportReport report={impReport} testid="new-app-import-report" />
@@ -274,8 +294,9 @@ export default function Dashboard() {
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
                     </div>
-                    <div className="absolute top-3 right-3">
+                    <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
                       <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
+                      <LockStateBadge state={lockStates[a.app_id]?.state} testid={`card-lock-badge-${a.app_id}`} />
                     </div>
                     <div className="absolute bottom-3 right-3 w-10 h-10 rounded-full bg-black/50 backdrop-blur flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                       <Play size={16} className="text-white ml-0.5" />
@@ -309,6 +330,7 @@ export default function Dashboard() {
                     <div className="text-xs text-[var(--mut)]">{a.industry} · {a.description?.slice(0, 60)}</div>
                   </div>
                   <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
+                  <LockStateBadge state={lockStates[a.app_id]?.state} testid={`row-lock-badge-${a.app_id}`} />
                   <div className="font-mono text-xs text-[var(--mut)] w-24 text-right">{a.metrics?.uptime}%</div>
                 </div>
               );

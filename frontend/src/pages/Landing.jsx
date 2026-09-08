@@ -106,7 +106,10 @@ export default function Landing() {
   const [showcase, setShowcase] = useState(SHOWCASE);
   const [modal, setModal] = useState(null);
   const [leaving, setLeaving] = useState(false);
-  const admin = !!user?.is_admin;
+  const isAdmin = !!user?.is_admin;
+  const [editMode, setEditMode] = useState(() => localStorage.getItem("os_landing_edit") !== "0");
+  const admin = isAdmin && editMode;
+  const toggleEditMode = () => setEditMode(v => { localStorage.setItem("os_landing_edit", v ? "0" : "1"); return !v; });
   const [cms, setCms] = useState({ cards: [], marquee: LOGOS, texts: {} });
   const [editCard, setEditCard] = useState(null);
   const [tickerOpen, setTickerOpen] = useState(false);
@@ -136,6 +139,12 @@ export default function Landing() {
     <div className="min-h-screen relative overflow-x-hidden">
       <AnimatePresence>{leaving && <motion.div data-testid="demo-transition" className="fixed inset-0 z-[90] bg-[var(--bg)] flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="flex items-center gap-3 text-sm text-[var(--mut)]"><span className="w-2 h-2 rounded-full bg-[var(--acc)] pulse-dot" /> Opening live demo…</div></motion.div>}</AnimatePresence>
       <AnimatePresence>{modal && <NicheModal s={modal.s} i={modal.i} onClose={() => setModal(null)} onStart={go} />}</AnimatePresence>
+      {isAdmin && (
+        <button data-testid="landing-edit-mode-toggle" onClick={toggleEditMode}
+          className={`fixed bottom-6 left-6 z-[80] rounded-full px-4 py-2.5 text-xs font-semibold backdrop-blur-xl border shadow-2xl transition-colors ${editMode ? "bg-[var(--acc)] text-black border-transparent" : "bg-black/70 text-white/80 border-white/15 hover:text-white"}`}>
+          {editMode ? "Editing on · click to browse" : "Editing off · click to edit"}
+        </button>
+      )}
       <div className="absolute inset-0 grid-bg pointer-events-none" />
       <div className="hero-glow pointer-events-none absolute -top-40 left-1/2 w-[900px] h-[500px] rounded-full bg-[var(--acc)]/12 blur-[140px]" />
       <Spotlight />

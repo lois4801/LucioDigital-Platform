@@ -1,0 +1,24 @@
+{
+  "summary": "Iteration 36 — retest of iteration 35 fixes. All 4 fixes verified PASS + all regressions green. Backend 9/9 (7 prior + 2 new for Inter font). Frontend: (FIX1) .tglassnav is now sticky — top=0 after scrollTo(0,1500) with backdrop-filter blur(18px) saturate(1.5) and semi-transparent bg; still sticky at top=0 after switching pages via preview-page-* buttons (verified on Services page). (FIX2) 390px viewport: documentElement.scrollWidth === innerWidth === 390 (body.scrollWidth 390 as well) — no horizontal overflow; preview chrome scrolls away with content (nav still sticky at 0 while chrome scrolled off). (FIX3) 0 fetchpriority console warnings — only harmless 401 asset noise + a framer 'container non-static position' hint. (FIX4) PUT /api/apps/{id}/theme font_body='Inter' persists as 'Inter' (was previously rewritten to Manrope); v2 demo tenant app_5d6afc6e523f now correctly has font_heading='Sora' + font_body='Inter' with design_v2=true. Regressions: home hero .thero is 1080/1080=100svh full-height, but Services inner page has NO .thero-full class and hero is compact (~530px, left-aligned) as required; .fx-stagger classes present (5); .dsv2 root class present; page switching still animates. Old tenants app_7a2cd286a360 & app_e3cb4f084785 still have design_v2 unset. v2 export contains --t-h1, clamp(, backdrop-filter, sticky, .fx-stagger and lazy imgs; non-v2 export does NOT contain --t-h1.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter35_design_v2.py",
+    "/app/backend/tests/test_iter36_fixes.py",
+    "/app/test_reports/pytest/iter36.xml",
+    "/app/test_reports/pytest/iter36_prev.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Console emits a benign framer-motion warning 'Please ensure that the container has a non-static position, like relative/fixed/absolute to ensure scroll offset is calculated correctly.' — not user-visible but worth checking whether the scroll container in PublicPreview has position:relative for cleaner logs.",
+    "Two 401 asset requests observed on the public preview (likely font/analytics probes) — harmless but adds console noise; consider gating them behind auth-aware fetches."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter36_fixes.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% (all 4 fixes + regressions verified)"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026! — worked.",
+  "seed_data_creation": "Two throwaway tenants (TEST_v2_default, TEST_v2_rebuild, TEST_inter_font) created & cleaned up by pytest.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All iteration 35 HIGH/LOW bugs are fixed. Regression suite is /app/backend/tests/test_iter35_design_v2.py + /app/backend/tests/test_iter36_fixes.py. Key manual checks for v2 preview: nav sticky top=0 after scroll 1500, 390px scrollWidth===innerWidth, 0 fetchpriority warnings in console, Sora heading + Inter body on app_5d6afc6e523f.",
+  "rca of the issue": "All prior RCAs (EffectWrap transform breaking sticky, preview chrome overflow, JSX fetchpriority casing, _clean_theme font guard rewriting Inter -> Manrope) confirmed fixed via source changes noted in review request."
+}

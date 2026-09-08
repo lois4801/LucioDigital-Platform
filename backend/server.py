@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 # LLM
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from studio import DEFAULT_THEME
+from studio import DEFAULT_THEME, V2_THEME
 from export_gen import render_page, render_item_page, css, starter_app_files
 
 # ---------- Setup ----------
@@ -405,6 +405,7 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
         "video_url": body.video_url,
         "live_url": body.live_url,
         "transfer_mode": False,
+        "theme": {**V2_THEME},
         "metrics": {
             "uptime": 99.9,
             "cpu": 24,
@@ -999,6 +1000,14 @@ register_site_content(api, db, get_current_user, get_user_app, log_activity)
 register_content_lock(api, db, get_current_user, get_user_app, log_activity)
 from page_guard import register as register_page_guard
 register_page_guard(api, db, get_current_user, get_user_app, log_activity)
+from edit_requests import register as register_edit_requests
+register_edit_requests(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
+from locks import register as register_locks
+register_locks(api, db, get_current_user, get_user_app, log_activity)
+from zip_import import register as register_zip_import
+import zip_import as _zip_import
+_zip_import.require_ai_access = GROWTH["require_ai_access"]
+register_zip_import(api, db, get_current_user, get_user_app, log_activity)
 from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin

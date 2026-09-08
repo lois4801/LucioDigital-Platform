@@ -4,6 +4,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Activity, Cpu, HardDrive, Timer, Users, Lock, Unlock } from "lucide-react";
 import { L, UiLabelsToolbar } from "@/components/UiLabels";
+import { LockToggle, MasterLockButton, LockStateBadge, useLocks } from "@/components/locks/LockContext";
 
 const STATUS_OPTIONS = [
   { v: "active", label: "Active", cls: "chip-active" },
@@ -40,13 +41,22 @@ function SiteSnapshot({ appDoc }) {
           <div className="font-mono text-[10px] text-[var(--dim)] mt-2">{snap.pages} page(s) · {snap.sections} sections on home · updated {new Date(snap.updated_at).toLocaleString()}</div>
         </div>
       )}
-      <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
+      <div className="group flex items-center gap-2 rounded-xl border border-[var(--line)] p-3">
         {lock.locked ? <Lock size={14} className="text-[var(--acc)]" /> : <Unlock size={14} className="text-amber-400" />}
         <div className="text-xs">
           <div className="font-semibold">{lock.locked ? "Content locked" : "Content unlocked"}</div>
           <div className="text-[var(--mut)]">{lock.locked ? "AI rebuilds and imports cannot replace this saved site. Manual edits still work." : "AI rebuilds and imports can overwrite this site."}</div>
         </div>
-        <button data-testid="content-lock-toggle" onClick={toggle} disabled={busy} className="btn-ghost !py-1.5 text-[11px] ml-auto disabled:opacity-50">{lock.locked ? "Unlock" : "Lock"}</button>
+        <LockToggle kind="overview" itemId="default" name="Overview & site snapshot" alwaysVisible />
+        <button data-testid="content-lock-toggle" onClick={toggle} disabled={busy} className="btn-ghost !py-1.5 text-[11px] disabled:opacity-50">{lock.locked ? "Unlock" : "Lock"}</button>
+      </div>
+      <div data-testid="overview-master-lock" className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] p-3">
+        <div className="text-xs flex-1 min-w-[180px]">
+          <div className="font-semibold">Master lock</div>
+          <div className="text-[var(--mut)]">Lock or unlock every page, section, form, CMS entry and workflow in this tenant at once.</div>
+        </div>
+        <LockStateBadge testid="overview-lock-state-badge" />
+        <MasterLockButton testid="overview-master-lock-btn" />
       </div>
     </div>
   );

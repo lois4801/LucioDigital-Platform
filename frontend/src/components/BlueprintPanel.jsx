@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LockToggle } from "@/components/locks/LockContext";
 import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Table, FormInput, BarChart3, LayoutGrid, MessageSquare, Settings, KanbanSquare, Calendar, LogIn, FileUp, RefreshCw } from "lucide-react";
 
 const COMP_ICON = { table: Table, list: Table, form: FormInput, stats: BarChart3, chart: BarChart3, cards: LayoutGrid, chat: MessageSquare, settings: Settings, kanban: KanbanSquare, calendar: Calendar, auth: LogIn, detail: Layout, hero: Layout, navbar: Layout };
@@ -104,6 +105,11 @@ export default function BlueprintPanel({ appId, apiRoot }) {
   const s = spec?.screens?.[screen];
   return (
     <div data-testid="blueprint-panel" className="space-y-6">
+      <div className="group flex flex-wrap items-center gap-3 card-surface p-3">
+        <div className="text-xs flex-1 min-w-[200px]"><div className="font-semibold">App Mode blueprint</div>
+          <div className="text-[var(--mut)]">Lock the blueprint so clients cannot regenerate or edit the app spec.</div></div>
+        <LockToggle kind="app_mode" itemId="default" name="App Mode blueprint" alwaysVisible size={13} />
+      </div>
       <Dialog open={briefOpen} onOpenChange={setBriefOpen}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-2xl">
           <DialogHeader><DialogTitle className="font-display flex items-center gap-2"><FileUp size={16} className="text-[var(--acc)]" /> Long brief or requirements document</DialogTitle></DialogHeader>

@@ -1,0 +1,40 @@
+{
+  "summary": "Iter-34 tests both master + granular locks and the new generic edit-request. Backend: created /app/backend/tests/test_iter34_master_and_granular_locks.py — 16/16 passed (POST /apps/{id}/locks/all, POST /locks/item with 400 on unknown kind, 403 for editor on lock-all + lock-item, GET /apps/{id}/locks, GET /locks/summary, GET /edit-access for owner/editor, 423 gates on CMS item PUT, workflow PUT and DELETE, owner can save while all-locked, generic POST /edit-request → approve → single-use grant consumed → re-lock, no route-shadowing between /locks/all vs /locks/item and page vs generic edit-access). Frontend Playwright: admin sees master-lock-btn in header on every tab (Overview/Site/CMS/Workflows) plus duplicate master control on Overview via overview-master-lock; Lock all flips to Unlock all with counter 28/28, badge switches to 'Fully locked', reverses instantly to 0/28 'Unlocked' with no confirm dialog. Lock state persists across full page reload (POST /locks/all responses stick and refresh via GET /locks). Granular locks render as expected: lock-block-*/lock-form-* (7 in Site Mode outline), lock-cms_collection-* (2), lock-cms_item-* (1), lock-workflow-* (3), lock-overview-default, lock-app_mode-default. Locking a single workflow flips header badge to 'Partially locked'. Dashboard shows lock-badge chips per tenant card. Editor sees no master-lock-btn (correct) and sees lock-state-badge/master-lock-badge instead.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/apps/{id}/locks/item", "issue": "Response 'locked' field is overwritten by summary's integer locked-count instead of echoing the requested boolean (harmless: frontend reads the 'locks' map). Consider spreading summary first, then echoing body fields last."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "OverviewPanel + AppDetail header", "issue": "On the Overview tab there are TWO elements with the same data-testid=master-lock-btn (header MasterLockButton + the one nested inside overview-master-lock container). Playwright must use .first / narrow scope. Not a functional bug but a testability smell.", "selector": "[data-testid=\"master-lock-btn\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Tenant header", "issues": ["Header renders LockStateBadge right next to MasterLockButton — both pills look visually similar ('Unlocked' badge and 'Lock all 0/28' button share pill styling), can feel redundant. Consider hiding the badge when the button already conveys the state, or restyling one."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter34_master_and_granular_locks.py",
+    "/app/test_reports/pytest/iter34.xml"
+  ],
+  "action_items": [
+    "(optional) De-duplicate data-testid=master-lock-btn on the Overview tab so Playwright can query without .first — e.g. give the Overview instance its own testid or ensure the header one is the only one on that tab.",
+    "(optional) Swap ordering in /locks/item response so body.locked (bool) is preserved and not overwritten by summary's locked-count int."
+  ],
+  "critical_code_review_comments": [
+    "locks.apply_all + lock_item both spread summary AFTER the boolean 'locked' echo, so 'locked' silently changes type in the response payload. Low risk today but a landmine if the FE ever reads r.data.locked as a bool.",
+    "MasterLockButton is embedded inside OverviewPanel's overview-master-lock container, which means two DOM nodes carry data-testid=master-lock-btn on the Overview tab — violates unique-testid convention.",
+    "edit_requests.active_grant looks up by (app_id, page_id, user_id) where page_id is used as a generic item_id for CMS items/workflows too. It works because the field is just a string key, but the naming is misleading; renaming to item_id (or aliasing) would future-proof the code.",
+    "locks.assert_item_editable imports edit_requests.active_grant lazily inside every call — fine for now, but a top-level import would be cleaner and avoid repeated attribute lookups on hot paths."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter34_master_and_granular_locks.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "~95% (all key data-testids present and interactive; two minor testability/design nits)"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! ; editor client.editor@example.com / ClientEdit2026! ; tenant app_7a2cd286a360 (Zip Import Test)",
+  "seed_data_creation": "No permanent seed. Test fixture creates a TEST_col_* CMS collection and TEST_item_* item / TEST_wf_* workflow only if the tenant is empty; otherwise reuses existing ones. Every test starts by POST /locks/all locked:false to reset state and does the same on teardown, so no locks are left on.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Tenant app_7a2cd286a360 is left FULLY UNLOCKED after this run (the autouse fixture resets on teardown; final playwright run also ended in unlocked state). The old POST /apps/{id}/pages/lock-all endpoint still exists but the new UI drives /locks/all instead — do not confuse the two. When testing the master button in Playwright, use .first and wait ≥ 4 s after each click before re-reading text_content — locking 28 items + refreshing UI can take a few seconds and the button is disabled while busy. There are 2 elements with data-testid=master-lock-btn on the Overview tab (header + nested inside overview-master-lock).",
+  "rca of the issue": "N/A — no blocking issues found. Only nits: (a) duplicate master-lock-btn testid on Overview, (b) /locks/item response overwrites body.locked bool with summary's int count."
+}

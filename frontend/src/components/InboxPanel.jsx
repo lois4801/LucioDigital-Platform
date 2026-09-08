@@ -20,9 +20,18 @@ export default function InboxPanel({ appId }) {
   const [fu, setFu] = useState({ enabled: false, hours: 48, pending_drafts: 0 });
   const [fuBusy, setFuBusy] = useState(false);
   const [fuEdit, setFuEdit] = useState("");
+  const [decisionReply, setDecisionReply] = useState("");
   useEffect(() => { api.get(`/apps/${appId}/inbox/followups`).then(r => setFu(r.data)).catch(() => {}); }, [appId]);
   useEffect(() => { setFuEdit(sel?.followup?.body || ""); }, [sel?.message_id, sel?.followup?.drafted_at]);
   function absorb(m) { setSel(m); setMsgs(ms => ms.map(x => x.message_id === m.message_id ? m : x)); }
+  async function decideRequest(action) {
+    setFuBusy(true);
+    try {
+      const { data } = await api.post(`/apps/${appId}/inbox/${sel.message_id}/edit-request/${action}`, { reply: decisionReply || undefined });
+      absorb(data); setDecisionReply("");
+      toast.success(action === "approve" ? "Approved — the page is unlocked for their change" : "Request rejected");
+    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } finally { setFuBusy(false); }
+  }
   async function toggleFu(enabled) {
     setFu(f => ({ ...f, enabled }));
     try { await api.post(`/apps/${appId}/inbox/followups`, { enabled }); toast.success(enabled ? `Auto follow-ups on — drafts appear here after ${fu.hours}h of silence` : "Auto follow-ups off"); }
@@ -74,6 +83,7 @@ export default function InboxPanel({ appId }) {
               {m.source === "chat" ? <MessageSquare size={13} className="text-[var(--cyan)]" /> : <Mail size={13} className="text-[var(--acc)]" />}
               <span className={`text-sm flex-1 truncate ${m.status === "unread" ? "font-bold text-white" : "text-[var(--mut)]"}`}>{m.from_name || m.from_email || "Visitor"}</span>
               <ScoreBadge m={m} />
+              {m.edit_request?.state === "pending" && <span data-testid="edit-request-badge" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Edit request">EDIT</span>}
               {m.followup?.status === "draft" && <span data-testid="followup-badge-draft" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up draft ready"><Clock size={9} /></span>}
               {m.followup?.status === "sent" && <span data-testid="followup-badge-sent" className="chip text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up sent"><Send size={9} /></span>}
               <span className="text-[10px] font-mono text-[var(--dim)]">{new Date(m.updated_at).toLocaleDateString()}</span>
@@ -102,6 +112,21 @@ export default function InboxPanel({ appId }) {
             <Attachments body={sel.body} testid="inbox-attachments" />
             {sel.replies?.length > 0 && <div className="mt-4 space-y-2">{sel.replies.map(r => <div key={r.reply_id} className="text-sm border-l-2 border-[var(--acc)] pl-3"><div className="text-[10px] font-mono text-[var(--dim)]">{r.by} · {new Date(r.created_at).toLocaleString()} · {r.delivery.replace("_", " ")}</div><div className="mt-1 whitespace-pre-wrap">{r.body}</div>{r.attachments?.length > 0 && <Attachments testid="inbox-reply-attachments" body={r.attachments.map(a => `[attachment] ${a.name} — ${a.url}`).join("\n")} />}</div>)}</div>}
             <div className="mt-auto pt-4">
+              {sel.edit_request && (
+                <div data-testid="edit-request-card" className="mb-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/5 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="overline">Edit request · {sel.edit_request.page_name}</span>
+                    <span data-testid="edit-request-state" className={`chip text-[10px] ml-auto ${sel.edit_request.state === "pending" ? "chip-active" : ""}`}>{sel.edit_request.state}</span>
+                  </div>
+                  {sel.edit_request.state === "pending" ? (                    <div className="flex gap-2">
+                      <button data-testid="edit-request-approve-btn" onClick={() => decideRequest("approve")} disabled={fuBusy} className="btn-primary text-xs !py-2 flex items-center gap-1.5 disabled:opacity-50">{fuBusy ? <Loader2 size={12} className="animate-spin" /> : <CheckCheck size={12} />} Approve & unlock</button>
+                      <button data-testid="edit-request-reject-btn" onClick={() => decideRequest("reject")} disabled={fuBusy} className="btn-ghost text-xs !py-2">Reject</button>
+                      <input data-testid="edit-request-reply-input" value={decisionReply} onChange={e => setDecisionReply(e.target.value)} placeholder="Optional reply to the client"
+                        className="flex-1 min-w-[160px] bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-2 text-xs outline-none" />
+                    </div>
+                  ) : <div className="text-xs text-[var(--mut)]">{sel.edit_request.state} by {sel.edit_request.decided_by} · {sel.edit_request.decided_at ? new Date(sel.edit_request.decided_at).toLocaleString() : ""}</div>}
+                </div>
+              )}
               {sel.from_email && (sel.followup?.status === "draft" ? (
                 <div data-testid="followup-draft-card" className="mb-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/5 p-3">
                   <div className="flex items-center gap-2 mb-2">

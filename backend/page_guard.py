@@ -26,12 +26,17 @@ async def role_of(db, app_doc: dict, user: dict) -> str:
 
 
 async def assert_can_edit_page(db, app_doc: dict, page: dict, user: dict):
-    """A locked page is read-only for editors and viewers; owner and admin can still edit it."""
+    """A locked page is read-only for editors and viewers; owner/admin, or a client holding an
+    approved single-use edit grant, can still save it."""
     if not page.get("locked"):
-        return
+        return None
     if await role_of(db, app_doc, user) in ("owner", "admin"):
-        return
-    raise HTTPException(423, f"'{page.get('name')}' is locked by the agency. Ask them to unlock it before editing.")
+        return None
+    from edit_requests import active_grant
+    grant = await active_grant(db, app_doc["app_id"], page["page_id"], user["user_id"])
+    if grant:
+        return grant
+    raise HTTPException(423, f"'{page.get('name')}' is locked by the agency. Use “Request a change” to ask them to open it.")
 
 
 async def snapshot(db, app_id: str, page: dict, by: str, reason: str = "save") -> Optional[dict]:
@@ -82,6 +87,18 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await log_activity(app_id, user["user_id"], "page.lock", f"Page '{page['name']}' {'locked' if body.locked else 'unlocked'}")
         return {"page_id": page_id, "locked": body.locked}
 
+    @api.post("/apps/{app_id}/pages/lock-all")
+    async def lock_all_pages(app_id: str, body: LockIn, user: dict = Depends(get_current_user)):
+        """Lock or unlock every page of a tenant at once, plus the tenant-wide content lock."""
+        doc = await get_user_app(app_id, user)
+        if await role_of(db, doc, user) not in ("owner", "admin"):
+            raise HTTPException(403, "Only the agency owner or an admin can lock or unlock pages")
+        r = await db.pages.update_many({"app_id": app_id}, {"$set": {"locked": body.locked, "locked_at": _now()}})
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"content_locked": body.locked, "locked_at": _now()}})
+        await log_activity(app_id, user["user_id"], "page.lock_all",
+                           f"All {r.matched_count} page(s) and the content lock {'locked' if body.locked else 'unlocked'}")
+        return {"locked": body.locked, "pages": r.matched_count, "content_locked": body.locked}
+
     @api.get("/apps/{app_id}/pages/{page_id}/versions")
     async def list_versions(app_id: str, page_id: str, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
@@ -98,6 +115,18 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if not v:
             raise HTTPException(404, "That version is no longer available")
         return v
+
+    @api.get("/apps/{app_id}/pages/{page_id}/versions/{version_id}/diff")
+    async def diff_version(app_id: str, page_id: str, version_id: str, user: dict = Depends(get_current_user)):
+        """What would change if this version were restored: added / removed / edited sections."""
+        await get_user_app(app_id, user)
+        page = await db.pages.find_one({"app_id": app_id, "page_id": page_id}, {"_id": 0, "blocks": 1, "name": 1})
+        v = await db.page_versions.find_one({"app_id": app_id, "page_id": page_id, "version_id": version_id}, {"_id": 0})
+        if not page or not v:
+            raise HTTPException(404, "That version is no longer available")
+        from page_diff import diff_blocks
+        return {"page": page["name"], "version_at": v["created_at"], "by": v["by"], "reason": v["reason"],
+                **diff_blocks(page.get("blocks") or [], v.get("blocks") or [])}
 
     @api.post("/apps/{app_id}/pages/{page_id}/versions/{version_id}/restore")
     async def restore_version(app_id: str, page_id: str, version_id: str, user: dict = Depends(get_current_user)):

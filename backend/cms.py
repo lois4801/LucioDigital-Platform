@@ -115,14 +115,18 @@ def register(api, db, get_current_user, get_user_app, log_activity, wf=None):
 
     @api.delete("/apps/{app_id}/cms/{collection_id}")
     async def delete_collection(app_id: str, collection_id: str, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc = await get_user_app(app_id, user)
+        from locks import assert_item_editable
+        await assert_item_editable(db, doc, "cms_collection", collection_id, user)
         await db.cms_collections.delete_one({"app_id": app_id, "collection_id": collection_id})
         await db.cms_items.delete_many({"collection_id": collection_id})
         return {"ok": True}
 
     @api.post("/apps/{app_id}/cms/{collection_id}/items")
     async def create_item(app_id: str, collection_id: str, body: ItemIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc_app = await get_user_app(app_id, user)
+        from locks import assert_item_editable
+        await assert_item_editable(db, doc_app, "cms_collection", collection_id, user)
         if not await db.cms_collections.find_one({"app_id": app_id, "collection_id": collection_id}):
             raise HTTPException(404, "Collection not found")
         slug = slugify(body.slug or body.title)
@@ -135,7 +139,9 @@ def register(api, db, get_current_user, get_user_app, log_activity, wf=None):
 
     @api.put("/apps/{app_id}/cms/{collection_id}/items/{item_id}")
     async def update_item(app_id: str, collection_id: str, item_id: str, body: ItemIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc_app = await get_user_app(app_id, user)
+        from locks import assert_item_editable, consume_if_grant
+        grant = await assert_item_editable(db, doc_app, "cms_item", item_id, user, body.title)
         upd = body.model_dump()
         upd["slug"] = slugify(body.slug or body.title)
         upd["date"] = body.date or now_iso()[:10]
@@ -143,11 +149,14 @@ def register(api, db, get_current_user, get_user_app, log_activity, wf=None):
         r = await db.cms_items.update_one({"app_id": app_id, "collection_id": collection_id, "item_id": item_id}, {"$set": upd})
         if not r.matched_count:
             raise HTTPException(404, "Item not found")
+        await consume_if_grant(db, grant, app_id, user, log_activity)
         return await db.cms_items.find_one({"item_id": item_id}, {"_id": 0})
 
     @api.delete("/apps/{app_id}/cms/{collection_id}/items/{item_id}")
     async def delete_item(app_id: str, collection_id: str, item_id: str, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc_app = await get_user_app(app_id, user)
+        from locks import assert_item_editable
+        await assert_item_editable(db, doc_app, "cms_item", item_id, user)
         await db.cms_items.delete_one({"app_id": app_id, "item_id": item_id})
         return {"ok": True}
 

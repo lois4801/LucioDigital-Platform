@@ -1,7 +1,11 @@
-import { useState } from "react";
+import { useState, createContext, useContext } from "react";
 import * as Icons from "lucide-react";
 import { SwapOverlay } from "@/components/builder/ImageSwap";
 import { EditableText } from "@/components/InlineTextTools";
+
+// design_v2 flag for the current tenant site — set by the canvas / public preview root.
+export const DesignCtx = createContext(false);
+export const useV2 = () => useContext(DesignCtx);
 
 const styleKey = (path) => `_styles.${String(path).replace(/\./g, "__")}`;
 
@@ -28,22 +32,35 @@ function T({ as: Tag = "span", value, path, onEdit, className, style, styles }) 
 }
 
 const PAD = { sm: "py-10", md: "py-16", lg: "py-24" };
-function sectionCls(style) {
+const V2PAD = { sm: "tsec-sm", md: "tsec", lg: "tsec-lg" };
+function sectionCls(style, v2) {
   const bg = style?.bg === "muted" ? "bg-[var(--tsf)] tsec-muted" : style?.bg === "accent" ? "bg-[var(--tp)] text-white tsec-accent" : style?.bg === "dark" ? "bg-[#0F172A] text-white" : "";
-  return `relative ${PAD[style?.padding] || PAD.md} ${bg} ${style?.align === "center" ? "text-center" : ""} px-8 lg:px-12`;
+  const pad = v2 ? V2PAD[style?.padding] || V2PAD.md : PAD[style?.padding] || PAD.md;
+  return `relative ${pad} ${bg} ${style?.align === "center" ? "text-center" : ""} px-6 sm:px-8 lg:px-12 ${v2 ? "[&>*]:mx-auto [&>*]:max-w-[1240px]" : ""}`;
 }
 const mut = (style) => (style?.bg === "accent" || style?.bg === "dark") ? "text-white/80" : "text-[var(--tmut)]";
-const card = "tglass rounded-[var(--tr)] border border-[var(--tbd)] p-6 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1";
-const Btn = ({ children, ghost }) => <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm transition-transform hover:-translate-y-0.5 ${ghost ? "border border-[var(--tbd)] tglass" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
-const H2 = (props) => <T as="h2" {...props} className={`font-[var(--tfh)] text-3xl lg:text-4xl font-bold tracking-tight ${props.className || ""}`} />;
+const cardCls = (v2) => v2
+  ? "tcard rounded-[var(--tr)] border border-[var(--tbd)] p-6"
+  : "tglass rounded-[var(--tr)] border border-[var(--tbd)] p-6 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1";
+const Btn = ({ children, ghost }) => {
+  const v2 = useV2();
+  return <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "border border-[var(--tbd)] tglass" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
+};
+const H2 = (props) => {
+  const v2 = useV2();
+  return <T as="h2" {...props} className={`font-[var(--tfh)] ${v2 ? "t-h2" : "text-3xl lg:text-4xl"} font-bold tracking-tight ${props.className || ""}`} />;
+};
 const Icon = ({ name, size = 18 }) => { const I = Icons[name] || Icons.Sparkles; return <I size={size} />; };
 const Kicker = ({ children }) => <div className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--tp)] mb-3">{children}</div>;
 const isYouTube = (u = "") => /youtube\.com|youtu\.be/.test(u);
 const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u;
 
 export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [] }) {
+  const v2 = useV2();
   const p = block.props || {}, s = block.style || {};
-  const cls = sectionCls(s), m = mut(s);
+  const cls = sectionCls(s, v2), m = mut(s);
+  const card = cardCls(v2);
+  const stag = v2 ? "tstagger" : "";
   const E = (path, extra = {}) => ({ path, onEdit, styles: p._styles, ...extra });
   const Swap = ({ path, current }) => onImage ? <SwapOverlay testid={`image-swap-${path}`} onSwap={() => onImage(path, current)} /> : null;
   const [lead, setLead] = useState({ name: "", email: "", message: "", sent: false });
@@ -61,16 +78,16 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
         <div className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--ts)] mt-6">{col?.name}</div>
         <h1 className="font-[var(--tfh)] text-4xl lg:text-5xl font-extrabold tracking-tight mt-3">{openItem.title}</h1>
         <div className={`text-sm mt-3 ${m}`}>{openItem.date}{openItem.tags?.length ? " · " + openItem.tags.join(", ") : ""}</div>
-        {openItem.cover && <img src={openItem.cover} alt="" className="w-full aspect-video object-cover rounded-[var(--tr)] mt-8" />}
+        {openItem.cover && <img src={openItem.cover} alt="" loading="lazy" decoding="async" className="w-full aspect-video object-cover rounded-[var(--tr)] mt-8" />}
         <p className={`text-xl mt-8 ${m}`}>{openItem.excerpt}</p>
         {(openItem.body || "").split("\n").filter(Boolean).map((x, i) => <p key={i} className="text-lg leading-relaxed mt-5">{x}</p>)}
       </div></section>
     );
     return (
       <section className={cls}><H2 value={p.heading} {...E("heading")} />
-        <div className="grid md:grid-cols-3 gap-5 mt-8 text-left">
-          {items.map(it => <button key={it.item_id} data-testid="collection-item-card" onClick={(e) => { e.stopPropagation(); setOpenItem(it); }} className={`${card} text-left hover:-translate-y-1 transition-transform`}>
-            {it.cover && <img src={it.cover} alt="" className="w-full aspect-video object-cover rounded-xl mb-4" />}
+        <div className={`grid md:grid-cols-3 gap-5 mt-8 text-left ${stag}`}>
+          {items.map(it => <button key={it.item_id} data-testid="collection-item-card" onClick={(e) => { e.stopPropagation(); setOpenItem(it); }} className={`${card} text-left`}>
+            {it.cover && <img src={it.cover} alt="" loading="lazy" decoding="async" className="w-full aspect-video object-cover rounded-xl mb-4" />}
             <div className={`text-xs ${m}`}>{it.date}</div><div className="font-[var(--tfh)] text-lg font-bold mt-1">{it.title}</div><p className="text-sm text-[var(--tmut)] mt-2">{it.excerpt}</p></button>)}
           {items.length === 0 && <div className={`text-sm ${m}`}>No published items in “{col?.name || p.collection}” yet — add some in the CMS tab.</div>}
         </div>
@@ -79,13 +96,13 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   }
 
   if (block.type === "navbar") return (
-    <nav className="px-8 lg:px-12 py-5 flex items-center justify-between border-b border-[var(--tbd)]">
+    <nav className={`px-6 sm:px-8 lg:px-12 py-5 flex items-center justify-between border-b border-[var(--tbd)] ${v2 ? "tglassnav" : ""}`}>
       <T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-xl flex items-center gap-2" />
       {p.logo && <img data-testid="navbar-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain order-first" />}
       <div className="hidden md:flex gap-6 text-sm font-medium text-[var(--tmut)]">
         {(p.links || []).map((l, i) => (
           <span key={i} className="relative group">
-            <button data-testid={`nav-link-${i}`} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className="hover:text-[var(--tfg)] flex items-center gap-1">
+            <button data-testid={`nav-link-${i}`} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className={`hover:text-[var(--tfg)] flex items-center gap-1 ${v2 ? "tlink" : ""}`}>
               <T value={l.label} {...E(`links.${i}.label`)} />
               {l.children?.length > 0 && <Icons.ChevronDown size={12} />}
             </button>
@@ -113,8 +130,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     const inner = (
       <div className={centered ? "mx-auto max-w-3xl" : "max-w-2xl"}>
         {p.badge && <T value={p.badge} {...E("badge")} className="inline-block text-xs font-bold uppercase tracking-[0.12em] text-[var(--ts)] bg-[var(--ts)]/10 border border-[var(--ts)]/30 px-3 py-1.5 rounded-full mb-6" />}
-        <T as="h1" value={p.title} {...E("title")} className="block font-[var(--tfh)] text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" />
-        <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-6 text-lg lg:text-xl ${cover ? "text-white/80" : m}`} />
+        <T as="h1" value={p.title} {...E("title")} className={`block font-[var(--tfh)] ${v2 ? "t-h1" : "text-4xl sm:text-5xl lg:text-6xl"} font-extrabold tracking-tight leading-[1.05]`} />
+        <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-6 ${v2 ? "t-lead" : "text-lg lg:text-xl"} ${cover ? "text-white/80" : m}`} />
         <div className="mt-8 flex flex-wrap gap-3" style={{ justifyContent: centered ? "center" : "flex-start" }}>
           <Btn><T value={p.cta || "Get started"} {...E("cta")} /></Btn>
           {String(p.cta2 || "").trim() && <Btn ghost><T value={p.cta2} {...E("cta2")} /></Btn>}
@@ -122,29 +139,29 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       </div>
     );
     if (cover) return (
-      <section data-testid="hero-cover" className={`relative overflow-hidden px-8 lg:px-12 py-28 lg:py-36 text-white ${centered ? "text-center" : ""}`}>
-        <img src={p.image} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      <section data-testid="hero-cover" className={`relative overflow-hidden px-6 sm:px-8 lg:px-12 ${v2 ? "thero py-24" : "py-28 lg:py-36"} text-white ${centered ? "text-center" : ""}`}>
+        <img src={p.image} alt="" decoding="async" fetchPriority="high" className={`absolute inset-0 w-full h-full object-cover ${v2 ? "scale-105" : ""}`} />
         <div className="absolute inset-0" style={{ background: "linear-gradient(105deg, var(--tbg) 0%, color-mix(in srgb, var(--tbg) 82%, transparent) 45%, color-mix(in srgb, var(--tbg) 30%, transparent) 100%)" }} />
         <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
         <div className="absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: "var(--tp)" }} />
-        <div className="relative">{inner}</div>
+        <div className="relative w-full">{inner}</div>
         {onImage && <div className="absolute top-4 right-4 z-20"><button type="button" data-testid="image-swap-image" onClick={(e) => { e.stopPropagation(); onImage("image", p.image); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/30 bg-black/60 backdrop-blur hover:bg-black/80"><Icons.ImagePlus size={12} /> Replace background</button></div>}
       </section>
     );
     return (
-      <section className={`${sectionCls({ ...s, padding: s.padding || "lg" })} ${centered ? "text-center" : ""}`}>
-        {split ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<div className="relative"><img src={p.image} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /><Swap path="image" current={p.image} /></div></div> : inner}
+      <section className={`${sectionCls({ ...s, padding: s.padding || "lg" }, v2)} ${v2 && centered ? "thero" : ""} ${centered ? "text-center" : ""}`}>
+        {split ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<div className="relative"><img src={p.image} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /><Swap path="image" current={p.image} /></div></div> : inner}
       </section>
     );
   }
   if (block.type === "stats") return (
     <section className={cls} data-testid="block-stats"><Kicker><T value={p.heading} {...E("heading")} /></Kicker>
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">{(p.items || []).map((it, i) => <div key={i} className={`${card} text-left`}><div className="font-[var(--tfh)] text-3xl lg:text-4xl font-extrabold text-[var(--tp)]"><T value={it.value} {...E(`items.${i}.value`)} /></div><div className="text-sm text-[var(--tmut)] mt-2"><T value={it.label} {...E(`items.${i}.label`)} /></div></div>)}</div>
+      <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 ${stag}`}>{(p.items || []).map((it, i) => <div key={i} className={`${card} text-left`}><div className="font-[var(--tfh)] text-3xl lg:text-4xl font-extrabold text-[var(--tp)]"><T value={it.value} {...E(`items.${i}.value`)} /></div><div className="text-sm text-[var(--tmut)] mt-2"><T value={it.label} {...E(`items.${i}.label`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "team") return (
     <section className={cls} data-testid="block-team"><H2 value={p.heading} {...E("heading")} />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left">{(p.members || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
+      <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left ${stag}`}>{(p.members || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" loading="lazy" decoding="async" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "logos") return (
@@ -157,11 +174,11 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     <section className={cls}>
       <H2 value={p.heading} {...E("heading")} />
       {p.subheading !== undefined && <T as="p" value={p.subheading} {...E("subheading")} className={`block mt-3 text-lg max-w-xl ${m} ${s.align === "center" ? "mx-auto" : ""}`} />}
-      <div className="grid md:grid-cols-3 gap-5 mt-10 text-left">
+      <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(p.items || []).map((it, i) => (
           <div key={i} className={card}>
             <div className="w-11 h-11 rounded-xl bg-[var(--tp)]/15 text-[var(--tp)] flex items-center justify-center mb-4 shadow-[0_0_24px_-6px_var(--tp)]"><Icon name={it.icon} /></div>
-            <T as="h3" value={it.title} {...E(`items.${i}.title`)} className="block font-[var(--tfh)] text-lg font-bold" />
+            <T as="h3" value={it.title} {...E(`items.${i}.title`)} className={`block font-[var(--tfh)] ${v2 ? "t-h3" : "text-lg"} font-bold`} />
             <T as="p" value={it.desc} {...E(`items.${i}.desc`)} className="block text-sm text-[var(--tmut)] mt-2" />
           </div>
         ))}
@@ -170,7 +187,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "gallery") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
-      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8">{(p.images || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
+      <div className={`grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8 ${stag}`}>{(p.images || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
     </section>
   );
   if (block.type === "video") return (
@@ -181,7 +198,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "testimonials") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
-      <div className="grid md:grid-cols-3 gap-5 mt-10 text-left">
+      <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(p.items || []).map((it, i) => (
           <div key={i} className={card}>
             <div className="flex gap-0.5 text-[var(--tp)] mb-3">{[...Array(5)].map((_, k) => <Icons.Star key={k} size={14} fill="currentColor" />)}</div>
@@ -194,7 +211,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "pricing") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} className="text-center block" />
-      <div className="grid md:grid-cols-3 gap-5 mt-10 text-left">
+      <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(p.plans || []).map((pl, i) => (
           <div key={i} className={`${card} ${pl.highlight ? "!border-[var(--tp)] shadow-[0_24px_60px_-30px_var(--tp)]" : ""}`}>
             <T value={pl.name} {...E(`plans.${i}.name`)} className="text-sm font-semibold text-[var(--tmut)]" />
@@ -227,10 +244,10 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     );
   }
   if (block.type === "cta") return (
-    <section className={`${sectionCls({ ...s, bg: s.bg || "accent" })} text-center`}>
-      <T as="h2" value={p.title} {...E("title")} className="block font-[var(--tfh)] text-3xl lg:text-5xl font-extrabold tracking-tight" />
-      <T as="p" value={p.subtitle} {...E("subtitle")} className="block mt-4 text-lg text-white/80" />
-      <div className="mt-8"><span className="inline-block px-7 py-3.5 rounded-full font-semibold bg-white text-[var(--tp)]"><T value={p.cta || "Get started"} {...E("cta")} /></span></div>
+    <section className={`${sectionCls({ ...s, bg: s.bg || "accent" }, v2)} text-center`}>
+      <T as="h2" value={p.title} {...E("title")} className={`block font-[var(--tfh)] ${v2 ? "t-h2" : "text-3xl lg:text-5xl"} font-extrabold tracking-tight`} />
+      <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-4 ${v2 ? "t-lead" : "text-lg"} text-white/80`} />
+      <div className="mt-8"><span className={`inline-block px-7 py-3.5 rounded-full font-semibold bg-white text-[var(--tp)] ${v2 ? "tbtn" : ""}`}><T value={p.cta || "Get started"} {...E("cta")} /></span></div>
     </section>
   );
   if (block.type === "contact") return (
@@ -295,8 +312,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     );
   }
   if (block.type === "footer") return (
-    <footer className="px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
-      <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
+    <footer className="px-6 sm:px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
+      <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" loading="lazy" decoding="async" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
       {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={typeof l === "string" ? l : (l?.label || "")} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
     </footer>
   );

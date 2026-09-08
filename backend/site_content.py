@@ -38,7 +38,7 @@ MOODS = {
 def theme_for(n):
     m = MOODS[n["mood"]]
     return {"mode": "dark", "primary": n["primary"], "secondary": n["secondary"], "bg": m["bg"], "surface": m["surface"], "fg": "#F8FAFC", "muted": "#A1A7B8", "border": m["border"],
-            "font_heading": m["font_heading"], "font_body": m["font_body"], "radius": m["radius"], "motion": True, "cursor": True, "glass": True, "grain": True, "premium_v": 3}
+            "font_heading": m["font_heading"], "font_body": m["font_body"], "radius": m["radius"], "motion": True, "cursor": True, "glass": True, "grain": True, "design_v2": True, "premium_v": 3}
 
 
 # Each niche: brand, mood, colors, hero, media, sections (ordered), copy. Every word is written for that industry.

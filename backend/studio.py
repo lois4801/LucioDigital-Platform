@@ -30,7 +30,11 @@ DEFAULT_THEME = {
     "mode": "dark", "primary": "#F97316", "secondary": "#14B8A6", "bg": "#0A0A0F", "surface": "#141420",
     "fg": "#F8FAFC", "muted": "#A1A7B8", "border": "#262637",
     "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "radius": 20, "motion": True, "cursor": True, "cursor_effect": "none", "cursor_density": 1, "cursor_speed": 1, "glass": True, "grain": True,
+    "design_v2": False,
 }
+
+# The Framer-grade standard applied to every new tenant site and every AI-generated site.
+V2_THEME = {**DEFAULT_THEME, "font_heading": "Sora", "font_body": "Inter", "radius": 20, "design_v2": True}
 
 BLOCK_SCHEMA = """
 Block types and props (every block: {"id": string, "type": string, "props": {...}, "style": {"bg": "default|muted|accent|dark", "align": "left|center", "padding": "sm|md|lg"}}):
@@ -71,8 +75,8 @@ def _clean_theme(t: dict) -> dict:
         if k in out and not re.match(r"^#[0-9a-fA-F]{6}$", str(out[k])):
             out.pop(k)
     for k in ("font_heading", "font_body"):
-        if k in out and str(out[k]).strip().lower() in ("inter", "roboto", "arial"):
-            out[k] = DEFAULT_THEME[k]
+        if k in out and str(out[k]).strip().lower() in ("roboto", "arial", "times new roman"):
+            out[k] = V2_THEME[k]
     if out.get("mode") not in ("light", "dark"):
         out.pop("mode", None)
     return out
@@ -210,8 +214,16 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         prev = await db.pages.find_one({"app_id": app_id, "page_id": page_id}, {"_id": 0})
         if not prev:
             raise HTTPException(404, "Page not found")
-        await assert_can_edit_page(db, doc, prev, user)
+        grant = await assert_can_edit_page(db, doc, prev, user)
         upd = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+        if "blocks" in upd:
+            from locks import blocked_block_edits
+            hit = await blocked_block_edits(db, app_id, prev.get("blocks") or [], upd["blocks"])
+            if hit and not grant:
+                from page_guard import role_of
+                if await role_of(db, doc, user) not in ("owner", "admin"):
+                    raise HTTPException(423, f"{len(hit)} section(s) on this page are locked by the agency. "
+                                              "Use “Request a change” on a locked section to ask them to open it.")
         if "blocks" in upd:
             upd["blocks"] = _ensure_ids(upd["blocks"])
         if "slug" in upd:
@@ -222,6 +234,12 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             raise HTTPException(404, "Page not found")
         if "blocks" in upd:
             await snapshot(db, app_id, prev, user.get("name") or user["email"], "save")
+            if grant:
+                from edit_requests import consume_grant
+                await consume_grant(db, grant["grant_id"])
+                await db.messages.update_one({"message_id": grant["message_id"]},
+                                             {"$set": {"edit_request.state": "completed", "edit_request.completed_at": now_iso()}})
+                await log_activity(app_id, user["user_id"], "edit.completed", f"Approved change saved on '{prev.get('name')}'")
             await log_activity(app_id, user["user_id"], "page.saved", f"Saved {len(upd['blocks'])} blocks")
             from content_lock import sync_overview
             await sync_overview(db, app_id)
@@ -270,7 +288,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         pages = data.get("pages") or []
         if not pages:
             raise HTTPException(500, "AI returned no pages. Try a more specific brief.")
-        theme = {**DEFAULT_THEME, **_clean_theme(doc.get("theme")), **_clean_theme(data.get("theme")), "mode": "dark", "glass": True, "grain": True, "motion": True, "cursor": True}
+        theme = {**DEFAULT_THEME, **_clean_theme(doc.get("theme")), **_clean_theme(data.get("theme")), "mode": "dark", "glass": True, "grain": True, "motion": True, "cursor": True, "design_v2": True}
         from content_lock import assert_unlocked, lock_after_build, sync_overview
         await assert_unlocked(db, app_id, "replace the saved pages")
         await db.pages.delete_many({"app_id": app_id})

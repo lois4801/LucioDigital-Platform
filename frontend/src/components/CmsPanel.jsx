@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Database, Plus, Trash2, Pencil, Eye, EyeOff, Loader2, Sparkles } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LockToggle } from "@/components/locks/LockContext";
 
 const EMPTY = { title: "", slug: "", excerpt: "", body: "", cover: "", date: "", tags: [], published: true };
 
@@ -42,7 +43,7 @@ export default function CmsPanel({ appId }) {
       <aside className="card-surface p-3 space-y-1">
         <div className="overline px-1 mb-2 flex items-center gap-2"><Database size={11} className="text-[var(--acc)]" /> Collections</div>
         {cols.map(c => <div key={c.collection_id} className={`group flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm ${cur === c.collection_id ? "bg-[var(--acc)]/10 text-[var(--acc)]" : "hover:bg-white/5"}`} data-testid={`cms-collection-${c.slug}`} onClick={() => setCur(c.collection_id)}>
-          <span>{c.name} <span className="font-mono text-[10px] text-[var(--dim)]">/{c.slug}</span></span><span className="flex items-center gap-2"><span className="font-mono text-[10px] text-[var(--dim)]">{c.items.length}</span><button onClick={e => { e.stopPropagation(); delCol(c); }} className="opacity-0 group-hover:opacity-100 hover:text-red-400"><Trash2 size={11} /></button></span></div>)}
+          <span>{c.name} <span className="font-mono text-[10px] text-[var(--dim)]">/{c.slug}</span></span><span className="flex items-center gap-2"><span className="font-mono text-[10px] text-[var(--dim)]">{c.items.length}</span><LockToggle kind="cms_collection" itemId={c.collection_id} name={c.name} /><button onClick={e => { e.stopPropagation(); delCol(c); }} className="opacity-0 group-hover:opacity-100 hover:text-red-400"><Trash2 size={11} /></button></span></div>)}
         <div className="flex gap-1 pt-2"><input data-testid="cms-new-collection-input" value={newCol} onChange={e => setNewCol(e.target.value)} placeholder="New collection" className="flex-1 bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-xs outline-none" /><button data-testid="cms-new-collection-btn" onClick={addCol} className="w-8 h-8 rounded-lg border border-[var(--line)] flex items-center justify-center hover:bg-white/5"><Plus size={12} /></button></div>
         <div className="px-1 pt-3 text-[10px] text-[var(--dim)] leading-relaxed">Add a “Collection list” block in Site Mode to display items. Each published item exports as its own page.</div>
       </aside>
@@ -57,10 +58,11 @@ export default function CmsPanel({ appId }) {
           </div>
           {col.items.length === 0 ? <div className="p-12 text-center text-sm text-[var(--mut)]">No items yet.</div> : (
             <div className="divide-y divide-[var(--line)]">{col.items.map(it => (
-              <div key={it.item_id} data-testid="cms-item-row" className="py-3 flex items-center gap-3">
+              <div key={it.item_id} data-testid="cms-item-row" className="group py-3 flex items-center gap-3">
                 {it.cover ? <img src={it.cover} alt="" className="w-14 h-10 object-cover rounded-md" /> : <div className="w-14 h-10 rounded-md bg-[var(--bg-2)]" />}
                 <div className="flex-1 min-w-0"><div className="text-sm font-semibold truncate">{it.title}</div><div className="text-[11px] font-mono text-[var(--dim)] truncate">/{col.slug}/{it.slug} · {it.date} {it.tags?.length ? "· " + it.tags.join(", ") : ""}</div></div>
                 <span className={`chip ${it.published ? "chip-active" : ""}`} style={{ padding: "1px 6px" }}>{it.published ? "published" : "draft"}</span>
+                <LockToggle kind="cms_item" itemId={it.item_id} name={it.title} />
                 <button data-testid="cms-item-toggle-btn" onClick={() => togglePub(it)} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">{it.published ? <EyeOff size={12} /> : <Eye size={12} />}</button>
                 <button data-testid="cms-item-edit-btn" onClick={() => setEdit({ ...it, tags: (it.tags || []).join(", ") })} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5"><Pencil size={12} /></button>
                 <button onClick={() => delItem(it)} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:text-red-400"><Trash2 size={12} /></button>

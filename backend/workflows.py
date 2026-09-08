@@ -156,13 +156,18 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.put("/apps/{app_id}/workflows/{wid}")
     async def update_wf(app_id: str, wid: str, body: WorkflowIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc_app = await get_user_app(app_id, user)
+        from locks import assert_item_editable, consume_if_grant
+        grant = await assert_item_editable(db, doc_app, "workflow", wid, user, body.name)
         await db.workflows.update_one({"app_id": app_id, "workflow_id": wid}, {"$set": body.model_dump()})
+        await consume_if_grant(db, grant, app_id, user, log_activity)
         return await db.workflows.find_one({"workflow_id": wid}, {"_id": 0})
 
     @api.delete("/apps/{app_id}/workflows/{wid}")
     async def delete_wf(app_id: str, wid: str, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc_app = await get_user_app(app_id, user)
+        from locks import assert_item_editable
+        await assert_item_editable(db, doc_app, "workflow", wid, user)
         await db.workflows.delete_one({"app_id": app_id, "workflow_id": wid})
         return {"ok": True}
 

@@ -60,6 +60,7 @@ export function ImportReport({ report, testid = "import-report" }) {
         <Stat icon={Layers} value={report.pages_imported} label="Pages imported" testid="report-pages" />
         <Stat icon={ImageIcon} value={`${report.images_saved}/${report.images_found}`} label="Images saved" testid="report-images" />
         <Stat icon={FileText} value={report.forms_detected} label="Forms rebuilt" testid="report-forms" />
+        {report.zip_files > 0 && <Stat icon={Layers} value={`${report.assets_saved}/${report.zip_files}`} label="ZIP assets" testid="report-zip" />}
         <Stat icon={Link2} value={`${report.nav_items}${report.dropdowns ? ` · ${report.dropdowns}▾` : ""}`} label="Nav items" testid="report-nav" />
         {report.videos_found > 0 && <Stat icon={Layers} value={`${report.videos_embedded}/${report.videos_found}`} label="Videos" testid="report-videos" />}
       </div>
@@ -93,6 +94,21 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
   const [sourceVideos, setSourceVideos] = useState(true);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const zipRef = useRef(null);
+
+  async function importZip(f) {
+    if (!f) return;
+    setApplying(true); setPreview(null); setDiscoveryNull(); setStage({ stage: "scanning", stage_detail: `Unpacking ${f.name}` }); setStartedAt(Date.now());
+    try {
+      const fd = new FormData(); fd.append("file", f); fd.append("mode", mode); fd.append("apply_theme", String(applyTheme));
+      const { data: job } = await api.post(`/apps/${appId}/site/import-zip`, fd, { headers: { "Content-Type": "multipart/form-data" }, timeout: 600000 });
+      const res = await pollImport(appId, job.job_id, { onStage: setStage });
+      setPreview(res);
+      toast.success(`Imported ${res.applied?.pages?.length || res.pages.length} page(s) from ${f.name}`);
+      onDone?.();
+    } catch (e) { toast.error(e.response?.data?.detail || e.message || "ZIP import failed"); } finally { setApplying(false); setStage(null); }
+  }
+  const setDiscoveryNull = () => setDiscovery(null);
 
   function reset() { setPreview(null); setUrl(""); setScanning(false); setApplying(false); setStage(null); setUploads([]); setDiscovery(null); setPicked({}); }
 
@@ -223,6 +239,17 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
             </div>
           </div>
         )}
+
+        <div className="card-surface p-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Upload size={13} className="text-[var(--acc)]" />
+            <span className="text-sm">Import a ZIP package (HTML, CSS, images, assets)</span>
+            <input ref={zipRef} data-testid="zip-import-input" type="file" accept=".zip" className="hidden" onChange={e => { importZip(e.target.files?.[0]); e.target.value = ""; }} />
+            <button data-testid="zip-import-btn" onClick={() => zipRef.current?.click()} disabled={scanning || applying} className="btn-ghost text-xs !py-1.5 ml-auto flex items-center gap-1.5 disabled:opacity-50">
+              {applying ? <Loader2 size={11} className="animate-spin" /> : <Upload size={11} />} Choose a .zip
+            </button>
+          </div>
+        </div>
 
         <div className="card-surface p-3">
           <div className="flex items-center gap-2 flex-wrap">

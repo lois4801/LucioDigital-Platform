@@ -22,6 +22,7 @@ import { UiLabelsProvider, L } from "@/components/UiLabels";
 import { CursorFXPicker } from "@/components/CursorFX";
 import FilesPanel from "@/components/FilesPanel";
 import DataDestinationPanel from "@/components/DataDestinationPanel";
+import { LocksProvider, MasterLockButton, LockStateBadge } from "@/components/locks/LockContext";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -81,6 +82,7 @@ export default function AppDetail() {
 
   return (
     <UiLabelsProvider appId={appId}>
+    <LocksProvider appId={appId}>
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)]">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
@@ -101,6 +103,8 @@ export default function AppDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <LockStateBadge />
+            <MasterLockButton />
             <CursorFXPicker />
             {appDoc.live_url && (
               <a data-testid="app-live-link" href={appDoc.live_url} target="_blank" rel="noopener noreferrer"
@@ -144,6 +148,7 @@ export default function AppDetail() {
         {tab === "members" && <MembersPanel appId={appId} currentUser={user} />}
       </main>
     </div>
+    </LocksProvider>
     </UiLabelsProvider>
   );
 }

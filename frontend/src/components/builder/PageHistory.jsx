@@ -2,11 +2,11 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { History, Loader2, Eye, RotateCcw, Clock } from "lucide-react";
+import { History, Loader2, Eye, RotateCcw, Clock, GitCompare } from "lucide-react";
 
 const REASONS = { save: "Manual save", "before restore": "Before a restore", "before AI site generation": "Before AI rebuild" };
 
-export function HistoryDialog({ appId, pageId, pageName, open, onOpenChange, onPreview, onRestored, onSiteRestored }) {
+export function HistoryDialog({ appId, pageId, pageName, open, onOpenChange, onPreview, onRestored, onSiteRestored, onCompare }) {
   const [versions, setVersions] = useState([]);
   const [points, setPoints] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -77,7 +77,7 @@ export function HistoryDialog({ appId, pageId, pageName, open, onOpenChange, onP
                   {i === 0 && <span className="chip chip-active text-[9px]" style={{ padding: "0 6px" }}>latest</span>}
                   <div className="flex gap-1.5 ml-auto">
                     <button data-testid={`history-preview-${i}`} onClick={() => preview(v)} disabled={!!busy} className="btn-ghost !py-1.5 text-[11px] flex items-center gap-1.5 disabled:opacity-50"><Eye size={11} /> Preview</button>
-                    <button data-testid={`history-restore-${i}`} onClick={() => restore(v)} disabled={!!busy} className="btn-primary !py-1.5 text-[11px] flex items-center gap-1.5 disabled:opacity-50">{busy === v.version_id ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />} Restore</button>
+                    <button data-testid={`history-restore-${i}`} onClick={() => onCompare?.(v)} disabled={!!busy} className="btn-primary !py-1.5 text-[11px] flex items-center gap-1.5 disabled:opacity-50"><GitCompare size={11} /> Compare & restore</button>
                   </div>
                 </div>
               ))}

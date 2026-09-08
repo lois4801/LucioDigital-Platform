@@ -5,6 +5,31 @@ from typing import List, Dict, Any
 FONT_URL = "https://fonts.googleapis.com/css2?family={h}:wght@500;600;700;800&family={b}:wght@400;500;600&display=swap"
 ICON_SVG = "<svg width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z'/></svg>"
 
+# Framer-grade defaults for exported sites (theme.design_v2): fluid type, 12-col grid,
+# glass navbar, staggered reveals, editorial rhythm, touch-friendly targets.
+V2_CSS = """
+:root{--t-h1:clamp(2.5rem,1.6rem + 4.4vw,5.25rem);--t-h2:clamp(1.9rem,1.35rem + 2.4vw,3.25rem);--t-h3:clamp(1.15rem,1rem + .6vw,1.5rem);--t-lead:clamp(1.05rem,.98rem + .5vw,1.4rem);--t-body:clamp(.95rem,.92rem + .18vw,1.05rem);--rh-sm:clamp(2.75rem,2rem + 3vw,4.5rem);--rh-md:clamp(4rem,2.75rem + 5vw,7.5rem);--rh-lg:clamp(5.5rem,3.5rem + 7vw,10rem)}
+html{scroll-behavior:smooth}body{font-size:var(--t-body);line-height:1.6;text-rendering:optimizeLegibility}
+h1{font-size:var(--t-h1);line-height:1.02;letter-spacing:-.035em;text-wrap:balance}h2{font-size:var(--t-h2);line-height:1.08;letter-spacing:-.028em;text-wrap:balance}h3{font-size:var(--t-h3);line-height:1.25;letter-spacing:-.018em}
+p{text-wrap:pretty}.hero p,.lead{font-size:var(--t-lead);line-height:1.5}
+section{padding-block:var(--rh-md)}section.sm{padding-block:var(--rh-sm)}section.lg{padding-block:var(--rh-lg)}
+.wrap{max-width:1240px;padding:0 clamp(1.25rem,1rem + 1.5vw,3rem)}
+.grid{display:grid;gap:clamp(1rem,.5rem + 1.4vw,2rem)}
+nav{position:sticky;top:0;z-index:40;background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(18px) saturate(150%);-webkit-backdrop-filter:blur(18px) saturate(150%);border-bottom:1px solid color-mix(in srgb,var(--bd) 70%,transparent);box-shadow:0 18px 40px -32px rgb(0 0 0/.65);padding:14px 0}
+nav .links a{position:relative}nav .links a::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:1.5px;background:currentColor;transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.22,1,.36,1)}nav .links a:hover::after{transform:scaleX(1)}
+.card{background:linear-gradient(160deg,color-mix(in srgb,var(--fg) 6%,transparent),transparent 60%),var(--glass);box-shadow:0 1px 0 color-mix(in srgb,var(--fg) 8%,transparent) inset,0 24px 60px -42px rgb(0 0 0/.8)}
+.card:hover{transform:translateY(-6px)}
+.btn,.btn2{min-height:44px;display:inline-flex;align-items:center;justify-content:center;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s}
+.btn:hover{transform:translateY(-2px) scale(1.025);box-shadow:0 18px 40px -14px var(--p)}.btn2:hover{transform:translateY(-2px) scale(1.02)}.btn:active,.btn2:active{transform:translateY(0) scale(.985)}
+.hero{min-height:100svh;display:flex;align-items:center}.hero.left,.hero.split{min-height:72svh}
+.fx-stagger>*{opacity:0;transform:translateY(16px)}.fx-stagger.in>*{animation:v2up .65s cubic-bezier(.22,1,.36,1) both}
+.fx-stagger>*:nth-child(2){animation-delay:80ms}.fx-stagger>*:nth-child(3){animation-delay:160ms}.fx-stagger>*:nth-child(4){animation-delay:240ms}.fx-stagger>*:nth-child(5){animation-delay:320ms}.fx-stagger>*:nth-child(n+6){animation-delay:400ms}
+@keyframes v2up{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+img{max-width:100%}img.g,img.tm{object-fit:cover}
+@media(max-width:640px){a,button,summary{min-height:44px}input,select,textarea{font-size:16px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+"""
+
 
 def esc(s) -> str:
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -48,7 +73,7 @@ img.g{{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);borde
 footer{{padding:56px 0;border-top:1px solid var(--bd)}}footer h4{{font-size:14px;margin-bottom:12px}}
 .logos{{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;font-weight:700;color:var(--mut);font-size:20px}}
 .chat-fab{{position:fixed;right:24px;bottom:24px;background:var(--p);color:#fff;border-radius:999px;padding:14px 20px;font-weight:600;box-shadow:0 12px 40px -10px var(--p)}}
-""" + FX_CSS
+""" + FX_CSS + (V2_CSS if theme.get("design_v2") else "")
 
 
 def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
@@ -126,7 +151,7 @@ FX_CSS = """
 .fx-parallax{will-change:transform}
 .os-cur{position:fixed;top:0;left:0;pointer-events:none;z-index:99999;border-radius:50%}
 """
-FX_JS = """<script>(function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'-60px'});document.querySelectorAll('.fx-reveal').forEach(function(el){io.observe(el)});
+FX_JS = """<script>(function(){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}})},{rootMargin:'-60px'});document.querySelectorAll('.fx-reveal,.fx-stagger').forEach(function(el){io.observe(el)});
 var px=document.querySelectorAll('.fx-parallax');if(px.length){addEventListener('scroll',function(){px.forEach(function(el){var r=el.getBoundingClientRect();var p=(r.top+r.height/2-innerHeight/2)/innerHeight;el.style.transform='translateY('+(-p*40)+'px)'})},{passive:true})}
 if(!matchMedia('(pointer: coarse)').matches&&document.body.dataset.cursor!=='off'){var c=getComputedStyle(document.documentElement).getPropertyValue('--p')||'#F97316';var d=document.createElement('div');d.className='os-cur';d.style.cssText+='width:8px;height:8px;background:'+c;document.body.append(d);document.documentElement.style.cursor='none';
 var t={x:innerWidth/2,y:innerHeight/2},p={x:t.x,y:t.y};addEventListener('mousemove',function(e){t.x=e.clientX;t.y=e.clientY},{passive:true});
@@ -186,10 +211,20 @@ def _doc(app_doc, theme, title, body, css_path="styles.css"):
             f"<link rel='stylesheet' href='{css_path}'></head><body data-cursor='{'off' if theme.get('cursor') is False else 'on'}' data-cursor-fx='{theme.get('cursor_effect') or 'none'}' data-cursor-density='{theme.get('cursor_density') or 1}' data-cursor-speed='{theme.get('cursor_speed') or 1}'>{body}{'' if (theme.get('motion') is False and theme.get('cursor') is False) else FX_JS}{'' if (theme.get('cursor_effect') or 'none') == 'none' else CURSOR_FX_JS}</body></html>")
 
 
+def _v2_polish(body: str, theme: dict) -> str:
+    """Exported markup gets the same standard: staggered grids and lazy media."""
+    if not theme.get("design_v2"):
+        return body
+    body = body.replace("class='grid g", "class='fx-stagger grid g")
+    body = body.replace("<img class='g'", "<img loading='lazy' decoding='async' class='g'")
+    body = body.replace("<img class='tm'", "<img loading='lazy' decoding='async' class='tm'")
+    return body
+
+
 def render_page(app_doc: dict, theme: dict, page: dict, pages: List[dict], cols: List[dict] = None) -> str:
     body = "".join(f"<div class='{fx_class(b, theme)}'>{render_block(b, '', cols)}</div>" for b in page.get("blocks", []))
     body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
-    return _doc(app_doc, theme, page["name"], body)
+    return _doc(app_doc, theme, page["name"], _v2_polish(body, theme))
 
 
 def render_item_page(app_doc: dict, theme: dict, col: dict, item: dict, pages: List[dict]) -> str:
@@ -203,7 +238,7 @@ def render_item_page(app_doc: dict, theme: dict, col: dict, item: dict, pages: L
         f"<p class='mut' style='font-size:20px;margin-top:28px'>{esc(item.get('excerpt'))}</p>{paras}<p style='margin-top:40px'><a class='btn2' href='../index.html'>← Back</a></p></div></section>" + \
         (render_block(footer, "") if footer else "")
     body = re.sub(r"href='(/[a-z0-9-]*)'", lambda m: f"href='../{'index' if m.group(1)=='/' else m.group(1).strip('/')}.html'", body)
-    return _doc(app_doc, theme, item["title"], body, "../styles.css")
+    return _doc(app_doc, theme, item["title"], _v2_polish(body, theme), "../styles.css")
 
 
 # ---------- Lovable-style starter code from app_spec ----------

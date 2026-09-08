@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2, History, Globe } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2, History, Globe, Lock } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import BlockPreview from "@/components/builder/BlockPreview";
+import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
@@ -15,7 +15,10 @@ import { LogoUpload } from "@/components/builder/LogoUpload";
 import { ImageSwapDialog } from "@/components/builder/ImageSwap";
 import { WebImportDialog } from "@/components/builder/WebImport";
 import { HistoryDialog } from "@/components/builder/PageHistory";
-import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
+import { DiffDialog } from "@/components/builder/VersionDiff";
+import { EditRequestDialog } from "@/components/builder/EditRequest";
+import { DEFAULT_THEME, themeVars, loadFonts, isV2 } from "@/lib/theme";
+import { LockToggle, MasterLockButton, useLocks } from "@/components/locks/LockContext";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
 const BLOCK_TEMPLATES = [
@@ -42,21 +45,24 @@ function OutlineItem({ block, index, selected, onSelect, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} onClick={onSelect} data-testid={`builder-outline-${block.type}-${index}`}
-      className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer select-none ${selected ? "bg-[var(--acc)]/10 border border-[var(--acc)]/30" : "hover:bg-white/5 border border-transparent"}`}>
+      className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer select-none group ${selected ? "bg-[var(--acc)]/10 border border-[var(--acc)]/30" : "hover:bg-white/5 border border-transparent"}`}>
       <button {...attributes} {...listeners} data-testid={`builder-drag-handle-${index}`} onClick={e => e.stopPropagation()} className="text-[var(--dim)] hover:text-white cursor-grab active:cursor-grabbing p-0.5 touch-none"><GripVertical size={14} /></button>
       <span className="text-sm capitalize flex-1 truncate">{block.type}</span>
+      <LockToggle kind={block.type === "form" ? "form" : "block"} itemId={block.id} name={block.type} />
       <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-[var(--mut)] hover:text-red-400 p-0.5"><Trash2 size={12} /></button>
     </div>
   );
 }
 
-function CanvasItem({ block, selected, onSelect, onEdit, onImage, onNavigate, collections, motionOn }) {
+function CanvasItem({ block, selected, onSelect, onEdit, onImage, onNavigate, collections, motionOn, v2 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} onClick={onSelect} className={`relative group ${selected ? "outline outline-2 outline-[var(--tp)]" : "hover:outline hover:outline-1 hover:outline-[var(--tp)]/40"}`}>
       <button {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="absolute left-2 top-2 z-10 w-8 h-8 rounded-lg bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none transition-opacity"><GripVertical size={14} /></button>
       <span className="absolute right-2 top-2 z-10 text-[10px] font-mono uppercase bg-black/70 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">{block.type}</span>
-      <EffectWrap effects={block.style?.effects} motionOn={motionOn}><BlockPreview block={block} onEdit={onEdit} onImage={onImage} onNavigate={onNavigate} collections={collections} /></EffectWrap>
+      <DesignCtx.Provider value={!!v2}>
+        <EffectWrap effects={block.style?.effects} motionOn={motionOn} v2={!!v2}><BlockPreview block={block} onEdit={onEdit} onImage={onImage} onNavigate={onNavigate} collections={collections} /></EffectWrap>
+      </DesignCtx.Provider>
     </div>
   );
 }
@@ -71,8 +77,16 @@ function setPath(obj, path, value) {
 export default function Builder({ appId, appDoc, user }) {
   const canLock = !user || !appDoc || appDoc.owner_id === user.user_id || appDoc.my_role === "admin" || user.is_admin;
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [diffVersion, setDiffVersion] = useState(null);
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [access, setAccess] = useState({ can_edit: true, can_request: false, locked: false });
   const [pages, setPages] = useState([]);
   const [pageId, setPageId] = useState(null);
+  const [lockBusy, setLockBusy] = useState(false);
+  const { refresh: refreshLocks, state: lockState } = useLocks();
+  const refreshAccess = () => pageId && api.get(`/apps/${appId}/pages/${pageId}/edit-access`).then(r => setAccess(r.data)).catch(() => { });
+  useEffect(() => { refreshAccess(); }, [appId, pageId, pages.length]);
+  const allLocked = lockState === "locked";
   const [blocks, setBlocks] = useState([]);
   const [theme, setTheme] = useState(DEFAULT_THEME);
   const [selected, setSelected] = useState(null);
@@ -196,8 +210,9 @@ export default function Builder({ appId, appDoc, user }) {
   const editStyle = (id, style, propsPatch) => mutate(blocks.map(b => b.id === id ? { ...b, style, props: { ...b.props, ...(propsPatch || {}) } } : b));
   async function toggleLock(p) {
     try {
-      const { data } = await api.post(`/apps/${appId}/pages/${p.page_id}/lock`, { locked: !p.locked });
+      const { data } = await api.post(`/apps/${appId}/locks/item`, { kind: "page", item_id: p.page_id, locked: !p.locked });
       setPages(pages.map(x => x.page_id === p.page_id ? { ...x, locked: data.locked } : x));
+      refreshLocks(); refreshAccess();
       toast.success(data.locked ? `"${p.name}" locked — clients can no longer edit it` : `"${p.name}" unlocked`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not change the page lock"); }
   }
@@ -269,6 +284,8 @@ export default function Builder({ appId, appDoc, user }) {
           </div>
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
+          {access.can_request && <button data-testid="request-change-btn" onClick={() => setRequestOpen(true)} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Lock size={14} /> Request a change</button>}
+          {canLock && <MasterLockButton compact />}
           <button data-testid="page-history-btn" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><History size={14} /> History</button>
           <button data-testid="web-import-btn" onClick={() => setImportOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Globe size={14} /> Import from URL</button>
           <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
@@ -281,7 +298,13 @@ export default function Builder({ appId, appDoc, user }) {
         open={historyOpen} onOpenChange={setHistoryOpen}
         onPreview={(v) => { setBlocks(v.blocks); setSelected(v.blocks?.[0]?.id || null); setDirty(true); }}
         onRestored={(pg) => { setBlocks(pg.blocks || []); setPages(pages.map(p => p.page_id === pg.page_id ? pg : p)); setDirty(false); }}
+        onCompare={(v) => { setHistoryOpen(false); setDiffVersion(v); }}
         onSiteRestored={() => load()} />
+      {diffVersion && <DiffDialog appId={appId} pageId={pageId} version={diffVersion} open={!!diffVersion}
+        onOpenChange={(o) => !o && setDiffVersion(null)}
+        onRestored={(pg) => { setBlocks(pg.blocks || []); setDirty(false); setDiffVersion(null); }} />}
+      {access.can_request && <EditRequestDialog appId={appId} pageId={pageId} pageName={pages.find(p => p.page_id === pageId)?.name || "page"}
+        open={requestOpen} onOpenChange={setRequestOpen} onSent={() => refreshAccess()} />}
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
       <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
       {draft && (
@@ -335,11 +358,11 @@ export default function Builder({ appId, appDoc, user }) {
 
         <div className="min-h-[600px]">
           <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : device === "tablet" ? "max-w-[820px]" : "max-w-full"}`}>
-            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
+            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${isV2(theme) ? "dsv2" : ""} ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                  {blocks.map(b => <CanvasItem key={b.id} block={b} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onImage={(path, current) => setSwapTarget({ blockId: b.id, path, current, ctx: b.props.title || b.props.heading || appDoc?.name })} onNavigate={navigateTo} collections={collections} motionOn={theme.motion !== false} />)}
+                  {blocks.map(b => <CanvasItem key={b.id} block={b} v2={isV2(theme)} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onImage={(path, current) => setSwapTarget({ blockId: b.id, path, current, ctx: b.props.title || b.props.heading || appDoc?.name })} onNavigate={navigateTo} collections={collections} motionOn={theme.motion !== false} />)}
                 </SortableContext>
                 {blocks.length === 0 && <div className="p-24 text-center text-[var(--tmut)]">Empty page. Add blocks from the left, or let AI design the whole site.</div>}
               </div>

@@ -3,6 +3,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Zap, Plus, Trash2, Play, Mail, Database, Webhook, Bell, Filter, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { LockToggle } from "@/components/locks/LockContext";
 
 const ACTION_META = { email: [Mail, "Send email"], db_write: [Database, "Write to database"], webhook: [Webhook, "Call webhook"], notify: [Bell, "Notify team"] };
 const EMPTY = { name: "", trigger: "form_submitted", conditions: [], actions: [{ type: "notify", message: "New {{name}} event" }], enabled: true };
@@ -58,8 +59,9 @@ export default function WorkflowsPanel({ appId }) {
         </div>}
         {wfs.length === 0 && <div className="card-surface p-10 text-center text-sm text-[var(--mut)]">No workflows yet. Try “When a form is submitted → email the lead + notify team”.</div>}
         {wfs.map(w => (
-          <div key={w.workflow_id} data-testid="workflow-card" className="card-surface p-5">
+          <div key={w.workflow_id} data-testid="workflow-card" className="group card-surface p-5">
             <div className="flex items-center gap-3">
+              <LockToggle kind="workflow" itemId={w.workflow_id} name={w.name} alwaysVisible />
               <Switch data-testid="workflow-enabled-toggle" checked={w.enabled} onCheckedChange={() => toggle(w)} />
               <div className="flex-1 min-w-0"><div className="font-semibold">{w.name}</div><div className="text-[11px] font-mono text-[var(--mut)]">on {w.trigger} · {w.conditions.length} condition{w.conditions.length !== 1 && "s"} · {w.actions.length} action{w.actions.length !== 1 && "s"} · {w.runs || 0} runs</div></div>
               <button data-testid="workflow-test-btn" onClick={() => test(w)} disabled={running === w.workflow_id} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1">{running === w.workflow_id ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} />} Test run</button>

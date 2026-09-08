@@ -497,7 +497,7 @@ async def _build_page(pg: dict, mapping: dict, brand: str, industry: str, sem: a
 
 async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id: Optional[str] = None,
                        quota_mb: int = 500, max_pages: int = MAX_PAGES, crawl: Optional[dict] = None,
-                       keep_slugs: Optional[List[str]] = None) -> dict:
+                       keep_slugs: Optional[List[str]] = None, pre_mapping: Optional[dict] = None) -> dict:
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "LLM key missing")
 
@@ -514,13 +514,14 @@ async def build_import(url: str, on: Optional[Callable] = None, db=None, app_id:
         chosen = all_pages
     home = all_pages[0]
 
-    mapping, saved_imgs = {}, 0
+    mapping, saved_imgs = dict(pre_mapping or {}), 0
     if db is not None and app_id:
-        all_imgs = [i["url"] for pg in chosen for i in pg["images"]]
+        all_imgs = [i["url"] for pg in chosen for i in pg["images"] if i["url"] not in mapping]
         for pg in chosen + [home]:
-            if pg.get("logo"):
+            if pg.get("logo") and pg["logo"] not in mapping:
                 all_imgs.insert(0, pg["logo"])
-        mapping, saved_imgs, img_fail = await save_images(db, app_id, all_imgs, quota_mb, on)
+        fetched, saved_imgs, img_fail = await save_images(db, app_id, all_imgs, quota_mb, on)
+        mapping.update(fetched)
         failures += img_fail
 
     await say("rebuilding", f"Rebuilding {crawl['brand']} — global brand, colours and navigation")
