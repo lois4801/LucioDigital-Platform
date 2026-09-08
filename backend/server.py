@@ -1011,6 +1011,8 @@ from web_import import register as register_web_import
 import web_import as _web_import
 _web_import.require_ai_access = GROWTH["require_ai_access"]
 register_web_import(api, db, get_current_user, get_user_app, log_activity)
+from followups import register as register_followups
+register_followups(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
 
 app.include_router(api)
 

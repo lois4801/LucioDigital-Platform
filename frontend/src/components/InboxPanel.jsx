@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame } from "lucide-react";
+import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame, Clock, Send } from "lucide-react";
 import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 import { LeadReply } from "@/components/LeadReply";
 
@@ -17,6 +17,27 @@ export default function InboxPanel({ appId }) {
   async function scoreAll() { setScoring(true); try { const { data } = await api.post(`/apps/${appId}/inbox/score`, {}, { timeout: 180000 }); toast.success(`Scored ${data.scored} leads`); load(); } catch { toast.error("Scoring failed"); } finally { setScoring(false); } }
   const [filter, setFilter] = useState("all");
   const [sel, setSel] = useState(null);
+  const [fu, setFu] = useState({ enabled: false, hours: 48, pending_drafts: 0 });
+  const [fuBusy, setFuBusy] = useState(false);
+  const [fuEdit, setFuEdit] = useState("");
+  useEffect(() => { api.get(`/apps/${appId}/inbox/followups`).then(r => setFu(r.data)).catch(() => {}); }, [appId]);
+  useEffect(() => { setFuEdit(sel?.followup?.body || ""); }, [sel?.message_id, sel?.followup?.drafted_at]);
+  function absorb(m) { setSel(m); setMsgs(ms => ms.map(x => x.message_id === m.message_id ? m : x)); }
+  async function toggleFu(enabled) {
+    setFu(f => ({ ...f, enabled }));
+    try { await api.post(`/apps/${appId}/inbox/followups`, { enabled }); toast.success(enabled ? `Auto follow-ups on — drafts appear here after ${fu.hours}h of silence` : "Auto follow-ups off"); }
+    catch { setFu(f => ({ ...f, enabled: !enabled })); toast.error("Failed"); }
+  }
+  async function fuAction(kind) {
+    setFuBusy(true);
+    try {
+      const url = `/apps/${appId}/inbox/${sel.message_id}/followup-${kind}`;
+      const { data } = await api.post(url, kind === "approve" ? { body: fuEdit } : {}, { timeout: 180000 });
+      absorb(data);
+      toast.success(kind === "draft" ? "Follow-up drafted" : kind === "approve" ? "Follow-up sent" : "Follow-up dismissed");
+      api.get(`/apps/${appId}/inbox/followups`).then(r => setFu(r.data)).catch(() => {});
+    } catch (e) { toast.error(e.response?.data?.detail || "Failed"); } finally { setFuBusy(false); }
+  }
 
   useEffect(() => { load(); }, [appId]);
   async function load() { try { const { data } = await api.get(`/apps/${appId}/inbox`); setMsgs(data.messages); setUnread(data.unread); setHot(data.hot || 0); } catch { toast.error("Failed to load inbox"); } }
@@ -36,6 +57,13 @@ export default function InboxPanel({ appId }) {
         </button>)}
         <button data-testid="inbox-score-btn" onClick={scoreAll} disabled={scoring || unscored === 0} className="mt-2 w-full btn-ghost text-xs !py-1.5 flex items-center justify-center gap-1 disabled:opacity-40">{scoring ? <Loader2 size={11} className="animate-spin" /> : <Flame size={11} />} {unscored ? `Score ${unscored} leads` : "All leads scored"}</button>
         <div className="px-3 pt-4 text-[10px] text-[var(--dim)] leading-relaxed">Leads are scored 0–100 by AI on intent, budget and urgency; hottest first.</div>
+        <div className="mt-3 border-t border-[var(--line)] pt-3 px-3">
+          <label className="flex items-start gap-2 text-[11px] cursor-pointer">
+            <input data-testid="followups-toggle" type="checkbox" checked={fu.enabled} onChange={e => toggleFu(e.target.checked)} className="mt-0.5 accent-[var(--acc)]" />
+            <span className="text-[var(--mut)]">Auto follow-up after {fu.hours}h of silence — AI writes it, you approve before it sends</span>
+          </label>
+          {fu.pending_drafts > 0 && <div data-testid="followups-pending" className="mt-2 chip chip-active text-[10px]">{fu.pending_drafts} follow-up draft{fu.pending_drafts > 1 ? "s" : ""} waiting</div>}
+        </div>
       </aside>
 
       <div className="card-surface divide-y divide-[var(--line)] overflow-y-auto max-h-[70vh] scrollbar-thin">
@@ -46,6 +74,8 @@ export default function InboxPanel({ appId }) {
               {m.source === "chat" ? <MessageSquare size={13} className="text-[var(--cyan)]" /> : <Mail size={13} className="text-[var(--acc)]" />}
               <span className={`text-sm flex-1 truncate ${m.status === "unread" ? "font-bold text-white" : "text-[var(--mut)]"}`}>{m.from_name || m.from_email || "Visitor"}</span>
               <ScoreBadge m={m} />
+              {m.followup?.status === "draft" && <span data-testid="followup-badge-draft" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up draft ready"><Clock size={9} /></span>}
+              {m.followup?.status === "sent" && <span data-testid="followup-badge-sent" className="chip text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up sent"><Send size={9} /></span>}
               <span className="text-[10px] font-mono text-[var(--dim)]">{new Date(m.updated_at).toLocaleDateString()}</span>
               <button onClick={e => { e.stopPropagation(); patch(m, { starred: !m.starred }); }} className={m.starred ? "text-amber-400" : "text-[var(--dim)] hover:text-amber-400"}><Star size={12} fill={m.starred ? "currentColor" : "none"} /></button>
             </div>
@@ -72,6 +102,27 @@ export default function InboxPanel({ appId }) {
             <Attachments body={sel.body} testid="inbox-attachments" />
             {sel.replies?.length > 0 && <div className="mt-4 space-y-2">{sel.replies.map(r => <div key={r.reply_id} className="text-sm border-l-2 border-[var(--acc)] pl-3"><div className="text-[10px] font-mono text-[var(--dim)]">{r.by} · {new Date(r.created_at).toLocaleString()} · {r.delivery.replace("_", " ")}</div><div className="mt-1 whitespace-pre-wrap">{r.body}</div>{r.attachments?.length > 0 && <Attachments testid="inbox-reply-attachments" body={r.attachments.map(a => `[attachment] ${a.name} — ${a.url}`).join("\n")} />}</div>)}</div>}
             <div className="mt-auto pt-4">
+              {sel.from_email && (sel.followup?.status === "draft" ? (
+                <div data-testid="followup-draft-card" className="mb-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/5 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock size={12} className="text-[var(--acc)]" />
+                    <span className="overline">Follow-up draft · {sel.followup.kind === "no_reply" ? "never replied" : "went quiet"}</span>
+                    <span className="ml-auto font-mono text-[10px] text-[var(--dim)]">{new Date(sel.followup.drafted_at).toLocaleString()}</span>
+                  </div>
+                  <textarea data-testid="followup-draft-body" value={fuEdit} onChange={e => setFuEdit(e.target.value)} rows={5}
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg p-3 text-sm outline-none focus:border-[var(--acc)]" />
+                  <div className="flex gap-2 mt-2">
+                    <button data-testid="followup-approve-btn" onClick={() => fuAction("approve")} disabled={fuBusy} className="btn-primary text-xs !py-2 flex items-center gap-1.5 disabled:opacity-50">{fuBusy ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />} Approve & send</button>
+                    <button data-testid="followup-regenerate-btn" onClick={() => fuAction("draft")} disabled={fuBusy} className="btn-ghost text-xs !py-2">Rewrite</button>
+                    <button data-testid="followup-dismiss-btn" onClick={() => fuAction("dismiss")} disabled={fuBusy} className="btn-ghost text-xs !py-2 ml-auto">Dismiss</button>
+                  </div>
+                </div>
+              ) : (
+                <button data-testid="followup-generate-btn" onClick={() => fuAction("draft")} disabled={fuBusy} className="btn-ghost text-xs !py-2 mb-3 flex items-center gap-1.5 disabled:opacity-50">
+                  {fuBusy ? <Loader2 size={12} className="animate-spin" /> : <Clock size={12} />}
+                  {sel.followup?.status === "sent" ? "Draft another follow-up" : "Draft a follow-up now"}
+                </button>
+              ))}
               <LeadReply lead={{ ...sel, app_id: appId }} onUpdated={(m) => { setSel(m); setMsgs(ms => ms.map(x => x.message_id === m.message_id ? m : x)); }} />
             </div>
           </>

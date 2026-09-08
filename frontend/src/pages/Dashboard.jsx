@@ -9,7 +9,7 @@ import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
-import { pollImport } from "@/components/builder/WebImport";
+import { pollImport, ImportProgress } from "@/components/builder/WebImport";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -33,6 +33,8 @@ export default function Dashboard() {
   const [newOpen, setNewOpen] = useState(false);
   const [newApp, setNewApp] = useState({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
   const [importing, setImporting] = useState(false);
+  const [impStage, setImpStage] = useState(null);
+  const [impStarted, setImpStarted] = useState(0);
 
   useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); }, []);
 
@@ -61,14 +63,13 @@ export default function Dashboard() {
       setApps([data, ...apps]); setNewOpen(false);
       setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
       if (url?.trim()) {
-        setImporting(true);
-        toast.info("Reading that website and rebuilding it — this takes a minute or two…");
+        setImporting(true); setImpStage({ stage: "scanning", stage_detail: "Starting import" }); setImpStarted(Date.now());
         try {
           const { data: job } = await api.post(`/apps/${data.app_id}/site/import`, { url, mode: "replace", apply_theme: true });
-          const res = await pollImport(data.app_id, job.job_id);
+          const res = await pollImport(data.app_id, job.job_id, { onStage: setImpStage });
           toast.success(`Imported ${res.pages.length} page(s) from ${url}`);
         } catch (e) { toast.error(e.response?.data?.detail || e.message || "Website import failed — the project was still created"); }
-        finally { setImporting(false); }
+        finally { setImporting(false); setImpStage(null); }
       } else toast.success("Project created");
       nav(`/apps/${data.app_id}`);
     } catch (e) { toast.error("Create failed"); }
@@ -224,6 +225,7 @@ export default function Dashboard() {
                   <input data-testid="new-app-url-input" value={newApp.url} onChange={(e) => setNewApp({ ...newApp, url: e.target.value })} placeholder="acmeplumbing.com"
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" />
                   <span className="text-[11px] text-[var(--mut)] mt-1 block">We'll copy its pages, copy, images, contact details and brand colours into this project.</span></label>
+                {importing && impStage && <ImportProgress stage={impStage} started={impStarted} testid="new-app-import-progress" />}
                 <button data-testid="new-app-create-btn" onClick={createApp} disabled={importing} className="btn-primary w-full disabled:opacity-60">{importing ? "Importing website…" : `Create ${newApp.kind === "app" ? "app" : "website"}`}</button>
               </div>
             </DialogContent>

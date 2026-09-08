@@ -1,14 +1,43 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Globe, Loader2, Link2, Check } from "lucide-react";
 
 // Imports run as a backend job (scrape + AI rebuild takes longer than the 60s request cap).
-export async function pollImport(appId, jobId, { tries = 100, every = 4000 } = {}) {
+export const IMPORT_STAGES = [["scanning", "Scanning site"], ["reading", "Reading pages"], ["rebuilding", "Rebuilding with AI"], ["applying", "Applying pages"]];
+
+export function ImportProgress({ stage, started, testid = "import-progress" }) {
+  const [secs, setSecs] = useState(0);
+  useEffect(() => { const t = setInterval(() => setSecs(Math.round((Date.now() - started) / 1000)), 1000); return () => clearInterval(t); }, [started]);
+  const idx = Math.max(0, IMPORT_STAGES.findIndex(s => s[0] === (stage?.stage || "scanning")));
+  return (
+    <div data-testid={testid} className="card-surface p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="overline">Importing website</div>
+        <span className="font-mono text-[10px] text-[var(--dim)]">{secs}s elapsed</span>
+      </div>
+      <div className="space-y-2">
+        {IMPORT_STAGES.map(([k, label], i) => (
+          <div key={k} data-testid={`import-step-${k}`} className="flex items-center gap-2 text-sm">
+            <span className={`w-5 h-5 rounded-full flex items-center justify-center border ${i < idx ? "border-[var(--acc)] bg-[var(--acc)]/20 text-[var(--acc)]" : i === idx ? "border-[var(--acc)] text-[var(--acc)]" : "border-[var(--line)] text-[var(--dim)]"}`}>
+              {i < idx ? <Check size={11} /> : i === idx ? <Loader2 size={11} className="animate-spin" /> : <span className="text-[10px] font-mono">{i + 1}</span>}
+            </span>
+            <span className={i <= idx ? "text-[var(--fg)]" : "text-[var(--dim)]"}>{label}</span>
+            {i === idx && stage?.stage_detail && <span className="text-[11px] text-[var(--mut)] truncate">— {stage.stage_detail}</span>}
+          </div>
+        ))}
+      </div>
+      <div className="h-1 rounded-full bg-white/8 overflow-hidden"><div className="h-full bg-[var(--acc)] transition-all duration-700" style={{ width: `${((idx + 0.5) / IMPORT_STAGES.length) * 100}%` }} /></div>
+    </div>
+  );
+}
+
+export async function pollImport(appId, jobId, { tries = 100, every = 4000, onStage } = {}) {
   for (let i = 0; i < tries; i++) {
     await new Promise(r => setTimeout(r, every));
     const { data } = await api.get(`/apps/${appId}/site/import-job/${jobId}`);
+    onStage?.(data);
     if (data.status === "done") return data.result;
     if (data.status === "error") throw new Error(data.error || "Import failed");
   }
@@ -18,6 +47,8 @@ export async function pollImport(appId, jobId, { tries = 100, every = 4000 } = {
 export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
   const [url, setUrl] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [stage, setStage] = useState(null);
+  const [startedAt, setStartedAt] = useState(0);
   const [applying, setApplying] = useState(false);
   const [preview, setPreview] = useState(null);
   const [mode, setMode] = useState("replace");
@@ -27,13 +58,14 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
 
   async function scan() {
     if (!url.trim()) return;
-    setScanning(true); setPreview(null);
+    setScanning(true); setPreview(null); setStage({ stage: "scanning", stage_detail: "Starting import" });
+    const started = Date.now(); setStartedAt(started);
     try {
       const { data: job } = await api.post(`/apps/${appId}/site/import-preview`, { url });
-      const res = await pollImport(appId, job.job_id);
+      const res = await pollImport(appId, job.job_id, { onStage: setStage });
       setPreview(res);
-      toast.success(`Scanned ${res.source?.pages || 1} page(s) — ${res.pages.length} page(s) rebuilt`);
-    } catch (e) { toast.error(e.response?.data?.detail || e.message || "Scan failed"); } finally { setScanning(false); }
+      toast.success(`Scanned ${res.source?.pages || 1} page(s) in ${Math.round((Date.now() - started) / 1000)}s`);
+    } catch (e) { toast.error(e.response?.data?.detail || e.message || "Scan failed"); } finally { setScanning(false); setStage(null); }
   }
 
   async function apply() {
@@ -57,9 +89,11 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
               placeholder="acmeplumbing.com" className="flex-1 bg-transparent py-3 text-sm outline-none" />
           </div>
           <button data-testid="web-import-scan-btn" onClick={scan} disabled={scanning || !url.trim()} className="btn-primary flex items-center gap-2 disabled:opacity-50">
-            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Reading site (30–60s)…" : "Scan website"}
+            {scanning ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}{scanning ? "Reading site…" : "Scan website"}
           </button>
         </div>
+
+        {scanning && stage && <ImportProgress stage={stage} started={startedAt} testid="web-import-progress" />}
 
         {preview && (
           <div data-testid="web-import-preview" className="space-y-4 mt-2">

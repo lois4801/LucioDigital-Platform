@@ -1,0 +1,8 @@
+crons:
+  - name: lead-followups
+    description: "Queues AI follow-up drafts for leads that have gone quiet for 48 hours"
+    cron: "0 * * * *"
+    # Cron endpoints must ack 2xx immediately; enqueue/background the actual work.
+    endpoint: "{{BASE_URL}}/api/cron/lead-followups"
+    method: POST
+    enabled: true

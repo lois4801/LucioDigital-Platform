@@ -132,9 +132,14 @@ def _parse_page(html: str, url: str) -> dict:
     }
 
 
-async def scrape_site(url: str) -> dict:
+async def scrape_site(url: str, on: Optional[callable] = None) -> dict:
     url = _norm_url(url)
+
+    async def say(*a):
+        if on:
+            await on(*a)
     async with httpx.AsyncClient(follow_redirects=True, timeout=25.0, headers={"User-Agent": UA, "Accept-Language": "en"}) as client:
+        await say("scanning", f"Opening {urlparse(url).netloc}")
         html = await _fetch(client, url)
         if not html:
             raise HTTPException(400, "Could not load that website (it may block bots or be offline)")
@@ -147,7 +152,8 @@ async def scrape_site(url: str) -> dict:
                     picked.append(l["url"])
             if len(picked) >= 4:
                 break
-        for u in picked:
+        for i, u in enumerate(picked):
+            await say("reading", f"Reading page {i + 2} of {len(picked) + 1} — {urlparse(u).path}")
             sub_html = await _fetch(client, u)
             if sub_html:
                 subs.append(_parse_page(sub_html, u))
@@ -180,11 +186,16 @@ SYSTEM = (
 )
 
 
-async def build_import(url: str) -> dict:
+async def build_import(url: str, on: Optional[callable] = None) -> dict:
     if not EMERGENT_LLM_KEY:
         raise HTTPException(500, "LLM key missing")
-    src = await scrape_site(url)
+
+    async def say(*a):
+        if on:
+            await on(*a)
+    src = await scrape_site(url, on)
     payload = {"url": src["url"], "brand": src["brand"], "home": src["home"], "subpages": src["subpages"]}
+    await say("rebuilding", f"Rebuilding {src['brand']} as editable pages")
     try:
         data = _parse_json(await _claude(SYSTEM, json.dumps(payload, default=str)[:38000], f"import-{_uid('i')}"))
     except Exception as e:
@@ -258,14 +269,17 @@ def _summary(import_id: str, imp: dict) -> dict:
 def register(api, db, get_current_user, get_user_app, log_activity):
     async def _run_job(job_id: str, app_id: str, url: str, user_id: str, auto: Optional[dict]):
         """Scrape + rebuild in the background — ingress caps requests at 60s, so the client polls."""
+        async def say(stage: str, detail: str = ""):
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"stage": stage, "stage_detail": detail, "stage_at": _now()}})
         try:
-            imp = await build_import(url)
+            imp = await build_import(url, say)
             import_id = _uid("imp")
             await db.site_imports.insert_one({"import_id": import_id, "app_id": app_id, "created_at": _now(), **imp})
             result = _summary(import_id, imp)
             if auto:
+                await say("applying", f"Adding {len(imp['pages'])} page(s) to the project")
                 result["applied"] = await apply_import(db, app_id, imp, auto["mode"], auto["apply_theme"], log_activity, user_id)
-            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "done", "result": result, "finished_at": _now()}})
+            await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "done", "stage": "done", "stage_detail": "", "result": result, "finished_at": _now()}})
         except HTTPException as e:
             await db.import_jobs.update_one({"job_id": job_id}, {"$set": {"status": "error", "error": str(e.detail), "finished_at": _now()}})
         except Exception as e:
@@ -276,7 +290,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await require_ai_access(app_id, user)
         _norm_url(url)
         job_id = _uid("job")
-        await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": url, "status": "running", "created_at": _now()})
+        await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": url, "status": "running",
+                                         "stage": "queued", "stage_detail": "Starting import", "created_at": _now()})
         asyncio.create_task(_run_job(job_id, app_id, url, user["user_id"], auto))
         return {"job_id": job_id, "status": "running"}
 

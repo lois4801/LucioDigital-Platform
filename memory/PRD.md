@@ -61,6 +61,26 @@ App Mode, multi-tenant with client portals.
   a real scrape of roto-rooter.com (correct brand, phone, colours, 5 pages) and merge-mode sync
   preserving prior screens.
 
+### Jun 2026 (v19) — Import progress + 48h lead follow-ups (iter 28)
+- **Import progress**: the import job now records `stage` / `stage_detail` / `stage_at`
+  (`queued → scanning → reading (n of m) → rebuilding → applying → done`). Stage writes are awaited
+  in order (an earlier fire-and-forget version raced and clobbered `applying`). `ImportProgress`
+  (in `WebImport.jsx`) renders an animated stepper with ticks, the live detail line and an
+  elapsed-seconds counter — used in the Site Mode import dialog (`web-import-progress`) and the
+  Dashboard new-project modal (`new-app-import-progress`).
+- **48h AI lead follow-ups** (`/app/backend/followups.py`): hourly platform cron
+  (`.emergent/crons.yml` → `POST /api/cron/lead-followups`, bearer `WEBHOOK_CRON_SECRET`, acks
+  immediately + `X-Webhook-Id` idempotency) scans tenants with `followups_enabled` and queues ONE
+  AI follow-up **draft** per quiet lead — both for leads we replied to 48h+ ago (`kind: replied`)
+  and leads nobody ever answered (`kind: no_reply`). Nothing is auto-sent: drafts land in the Inbox
+  for one-click approval. Skips archived leads, leads without an email, and already-followed leads.
+  - Endpoints: `GET/POST /api/apps/{id}/inbox/followups {enabled}` (default OFF),
+    `POST /api/apps/{id}/inbox/{mid}/followup-draft|followup-approve|followup-dismiss`.
+  - UI in `InboxPanel.jsx`: sidebar toggle + pending-draft badge, per-lead row badges, and an
+    editable draft card with Approve & send / Rewrite / Dismiss.
+- Testing: iteration_28.json — backend 12/12 pytest, frontend verified; the one reported issue
+  (unobservable `applying` stage) was fixed by awaiting the stage callbacks.
+
 ## Backlog (P1/P2)
 - P1: Real GitHub push — waiting on the user's Personal Access Token (currently MOCKED without one).
 - P1: ElevenLabs voice — waiting on the user's API key (falls back to OpenAI TTS).
@@ -70,8 +90,9 @@ App Mode, multi-tenant with client portals.
 - P1: Landing demo section still uses placeholder clips.
 - P2: Undo for a "replace" website import (snapshot previous pages before deleting).
 - P2: Progress steps (Scanning → Building → Applying) for the ~90s import job.
-- P2: Lead follow-up sequences (second AI email after 48h with no reply).
 - P2: Edit-mode on/off switch for the landing page admin CMS.
+- P2: Remember the last-selected tenant tab across reloads (Inbox/Site Mode resets to Overview).
+- P2: Second follow-up in the sequence (a third touch) + a per-tenant follow-up delay setting.
 - P2: Real CI/CD for mobile builds; Stripe customer portal; audit-log CSV export.
 
 ## Notes
