@@ -1,0 +1,21 @@
+{
+  "summary": "Iter-49 verified the platform-wide Real/Test/Archived tab migration on the master /leads inbox, plus edit_request lane pinning, manual lane override persistence, and regressions on the tenant inbox. All 8 pytest cases pass (test_iter49_leads_lanes.py) and the Playwright pass on /leads is clean with 0 Maximum-update-depth errors.\n\nBackend (all green): GET /api/inbox returns a lane on every message (28 msgs across multiple tenants), unread count excludes lane='test', PATCH /apps/{id}/inbox/{msg}/lane flips lane and sets lane_manual=true, invalid lane returns 400, client-editor POST /apps/{id}/pages/{page}/edit-request lands with lane='real' (even with the word 'test' in the body) and shows in the master inbox in real lane, generic /apps/{id}/edit-request also lane='real', per-tenant /inbox counts still include real/test/archived/review/priority keys.\n\nFrontend (all green on /leads master): the three tabs render as leads-tab-real (ACTIVE BY DEFAULT with count 10), leads-tab-test (13), leads-tab-archived (7). Old leads-filter-read tab is gone. Secondary chips leads-filter-{all,hot,unread,starred} render. Row-level and detail-pane lane buttons flip the lead, show the toast 'Moved to Test Leads' / 'Moved to Real Leads', update counts and the detail-pane 'Lane' field (shows 'Real lead · manual' / 'Test lead · manual'), and the change survives a full page reload. No 'Maximum update depth exceeded' console errors observed anywhere.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter49_leads_lanes.py",
+    "/app/test_reports/pytest/iter49.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "inbox.py::_classify_pending has no batch limit (to_list(500) is fine now but will churn on scaled tenants); consider paginating and skipping already-classified messages in a single $unset+$set aggregation to avoid N update round-trips.",
+    "Leads.jsx `rows` useMemo sorts twice for the real tab (once by hot/score, then again by rank). Merge into a single comparator to reduce O(2n log n) to O(n log n) and prevent the stable-sort ordering surprise if the second sort ever changes."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter49_leads_lanes.py"],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (owner) + client.editor@example.com / ClientEdit2026! (client editor). Both accepted.",
+  "seed_data_creation": "Two edit_request messages created on app_6663b5de0007 as part of the pinning assertions (both lane='real' as expected). No apps/users/pages deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The Test-lane view on /leads currently shows three 'Change request' entries with lane_manual=true — that stickiness is intentional (main agent flipped them in earlier runs) and does NOT contradict the new rule that fresh edit_requests are pinned to real. If a future iteration adds 'reclassify edit_requests unconditionally', those legacy manual flips will get reset. All Playwright verifications used the data-testids listed in the request. Backend suite is idempotent (flips a lead to opposite lane, verifies, flips back)."
+}

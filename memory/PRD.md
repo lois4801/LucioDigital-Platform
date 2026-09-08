@@ -198,6 +198,24 @@ Respond to the user in **English** only.
      by page, form and channel with lead count, hot count, average/best score, reply rate and invites sent,
      plus the five highest-scoring leads. UI: collapsible `lead-insights-card` at the top of the Inbox
 
+14. **Code-quality pass + logout race fix** (iters 47-49, all green):
+   - Triaged the external code-review report: the "hardcoded secret" (server.py embed tag uses the public
+     preview token), the page_guard↔edit_requests "circular import" (both are function-local imports) and the
+     "35 undefined variables / 231 `is`-literal comparisons" were **false positives** —
+     `ruff --select F821,F811,E711,E712` passes clean across the backend. Independently confirmed by the
+     testing agent in iteration 47
+   - Silent catches now log: `Dashboard.loadNotifs` and `AuthContext.logout`
+   - **Real bug found and fixed**: a burst of React "Maximum update depth exceeded" errors on logout.
+     Dashboard awaited `logout()` then called `nav("/")`, while the still-mounted (AnimatePresence exit)
+     ProtectedRoute saw `user=null` and pushed `<Navigate to="/login">` — two competing navigations
+     ping-ponged. Fix: navigate first (`nav("/login", { replace: true })`), clear the session after.
+     Pattern to reuse: **navigate, then await async cleanup**
+   - **Lanes rolled out to the master `/leads` inbox** (Real Leads default · Test Leads · Archived + chips,
+     priority/review ordering, per-row and detail-pane manual override); `GET /api/inbox` classifies
+     platform-wide and excludes test leads from unread
+   - Client change requests (`kind=edit_request`) are pinned to the real lane at insert and on backfill;
+     `_classify_pending` now does a single `bulk_write`
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

@@ -63,6 +63,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         who = user.get("name") or user["email"]
         msg = {
             "message_id": _uid("msg"), "app_id": app_id, "kind": "edit_request", "status": "unread",
+            "lane": "real", "lane_reasons": [], "lane_manual": False, "review": False,
             "from_name": who, "from_email": user["email"],
             "subject": f"Edit request — {page['name']}",
             "body": body.description.strip()[:3000],
@@ -96,6 +97,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         name = (body.item_name or LABELS[body.kind]).strip()
         msg = {
             "message_id": _uid("msg"), "app_id": app_id, "kind": "edit_request", "status": "unread",
+            "lane": "real", "lane_reasons": [], "lane_manual": False, "review": False,
             "from_name": who, "from_email": user["email"],
             "subject": f"Edit request — {name}",
             "body": body.description.strip()[:3000],

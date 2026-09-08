@@ -61,7 +61,8 @@ export default function Dashboard() {
     finally { setLoading(false); }
   }
   async function loadNotifs() {
-    try { const { data } = await api.get("/notifications"); setNotifs(data); } catch {}
+    try { const { data } = await api.get("/notifications"); setNotifs(data); }
+    catch (e) { console.warn("Could not load notifications", e?.response?.status || e?.message); }
   }
 
   const filtered = useMemo(() => apps.filter((a) => {
@@ -183,7 +184,7 @@ export default function Dashboard() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem data-testid="nav-logout" onClick={async () => { await logout(); nav("/"); }}>
+                <DropdownMenuItem data-testid="nav-logout" onClick={async () => { nav("/login", { replace: true }); await logout(); }}>
                   <LogOut size={14} className="mr-2" /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>

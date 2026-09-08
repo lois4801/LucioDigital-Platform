@@ -1,0 +1,39 @@
+{
+  "summary": "Iter 47 regression pass after code-quality fixes (silent catches in Dashboard.loadNotifs + AuthContext.logout, plus inbox.py booking-invite 503 and cron_archive_test_leads run_id fallback). Backend smoke suite /app/backend/tests/test_iter47_smoke.py: 6/6 pass — GET /api/apps (finds app_6663b5de0007), GET /api/apps/{id}/inbox (200), GET /api/apps/{id}/inbox/insights (all 8 keys present), GET /api/settings/email (200, configured key present), GET /api/notifications (200 list), POST /api/apps/{id}/export/start (returns job_id). Backend log tail has NO new tracebacks; only expected LiteLLM info + 'auto-archived N stale test lead(s)' entries. Frontend: login as owner → /dashboard renders (agency-master-dashboard visible, 4 tenants, stats populate). Notifications bell dropdown opens with 'Recent Activity' label (loadNotifs succeeded, no warn). Navigated to /apps/app_6663b5de0007 → tab-inbox-btn present → all requested sub-elements render (inbox-tab-real, inbox-tab-test, inbox-tab-archived, inbox-archive-test-btn, lead-insights-card, lead-insights-toggle, lead-summary-card). tab-handoff-btn present → export-system + export-website-btn + export-fullstack-btn + export-plugin-btn all render (did NOT trigger the 90s full export as instructed). Sign-out from nav-user-menu → nav-logout clears the session; re-login with same credentials succeeds and returns to /dashboard.",
+  "triage_agreement": {
+    "server_py_662_embed_script": "AGREE — line 662 emits <script src='.../embed.js' data-token='{preview_token}'> and preview_token is a per-tenant PUBLIC token (already exposed on /p/{token} and /site-admin/{token} in test_credentials.md). It is NOT a secret; no fix needed.",
+    "page_guard_edit_requests_circular_import": "AGREE — verified: page_guard.py:35 does `from edit_requests import active_grant` INSIDE a function, and edit_requests.py:53 does `from page_guard import role_of` INSIDE a function. Both modules are wired at module load from server.py (lines 1008-1011) with no module-level cycle. This is the textbook cycle-break pattern.",
+    "ruff_F821_F811_E711_E712": "AGREE — `ruff check --select F821,F811,E711,E712 /app/backend` reports 'All checks passed!'. No undefined names, no redefinitions, no `== None` or literal `== True/False` comparisons in scope. The remaining `is False` uses are deliberate None-vs-False tri-state checks and are correct.",
+    "silent_catch_fixes": "VERIFIED — Dashboard.jsx line 65 now logs `console.warn('Could not load notifications', ...)`; AuthContext.jsx line 43 now logs `console.warn('Logout request failed, clearing the session locally', ...)` before `setUser(null)`. Both are the minimum-diff fixes described."
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dashboard sign-out flow", "issues": ["Dashboard.jsx line 187 calls `nav(\"/\")` after logout but the observed URL ends up on `/login` instead of the marketing landing page — Landing likely redirects unauthenticated visitors. Behaviour is functionally correct (session is cleared, user can re-login) but does not literally match the task's 'lands on the landing page' phrasing."]},
+      {"screen": "Global (logout transition)", "issues": ["A short burst of ~10 React 'Maximum update depth exceeded' warnings fires in the console during the logout → /login transition. Login page renders normally and re-login succeeds, but this indicates a probable useEffect dep-array smell in Landing or a page-transition wrapper (not in the two files touched this iter). Pre-existing, not caused by this fix. Worth investigating separately."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter47_smoke.py",
+    "/app/test_reports/pytest/iter47.xml"
+  ],
+  "action_items": [
+    "(Optional, not blocking) Investigate the transient 'Maximum update depth exceeded' console errors during the logout→/login transition — most likely a useEffect dep-array issue in Landing.jsx or a route-transition wrapper.",
+    "(Cosmetic) Confirm whether nav('/') after logout should stay on the landing page or intentionally bounce to /login; adjust Dashboard.jsx line 187 or Landing.jsx redirect accordingly."
+  ],
+  "critical_code_review_comments": [
+    "Dashboard.jsx loadNotifs fix is correct — console.warn on failure preserves the working-app UX (bell still opens, dropdown just shows 'No activity yet') without swallowing the error.",
+    "AuthContext.jsx logout fix is correct — the local session is always cleared even if POST /auth/logout errors, and the warning is emitted first with status/message. This is the right ordering.",
+    "Triage of the code-quality report is accurate: the three big-ticket items (embed 'secret', circular import, undefined vars) are all false positives, and the hook-dep / index-key / component-size items are refactors of working code with no observable symptom — deferring them is defensible."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter47_smoke.py"],
+  "success_rate": {"backend": "100% (6/6)", "frontend": "100% for the listed regression items"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie session)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 47 smoke suite at /app/backend/tests/test_iter47_smoke.py — run with `REACT_APP_BACKEND_URL=<url> pytest -n 0 -v`. Skips nothing, deletes nothing, no seeding. If retesting the logout flow, wait ~5s after login for the 'Welcome back' toast to clear before clicking nav-user-menu (the toast overlaps the trigger and eats the click otherwise).",
+  "rca of the issue": "n/a — no bug fixed this iteration; report is a regression pass."
+}

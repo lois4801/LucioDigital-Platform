@@ -182,10 +182,11 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         memberships = await db.memberships.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(500)
         apps = await db.apps.find({"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in memberships]}}]}, {"_id": 0, "app_id": 1, "name": 1, "color": 1}).to_list(500)
         names = {a["app_id"]: a for a in apps}
+        await _classify_pending()
         q = {"app_id": {"$in": list(names)}}
         if status:
             q["status"] = status
-        msgs = await db.messages.find(q, {"_id": 0}).sort("updated_at", -1).limit(200).to_list(200)
+        msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(300).to_list(300)
         for m in msgs:
             m["app_name"] = names.get(m["app_id"], {}).get("name")
             m["app_color"] = names.get(m["app_id"], {}).get("color")
@@ -193,16 +194,27 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                                                     "lane": {"$ne": "test"}})
         return {"messages": msgs, "unread": unread}
 
-    async def _classify_pending(app_id: str) -> int:
+    async def _classify_pending(app_id: Optional[str] = None) -> int:
         """Backfills lane/review on any lead that has never been classified (all tenants, lazily)."""
         from lead_class import classify
-        rows = await db.messages.find({"app_id": app_id, "lane": {"$exists": False}}, {"_id": 0}).to_list(500)
+        from pymongo import UpdateOne
+        q = {"lane": {"$exists": False}}
+        if app_id:
+            q["app_id"] = app_id
+        rows = await db.messages.find(q, {"_id": 0}).to_list(500)
+        ops = []
         for m in rows:
-            cls = classify(m.get("from_name"), m.get("from_email"), m.get("body"), m.get("subject"),
-                           m.get("source"), m.get("meta"))
-            await db.messages.update_one({"message_id": m["message_id"]}, {"$set": {
+            if m.get("kind") == "edit_request":
+                # Client change requests come from authenticated editors — always a real lane.
+                cls = {"lane": "real", "reasons": [], "review": False, "review_reasons": []}
+            else:
+                cls = classify(m.get("from_name"), m.get("from_email"), m.get("body"), m.get("subject"),
+                               m.get("source"), m.get("meta"))
+            ops.append(UpdateOne({"message_id": m["message_id"]}, {"$set": {
                 "lane": cls["lane"], "lane_reasons": cls["reasons"], "lane_manual": False,
-                "review": cls.get("review", False), "review_reasons": cls.get("review_reasons", [])}})
+                "review": cls.get("review", False), "review_reasons": cls.get("review_reasons", [])}}))
+        if ops:
+            await db.messages.bulk_write(ops, ordered=False)
         return len(rows)
 
     @api.post("/apps/{app_id}/inbox/classify")

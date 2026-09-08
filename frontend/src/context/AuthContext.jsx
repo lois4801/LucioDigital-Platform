@@ -39,7 +39,8 @@ export function AuthProvider({ children }) {
     return data;
   };
   const logout = async () => {
-    try { await api.post("/auth/logout"); } catch {}
+    try { await api.post("/auth/logout"); }
+    catch (e) { console.warn("Logout request failed, clearing the session locally", e?.response?.status || e?.message); }
     setUser(null);
   };
 
