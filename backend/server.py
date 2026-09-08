@@ -894,6 +894,7 @@ async def startup():
         await db.memberships.create_index("app_id")
         await db.activity_logs.create_index("app_id")
         await db.media_assets.create_index("app_id")
+        await db.data_destinations.create_index("app_id", unique=True)
         await db.payment_transactions.create_index("session_id", unique=True)
         await db.apps.create_index("preview_token")
     except Exception as e:
@@ -999,6 +1000,8 @@ from ui_cms import register as register_ui_cms
 register_ui_cms(api, db, get_current_user, get_user_app)
 from files_lib import register as register_files, bundle_media
 register_files(api, db, get_current_user, get_user_app, log_activity)
+from data_destinations import register as register_data_destinations
+register_data_destinations(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 

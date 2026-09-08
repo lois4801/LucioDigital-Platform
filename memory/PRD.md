@@ -122,6 +122,24 @@ Build a production-ready dashboard for an agency to host, manage, showcase and h
 - **Landing texts**: `PUT /admin/landing` texts now accept any key; `Tx` helper wraps every landing text (brand name, hero eyebrow/h1/sub/CTAs, showcase, demos sub, bento titles/descs, pricing overline/heading/sub + tier name/price/period/desc/CTA (`text-pricing_i_*`), footer CTA/copyright). Admin click → type → blur saves to DB.
 - **Demo videos**: admin "Set video URL" chip per demo (`demo-video-url-i`, MP4 or YouTube embed) + editable demo titles; stored as `demo_i_video` text keys.
 
+### Jun 2026 (v17) — Client data destinations + canvas library placement
+- **Client-owned data destination** (`backend/data_destinations.py`, `DataDestinationPanel.jsx`):
+  each tenant can select OmniStack workspace, standard PostgreSQL, Supabase PostgreSQL,
+  a custom HTTPS storage API, Google Drive, Dropbox, or Microsoft OneDrive as its primary
+  data destination. Settings are tenant-isolated; only the tenant owner, tenant admin, or
+  platform admin can manage them.
+- **Secure setup**: connection secrets are encrypted at rest and never returned to the
+  browser. PostgreSQL and custom API destinations include live connection tests; Supabase
+  accepts only Transaction Pooler URIs (`pooler.supabase.com:6543`). Cloud providers expose
+  their secure per-client configuration fields, ready for their respective credentials and
+  authorization details.
+- **Drop into pages** (`ImageSwap.jsx`): the Site Mode image dialog now includes a Library
+  tab. It lists tenant library images and, when needed, changes a selected private image to
+  Shared before inserting its public URL into the canvas. The normal Save flow persists it.
+- **Testing**: iteration_26.json — 12/12 backend tests and all frontend flows passed,
+  including tenant isolation, secret redaction, URI validation, private-image sharing,
+  builder save persistence, and mobile layout.
+
 ## Backlog (P1/P2)
 - P1: Landing demo section uses placeholder clips — swap for real product walkthrough videos when user provides them.
 - P1: User adds ElevenLabs key (button in AI Media tab) — voice untested with a real key.

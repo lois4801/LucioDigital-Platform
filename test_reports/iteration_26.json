@@ -1,0 +1,38 @@
+{
+  "summary": "Iter-26 tested per-tenant Data & Storage destination flows and Site Mode → ImageSwap Library. Backend pytest suite (12/12 pass) covers: default platform destination, platform test success, PostgreSQL save with secret redaction (never returned in GET/PUT response body or DOM), invalid URI (400), Supabase direct-URI rejected (400 with 'pooler' message), Supabase wrong-port rejected, Supabase pooler:6543 accepted, DELETE reset, and 403 permission checks for a non-member outsider on GET/PUT/POST-test/DELETE. Playwright verified: (a) tab-data-btn opens data-destination-panel with all 7 provider cards, (b) Test connection succeeds on platform, (c) postgres URI save does not leak the fake secret into the DOM, (d) reset restores 'OmniStack workspace', (e) Supabase bad URI shows toast referencing 'pooler', (f) builder Replace-image overlay opens ImageSwap dialog with swap-tab-library, loads swap-library-grid with tenant images, clicking a PRIVATE library image auto-shares it (private:True → private:False verified via API) and closes the dialog, and (g) Save persisted the change ('Page & theme saved' toast). Mobile 390px layout renders correctly. Cleaned up: uploaded TEST_iter26_swap.png was deleted; destination was reset to platform.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter26_data_destinations.py",
+    "/app/test_reports/pytest/iter26.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "data_destinations.py _fernet(): derives Fernet key from JWT_SECRET via SHA-256. Correct + deterministic, but rotating JWT_SECRET would silently invalidate all stored destination secrets (they'd decrypt to {} and appear as 'missing_fields'). Consider a dedicated DATA_DEST_SECRET env var so JWT rotation doesn't nuke tenant credentials.",
+    "data_destinations.py save_destination(): when the caller PUTs the same provider without secrets, existing_secrets are merged in — good UX. However when a caller wants to actually CLEAR a secret (e.g., rotate to a new bearer token or remove headers_json), passing an empty string is stripped by _clean() so it silently no-ops. Consider a dedicated 'clear' flag or accept null values.",
+    "data_destinations.py test_destination(): the psycopg2 import is inside the sync function; if the package is not installed the test endpoint will return a 502 with a generic 'Connection failed' message and no server-side hint. Confirmed psycopg2-binary IS installed in requirements. Fine, but the swallowed exception path masks real config issues — logging the exception type (already done) + returning it in the response body behind a debug flag would help tenants self-serve.",
+    "data_destinations.py _public(): status defaults to 'needs_credentials' but for the platform provider _public(None) hard-codes 'active'. Any orphaned destination doc with provider=='platform' would return needs_credentials — probably impossible in practice given save_destination sets status='active' for platform, but worth a unit test.",
+    "DataDestinationPanel.jsx choose(): when a user switches provider tabs, draft is reset to EMPTY. If the user was mid-edit on postgres and clicks supabase then back to postgres, their typed URI is gone. Minor UX; may confuse power users.",
+    "DataDestinationPanel.jsx test button visibility gated by destination.can_test — after Save success, panel re-fetches load() which correctly toggles the Test button on. Good.",
+    "ImageSwap.jsx applyLibraryImage(): if the PATCH privacy call fails (e.g., 404 stale file), it toasts an error but still consumes the click — user must reopen the dialog. Consider auto-refreshing loadLibrary() on error.",
+    "ImageSwap.jsx swap-library-image cards use file.url (public) for shared and /api/apps/.../download for private. onApply(file.url) is called AFTER the PATCH — good, so the applied URL is public. Correct.",
+    "Server startup: db.data_destinations index is created unique on app_id (server.py:897). Correct."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter26_data_destinations.py"
+  ],
+  "success_rate": {"backend": "100% (12/12)", "frontend": "100%"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026!; tenant app_id: app_bdbf27abe643",
+  "seed_data_creation": "Created 1 TEST_iter26_outsider_*@example.com user (module-scoped) for the 403 branch — left in db.users (harmless). Uploaded 1 TEST_iter26_swap.png to app_bdbf27abe643 for the ImageSwap library test — soft-deleted after the run. Every backend test auto-resets the destination back to platform (autouse fixture). Playwright run also DELETE'd the destination at the end. Verified via API: GET /api/apps/app_bdbf27abe643/data-destination now returns provider=platform.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter-26 all green. Pytest /app/backend/tests/test_iter26_data_destinations.py has 4 test classes (TestDefaultAndPlatform, TestPostgresSaveAndSecrecy, TestSupabaseValidation, TestPermissions) and uses an autouse fixture to reset the destination after every test — safe to re-run repeatedly. The 401/404 console errors seen during the frontend run were pre-login unauthenticated requests and a benign missing static asset; nothing new. Note the 'Save' button in Site Mode is data-testid='builder-save-btn'. Overlays for ImageSwap use `button[title=\"Replace image\"]` (no data-testid on the overlay itself — could be improved but not blocking). The library tab correctly shows tenant images including the freshly uploaded TEST asset within ~2.5s.",
+  "rca of the issue": "N/A — no bugs found in this iteration."
+}

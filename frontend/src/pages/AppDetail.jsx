@@ -20,6 +20,7 @@ import CmsPanel from "@/components/CmsPanel";
 import { UiLabelsProvider, L } from "@/components/UiLabels";
 import { CursorFXPicker } from "@/components/CursorFX";
 import FilesPanel from "@/components/FilesPanel";
+import DataDestinationPanel from "@/components/DataDestinationPanel";
 
 const TABS = [
   { key: "overview", label: "Overview" },
@@ -30,6 +31,7 @@ const TABS = [
   { key: "inbox", label: "Inbox" },
   { key: "media", label: "AI Media" },
   { key: "files", label: "Files" },
+  { key: "data", label: "Data & Storage" },
   { key: "billing", label: "Billing" },
   { key: "domain", label: "Domain" },
   { key: "handoff", label: "Handoff & Export" },
@@ -131,6 +133,7 @@ export default function AppDetail() {
         {tab === "inbox" && <InboxPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "files" && <FilesPanel appId={appId} />}
+        {tab === "data" && <DataDestinationPanel appId={appId} />}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
         {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} setAppDoc={setAppDoc} />}
