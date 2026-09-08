@@ -89,6 +89,33 @@
 .dsv2 .thero { min-height: 100svh; display: flex; align-items: center; }
 .dsv2 .thero > * { width: 100%; }
 
+/* ---------- Section style presets (per block, works with or without design_v2) ---------- */
+.pr-editorial { --pr-gap: 1.75rem; }
+.pr-editorial h1, .pr-editorial h2 { letter-spacing: -0.015em; font-weight: 550; }
+.pr-editorial h2 { padding-bottom: .75rem; border-bottom: 1px solid color-mix(in srgb, var(--tbd) 80%, transparent); }
+.pr-editorial p { max-width: 68ch; line-height: 1.75; }
+.pr-editorial .tcard, .pr-editorial .tglass { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border-width: 0 0 1px 0 !important; border-radius: 0 !important; padding-inline: 0 !important; }
+
+.pr-bold h1, .pr-bold h2 { font-weight: 800; letter-spacing: -0.045em; line-height: .95; text-transform: none; }
+.pr-bold h2 { font-size: calc(var(--t-h2, 2.5rem) * 1.12); }
+.pr-bold .tcard, .pr-bold .tglass { border-color: color-mix(in srgb, var(--tp) 55%, var(--tbd)) !important; background: color-mix(in srgb, var(--tp) 10%, var(--tsf)) !important; }
+.pr-bold .tbtn, .pr-bold .btn { text-transform: uppercase; letter-spacing: .08em; }
+
+.pr-minimal { --pr-quiet: 1; }
+.pr-minimal h1, .pr-minimal h2, .pr-minimal h3 { font-weight: 400; letter-spacing: -0.01em; }
+.pr-minimal .tcard, .pr-minimal .tglass { background: transparent !important; backdrop-filter: none !important; box-shadow: none !important; border-color: color-mix(in srgb, var(--tbd) 60%, transparent) !important; }
+.pr-minimal .tcard:hover { transform: none; box-shadow: none; }
+.pr-minimal img { border-radius: 2px !important; }
+
+.pr-luxe { letter-spacing: .01em; }
+.pr-luxe h1, .pr-luxe h2 { font-weight: 500; letter-spacing: .005em; }
+.pr-luxe .t-small, .pr-luxe .overline { letter-spacing: .28em; }
+.pr-luxe .tcard, .pr-luxe .tglass { border-color: color-mix(in srgb, var(--ts) 45%, var(--tbd)) !important; box-shadow: 0 30px 90px -60px var(--ts) !important; }
+.pr-luxe .tbtn, .pr-luxe .btn { letter-spacing: .14em; text-transform: uppercase; font-size: .72rem; }
+.dsv2 .pr-luxe { padding-block: var(--rh-lg); }
+.dsv2 .pr-editorial { padding-block: var(--rh-lg); }
+.dsv2 .pr-minimal { padding-block: var(--rh-lg); }
+
 /* ---------- Mobile ---------- */
 @media (max-width: 640px) {
   .dsv2 a, .dsv2 button, .dsv2 summary, .dsv2 .tbtn { min-height: 44px; }

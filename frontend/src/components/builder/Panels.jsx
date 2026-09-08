@@ -72,9 +72,18 @@ function FormRouting({ block, onChange, appId }) {
   );
 }
 
-export function StylePanel({ block, onChange, appId }) {
+const PRESETS = [
+  ["default", "Default", "The tenant's current look"],
+  ["editorial", "Editorial", "Roomy, hairline dividers, long-form measure"],
+  ["bold", "Bold", "Heavy tight headings, high contrast accents"],
+  ["minimal", "Minimal", "Whitespace, thin type, no glass or shadow"],
+  ["luxe", "Luxe", "Refined spacing, wide tracking, quiet glow"],
+];
+
+export function StylePanel({ block, onChange, appId, onApplyPresetToPage, locked }) {
   const s = block.style || { bg: "default", align: "left", padding: "md" };
   const set = (k, v) => onChange({ ...s, [k]: v });
+  const preset = s.preset || "default";
   const Seg = ({ k, opts }) => (
     <div className="flex rounded-lg border border-[var(--line)] overflow-hidden text-[11px]">
       {opts.map(o => <button key={o} data-testid={`style-${k}-${o}`} onClick={() => set(k, o)} className={`flex-1 py-1.5 capitalize ${s[k] === o ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)] hover:text-white"}`}>{o}</button>)}
@@ -83,6 +92,21 @@ export function StylePanel({ block, onChange, appId }) {
   return (
     <div className="space-y-2" data-testid="style-panel">
       <div className="overline">Section style</div>
+      <div data-testid="preset-picker">
+        <div className="text-[10px] text-[var(--dim)] mb-1">Style preset</div>
+        <div className="grid grid-cols-2 gap-1">
+          {PRESETS.map(([k, label, hint]) => (
+            <button key={k} data-testid={`preset-${k}`} title={hint} disabled={locked}
+              onClick={() => set("preset", k === "default" ? undefined : k)}
+              className={`px-2 py-1.5 rounded-lg border text-[11px] text-left disabled:opacity-40 ${preset === k ? "border-[var(--acc)]/50 bg-[var(--acc)]/10 text-[var(--acc)]" : "border-[var(--line)] text-[var(--mut)] hover:text-white"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {onApplyPresetToPage && <button data-testid="preset-apply-page-btn" disabled={locked} onClick={() => onApplyPresetToPage(s.preset)}
+          className="mt-1 w-full text-[11px] text-[var(--acc)] hover:underline disabled:opacity-40">Apply “{PRESETS.find(p => p[0] === preset)[1]}” to every section on this page</button>}
+        {locked && <div className="text-[10px] text-amber-300 mt-1">This section is locked — ask the agency to open it.</div>}
+      </div>
       <div><div className="text-[10px] text-[var(--dim)] mb-1">Background</div><Seg k="bg" opts={["default", "muted", "accent", "dark"]} /></div>
       <div className="grid grid-cols-2 gap-2">
         <div><div className="text-[10px] text-[var(--dim)] mb-1">Align</div><Seg k="align" opts={["left", "center"]} /></div>

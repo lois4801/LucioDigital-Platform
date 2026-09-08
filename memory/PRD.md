@@ -57,13 +57,26 @@ Respond to the user in **English** only.
    - Applied automatically to **new tenants**, AI-generated sites and "Try another look"; existing tenants untouched (`theme.design_v2` flag)
    - Same standard exported to static HTML/CSS (`export_gen.V2_CSS`, `_v2_polish`)
 
-## Backlog
+5. **Design Upgrade Button + Section Style Presets** (iter 37, 7/7 backend + all frontend flows green):
+   - `POST /api/apps/{id}/site/upgrade-design` — flips a legacy tenant to the current standard with a
+     **byte-identical pages payload** (verified); swaps to Sora/Inter only if the tenant still has the
+     old default font pair; snapshots the site first so History → "Undo a whole site change" can revert it
+   - `POST /api/site/upgrade-design-all` — bulk upgrade of the caller's legacy tenants (skips v2 ones)
+   - UI: "Upgrade design" card + "Legacy look" badge in Overview, `Legacy look` chip on tenant cards,
+     `Upgrade N legacy sites` action in the dashboard header; editors get 403
+   - Section presets `block.style.preset`: **Editorial / Bold / Minimal / Luxe** + Default, per section in the
+     Site Mode style panel, plus "Apply to every section on this page"; disabled on locked sections;
+     rendered as `.pr-*` classes in the canvas, the live site and the exported `styles.css`/HTML
+
+## Testing note
+A testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
+`app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
+must forbid deleting apps/users/pages.
 - **P1** Real GitHub push (currently MOCKED — needs a user PAT)
 - **P1** Live ElevenLabs / Resend keys (MOCKED / graceful fallback)
 - **P1** Real sync/export to client Supabase / Postgres / Google Drive / Dropbox (credential UI built, transport pending)
-- **P2** Retrofit existing tenants to `design_v2` on demand (one-click "Upgrade design" per tenant)
-- **P2** Per-section design presets (editorial / bold / minimal) on top of design_v2
 - **P2** Lock audit trail view (who locked what, when) in the Activity tab
+- **P2** Shareable before/after comparison link for prospects
 
 ## Testing
 - Reports: `/app/test_reports/iteration_27.json … iteration_36.json` (33–36 this session, all passing)

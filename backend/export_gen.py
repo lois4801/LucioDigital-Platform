@@ -73,12 +73,26 @@ img.g{{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--r);borde
 footer{{padding:56px 0;border-top:1px solid var(--bd)}}footer h4{{font-size:14px;margin-bottom:12px}}
 .logos{{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;font-weight:700;color:var(--mut);font-size:20px}}
 .chat-fab{{position:fixed;right:24px;bottom:24px;background:var(--p);color:#fff;border-radius:999px;padding:14px 20px;font-weight:600;box-shadow:0 12px 40px -10px var(--p)}}
-""" + FX_CSS + (V2_CSS if theme.get("design_v2") else "")
+""" + FX_CSS + PRESET_CSS + (V2_CSS if theme.get("design_v2") else "")
+
+
+PRESET_CSS = """
+.pr-editorial h1,.pr-editorial h2{letter-spacing:-.015em;font-weight:550}.pr-editorial h2{padding-bottom:.75rem;border-bottom:1px solid color-mix(in srgb,var(--bd) 80%,transparent)}
+.pr-editorial p{max-width:68ch;line-height:1.75}.pr-editorial .card{background:transparent!important;backdrop-filter:none!important;box-shadow:none!important;border-width:0 0 1px 0!important;border-radius:0!important;padding-inline:0!important}
+.pr-bold h1,.pr-bold h2{font-weight:800;letter-spacing:-.045em;line-height:.95}.pr-bold .card{border-color:color-mix(in srgb,var(--p) 55%,var(--bd))!important;background:color-mix(in srgb,var(--p) 10%,var(--sf))!important}
+.pr-bold .btn,.pr-bold .btn2{text-transform:uppercase;letter-spacing:.08em}
+.pr-minimal h1,.pr-minimal h2,.pr-minimal h3{font-weight:400;letter-spacing:-.01em}.pr-minimal .card{background:transparent!important;backdrop-filter:none!important;box-shadow:none!important;border-color:color-mix(in srgb,var(--bd) 60%,transparent)!important}
+.pr-minimal .card:hover{transform:none;box-shadow:none}.pr-minimal img{border-radius:2px!important}
+.pr-luxe h1,.pr-luxe h2{font-weight:500;letter-spacing:.005em}.pr-luxe .kicker{letter-spacing:.28em}
+.pr-luxe .card{border-color:color-mix(in srgb,var(--s) 45%,var(--bd))!important;box-shadow:0 30px 90px -60px var(--s)!important}
+.pr-luxe .btn,.pr-luxe .btn2{letter-spacing:.14em;text-transform:uppercase;font-size:.72rem}
+"""
 
 
 def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
     t, p, s = b.get("type"), b.get("props", {}), b.get("style", {}) or {}
-    cls = " ".join(filter(None, [s.get("bg") if s.get("bg") in ("muted", "accent", "dark") else "", s.get("padding") if s.get("padding") in ("sm", "lg") else "", "center" if s.get("align") == "center" else ""]))
+    cls = " ".join(filter(None, [s.get("bg") if s.get("bg") in ("muted", "accent", "dark") else "", s.get("padding") if s.get("padding") in ("sm", "lg") else "", "center" if s.get("align") == "center" else "",
+                                 f"pr-{s['preset']}" if s.get("preset") in ("editorial", "bold", "minimal", "luxe") else ""]))
     if t == "collection_list":
         col = next((c for c in (cols or []) if c["slug"] == p.get("collection")), None)
         items = (col or {}).get("items", [])[: int(p.get("limit") or 6)]

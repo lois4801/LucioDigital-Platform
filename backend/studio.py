@@ -184,6 +184,48 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         await log_activity(app_id, user["user_id"], "theme.saved", "Design theme updated")
         return theme
 
+    @api.post("/apps/{app_id}/site/upgrade-design")
+    async def upgrade_design(app_id: str, user: dict = Depends(get_current_user)):
+        """Switch a legacy tenant to the current design standard. Copy, images and layout are
+        untouched — only the theme flag (and the old default font pair) change."""
+        doc = await get_user_app(app_id, user)
+        from page_guard import role_of, snapshot_site
+        if await role_of(db, doc, user) not in ("owner", "admin"):
+            raise HTTPException(403, "Only the agency owner or an admin can upgrade a site's design")
+        old = {**DEFAULT_THEME, **_clean_theme(doc.get("theme"))}
+        if old.get("design_v2"):
+            return {"already": True, "theme": old}
+        snap = await snapshot_site(db, app_id, user.get("name") or user["email"], "before design upgrade")
+        theme = {**old, "design_v2": True}
+        if old.get("font_heading") == DEFAULT_THEME["font_heading"] and old.get("font_body") == DEFAULT_THEME["font_body"]:
+            theme["font_heading"], theme["font_body"] = V2_THEME["font_heading"], V2_THEME["font_body"]
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"theme": theme, "updated_at": now_iso()}})
+        await log_activity(app_id, user["user_id"], "design.upgraded",
+                           "Upgraded to the current design standard — content unchanged")
+        return {"already": False, "theme": theme, "restore_point": snap}
+
+    @api.post("/site/upgrade-design-all")
+    async def upgrade_design_all(user: dict = Depends(get_current_user)):
+        """Bulk upgrade every tenant the user owns or administers that is still on the legacy look."""
+        ms = await db.memberships.find({"user_id": user["user_id"], "role": "admin"}, {"_id": 0, "app_id": 1}).to_list(500)
+        apps = await db.apps.find({"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in ms]}}]},
+                                  {"_id": 0, "app_id": 1, "name": 1, "theme": 1}).to_list(500)
+        from page_guard import snapshot_site
+        who = user.get("name") or user["email"]
+        upgraded = []
+        for a in apps:
+            old = {**DEFAULT_THEME, **_clean_theme(a.get("theme"))}
+            if old.get("design_v2"):
+                continue
+            await snapshot_site(db, a["app_id"], who, "before design upgrade")
+            theme = {**old, "design_v2": True}
+            if old.get("font_heading") == DEFAULT_THEME["font_heading"] and old.get("font_body") == DEFAULT_THEME["font_body"]:
+                theme["font_heading"], theme["font_body"] = V2_THEME["font_heading"], V2_THEME["font_body"]
+            await db.apps.update_one({"app_id": a["app_id"]}, {"$set": {"theme": theme, "updated_at": now_iso()}})
+            await log_activity(a["app_id"], user["user_id"], "design.upgraded", "Upgraded to the current design standard (bulk)")
+            upgraded.append({"app_id": a["app_id"], "name": a.get("name")})
+        return {"upgraded": upgraded, "count": len(upgraded)}
+
     # ===== PAGES (multi) =====
     @api.get("/apps/{app_id}/pages")
     async def list_pages(app_id: str, user: dict = Depends(get_current_user)):

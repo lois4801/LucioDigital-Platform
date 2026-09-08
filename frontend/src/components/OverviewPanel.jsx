@@ -2,7 +2,7 @@ import AnalyticsCard from "@/components/AnalyticsCard";
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Activity, Cpu, HardDrive, Timer, Users, Lock, Unlock } from "lucide-react";
+import { Activity, Cpu, HardDrive, Timer, Users, Lock, Unlock, Sparkles } from "lucide-react";
 import { L, UiLabelsToolbar } from "@/components/UiLabels";
 import { LockToggle, MasterLockButton, LockStateBadge, useLocks } from "@/components/locks/LockContext";
 
@@ -22,6 +22,17 @@ const HOST_METRICS = [
 function SiteSnapshot({ appDoc }) {
   const [lock, setLock] = useState({ locked: true, snapshot: null });
   const [busy, setBusy] = useState(false);
+  const [design, setDesign] = useState(appDoc.theme?.design_v2);
+  const [upBusy, setUpBusy] = useState(false);
+  useEffect(() => { setDesign(appDoc.theme?.design_v2); }, [appDoc.theme?.design_v2]);
+  async function upgradeDesign() {
+    setUpBusy(true);
+    try {
+      const { data } = await api.post(`/apps/${appDoc.app_id}/site/upgrade-design`);
+      setDesign(true);
+      toast.success(data.already ? "This site already uses the current design standard" : "Design upgraded — your copy and images are untouched. Undo it any time from History.");
+    } catch (e) { toast.error(e.response?.data?.detail || "Upgrade failed"); } finally { setUpBusy(false); }
+  }
   useEffect(() => { api.get(`/apps/${appDoc.app_id}/content-lock`).then(r => setLock(r.data)).catch(() => { }); }, [appDoc.app_id, appDoc.updated_at]);
   const snap = lock.snapshot || appDoc.site_snapshot;
   async function toggle() {
@@ -50,6 +61,17 @@ function SiteSnapshot({ appDoc }) {
         <LockToggle kind="overview" itemId="default" name="Overview & site snapshot" alwaysVisible />
         <button data-testid="content-lock-toggle" onClick={toggle} disabled={busy} className="btn-ghost !py-1.5 text-[11px] disabled:opacity-50">{lock.locked ? "Unlock" : "Lock"}</button>
       </div>
+      {!design && (
+        <div data-testid="design-upgrade-card" className="rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/5 p-4 flex flex-wrap items-center gap-3">
+          <Sparkles size={15} className="text-[var(--acc)]" />
+          <div className="flex-1 min-w-[220px] text-xs">
+            <div className="font-semibold">This site is still on the legacy look</div>
+            <div className="text-[var(--mut)]">Upgrade to the current standard — fluid type, glass depth, scroll reveals and a full-height hero. Every word and image stays exactly as it is, and History can undo it.</div>
+          </div>
+          <span data-testid="legacy-look-badge" className="chip chip-maint">Legacy look</span>
+          <button data-testid="design-upgrade-btn" onClick={upgradeDesign} disabled={upBusy} className="btn-primary text-sm !py-2 !px-4 disabled:opacity-50">{upBusy ? "Upgrading…" : "Upgrade design"}</button>
+        </div>
+      )}
       <div data-testid="overview-master-lock" className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] p-3">
         <div className="text-xs flex-1 min-w-[180px]">
           <div className="font-semibold">Master lock</div>

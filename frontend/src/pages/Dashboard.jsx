@@ -39,6 +39,17 @@ export default function Dashboard() {
   const [impReport, setImpReport] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [lockStates, setLockStates] = useState({});
+  const [upBusy, setUpBusy] = useState(false);
+  const legacyCount = apps.filter(a => !a.theme?.design_v2).length;
+  async function bulkUpgrade() {
+    if (!window.confirm(`Upgrade ${legacyCount} site(s) to the current design standard? Copy and images stay exactly as they are, and each site keeps an undo point in History.`)) return;
+    setUpBusy(true);
+    try {
+      const { data } = await api.post("/site/upgrade-design-all");
+      toast.success(`${data.count} site(s) upgraded — content untouched`);
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
+  }
 
   useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
 
@@ -117,6 +128,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {legacyCount > 0 && <button data-testid="bulk-upgrade-design-btn" onClick={bulkUpgrade} disabled={upBusy}
+              className="chip chip-maint cursor-pointer hover:!text-white disabled:opacity-50">{upBusy ? "Upgrading…" : `Upgrade ${legacyCount} legacy site${legacyCount === 1 ? "" : "s"}`}</button>}
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
             <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
@@ -293,6 +306,7 @@ export default function Dashboard() {
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
+                      {!a.theme?.design_v2 && <span data-testid={`card-legacy-badge-${a.app_id}`} className="chip chip-maint">Legacy look</span>}
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
                       <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>

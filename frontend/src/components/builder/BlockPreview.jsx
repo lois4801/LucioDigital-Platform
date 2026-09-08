@@ -36,7 +36,8 @@ const V2PAD = { sm: "tsec-sm", md: "tsec", lg: "tsec-lg" };
 function sectionCls(style, v2) {
   const bg = style?.bg === "muted" ? "bg-[var(--tsf)] tsec-muted" : style?.bg === "accent" ? "bg-[var(--tp)] text-white tsec-accent" : style?.bg === "dark" ? "bg-[#0F172A] text-white" : "";
   const pad = v2 ? V2PAD[style?.padding] || V2PAD.md : PAD[style?.padding] || PAD.md;
-  return `relative ${pad} ${bg} ${style?.align === "center" ? "text-center" : ""} px-6 sm:px-8 lg:px-12 ${v2 ? "[&>*]:mx-auto [&>*]:max-w-[1240px]" : ""}`;
+  const preset = ["editorial", "bold", "minimal", "luxe"].includes(style?.preset) ? `pr-${style.preset}` : "";
+  return `relative ${pad} ${bg} ${preset} ${style?.align === "center" ? "text-center" : ""} px-6 sm:px-8 lg:px-12 ${v2 ? "[&>*]:mx-auto [&>*]:max-w-[1240px]" : ""}`;
 }
 const mut = (style) => (style?.bg === "accent" || style?.bg === "dark") ? "text-white/80" : "text-[var(--tmut)]";
 const cardCls = (v2) => v2

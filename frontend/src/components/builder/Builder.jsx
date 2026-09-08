@@ -83,7 +83,7 @@ export default function Builder({ appId, appDoc, user }) {
   const [pages, setPages] = useState([]);
   const [pageId, setPageId] = useState(null);
   const [lockBusy, setLockBusy] = useState(false);
-  const { refresh: refreshLocks, state: lockState } = useLocks();
+  const { refresh: refreshLocks, state: lockState, isLocked } = useLocks();
   const refreshAccess = () => pageId && api.get(`/apps/${appId}/pages/${pageId}/edit-access`).then(r => setAccess(r.data)).catch(() => { });
   useEffect(() => { refreshAccess(); }, [appId, pageId, pages.length]);
   const allLocked = lockState === "locked";
@@ -380,7 +380,9 @@ export default function Builder({ appId, appDoc, user }) {
           </div>
           {sel && (
             <div className="card-surface p-4 space-y-4">
-              <StylePanel block={sel} appId={appId} onChange={(style, propsPatch) => editStyle(sel.id, style, propsPatch)} />
+              <StylePanel block={sel} appId={appId} locked={!access.can_edit || isLocked("block", sel.id) || isLocked("form", sel.id)}
+                onChange={(style, propsPatch) => editStyle(sel.id, style, propsPatch)}
+                onApplyPresetToPage={(preset) => { mutate(blocks.map(b => ({ ...b, style: { ...(b.style || {}), preset } }))); toast.success(preset ? `“${preset}” applied to every section — press Save to keep it` : "Preset cleared on every section"); }} />
               <div>
                 <div className="overline mb-2">{sel.type} content</div>
                 <div className="space-y-3 max-h-[36vh] overflow-y-auto scrollbar-thin pr-1">
