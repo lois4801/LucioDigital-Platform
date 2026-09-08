@@ -10,6 +10,7 @@ import { themeVars, loadFonts, isV2 } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
 import MemberAccount from "@/components/MemberAccount";
+import Paywall from "@/components/Paywall";
 import { LogOut } from "lucide-react";
 import { Layers, Eye } from "lucide-react";
 
@@ -20,6 +21,7 @@ export default function PublicPreview() {
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
   const [account, setAccount] = useState(false);
+  const [hasPaid, setHasPaid] = useState(false);
   const member = useMember(token);
   useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
@@ -46,6 +48,7 @@ export default function PublicPreview() {
 
   const v2 = isV2(site.theme);
   const gated = !!(site.webapp?.converted && page?.protected && !member.user && !member.loading);
+  const paywalled = !!(site.webapp?.paid?.enabled && page?.paid && !hasPaid);
   const submitLead = async (l) => {
     await api.post(`/public/contact/${token}`, l);
     if (site.webapp?.converted) {
@@ -85,7 +88,10 @@ export default function PublicPreview() {
             ? <MemberAccount token={token} jwt={member.jwt} onSignedOut={() => { member.signOut(); setAccount(false); }} onClose={() => setAccount(false)} />
             : gated
               ? <MemberGate token={token} pageName={page?.name} signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} />
-              : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
+              : paywalled
+                ? <Paywall token={token} jwt={member.jwt} user={member.user} paid={site.webapp.paid} pageName={page?.name}
+                    signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} onPaid={() => setHasPaid(true)} />
+                : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
                 <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
                   <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null} />
                 </EffectWrap>

@@ -1013,6 +1013,8 @@ from site_app import register as register_site_app
 register_site_app(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
 from compare import register as register_compare
 register_compare(api, db, get_current_user, get_user_app, log_activity, None, WF_HOOKS["send_email"])
+from pro_features import register as register_pro
+PRO = register_pro(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
 from zip_import import register as register_zip_import
 import zip_import as _zip_import
 _zip_import.require_ai_access = GROWTH["require_ai_access"]

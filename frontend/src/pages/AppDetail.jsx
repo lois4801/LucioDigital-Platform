@@ -25,6 +25,8 @@ import DataDestinationPanel from "@/components/DataDestinationPanel";
 import { LocksProvider, MasterLockButton, LockStateBadge } from "@/components/locks/LockContext";
 import ConvertToWebApp from "@/components/ConvertToWebApp";
 import SubmissionsPanel from "@/components/SubmissionsPanel";
+import BookingsCalendar from "@/components/BookingsCalendar";
+import ProSettings from "@/components/ProSettings";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },
@@ -32,6 +34,7 @@ const TABS = [
   { key: "blueprint", label: "App Mode" },
   { key: "workflows", label: "Workflows" },
   { key: "inbox", label: "Inbox" },
+  { key: "bookings", label: "Bookings" },
   { key: "media", label: "AI Media" },
   { key: "videos", label: "Videos" },
   { key: "files", label: "Files" },
@@ -142,6 +145,9 @@ export default function AppDetail() {
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "videos" && <VideoStudio appId={appId} appDoc={appDoc} />}
         {tab === "files" && <FilesPanel appId={appId} />}
+        {tab === "bookings" && (appDoc?.webapp?.converted
+          ? <div className="space-y-8"><BookingsCalendar appId={appId} token={appDoc.preview_token} /><ProSettings appId={appId} /></div>
+          : <div className="text-sm text-[var(--mut)]">Convert this site to a web app from Overview and bookings, the weekly digest and the paid members area appear here.</div>)}
         {tab === "data" && <div className="space-y-8"><SubmissionsPanel appId={appId} /><DataDestinationPanel appId={appId} /></div>}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}

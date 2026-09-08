@@ -104,6 +104,24 @@ Respond to the user in **English** only.
      iframe, and a lead form (`POST /api/public/compare/{code}/lead`) that drops into the tenant Inbox
    - UI: `ClientTools` card in Overview (invites + share link), `MemberAccount`, `Compare` page, `BookingPicker`
 
+8. **Booking calendar · Weekly digest · Paid members area · Admin bookings** (iter 41, 16/16 backend + UI green):
+   - **Bookings tab** per tenant: 24h × day grid with Day/Week/Month toggle, prev/today/next, 8-second live
+     polling; overlapping bookings render **red** with a `clash-warning` badge; click a block for details →
+     reschedule / cancel (notify or quietly). `BookingsCalendar.jsx`
+   - **Admin-created bookings**: New Booking button or any empty slot → name, email, phone, service, date,
+     time, duration, notes + pre-ticked "email the client". `POST|PUT|DELETE /api/site/{token}/admin/bookings[/{id}]`
+     (panel-guarded; duration clamped 15–480 min)
+   - **Monday client digest**: `PATCH /api/apps/{id}/webapp/digest` (on/off, hour, extra recipients),
+     `GET /apps/{id}/digest/preview`, `POST /apps/{id}/digest/test`; recipients default to the client panel
+     admins plus the agency owner; cron `POST /api/cron/weekly-digest` (bearer `WEBHOOK_CRON_SECRET`,
+     `0 * * * 1` in `.emergent/crons.yml`, fires only for tenants whose send hour matches)
+   - **Paid members area**: `PATCH /api/apps/{id}/webapp/paid` (one-time or subscription, price, currency,
+     paid page_ids) syncs a Stripe price by `lookup_key members_{app_id}_{mode}` using the app's existing
+     sandbox keys; `GET /api/site/{token}/paywall`, `POST .../paywall/checkout`, `GET .../paywall/status/{sid}`;
+     `member_access` grants unlock every paid page; `GET /apps/{id}/paid-members` lists members + payment
+     history; turning the toggle off reverts every paid page to public **immediately** (verified)
+   - Paywall UI signs the visitor in with the existing auth first, then Stripe Checkout (card, Apple Pay, Google Pay)
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

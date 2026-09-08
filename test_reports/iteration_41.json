@@ -1,0 +1,33 @@
+{
+  "summary": "Iter 41: full backend + UI smoke of the Bookings Calendar, Weekly Digest cron, and Paid Members Area on Northwind Roofing (app_6663b5de0007, token pv_15f7e07b2d724b452e2a). 16/16 pytest cases pass. UI: Bookings tab present on the converted tenant; calendar renders 24h x 7-day grid with view toggles (day/week/month), prev/today/next, three booking blocks including the two clashing 10:00 blocks on today (Today Tina + Clash Chris) styled red, and the header shows data-testid=clash-warning ('double-booked'). Booking form opens from New Booking with all 8 booking-field-* controls plus notify checkbox and save button. Clicking an existing block opens booking-details with edit / cancel / cancel-quiet buttons. ProSettings shows the digest-card (enabled, hour, recipients, test, preview) and the paid-area-card (enabled, mode-one_time/subscription, price, currency, and 4 paid-page-* checkboxes). Anonymous /api/site/{token}/page/services correctly returns {paid:true, requires_payment:true} with no blocks; disabling the paid area flips it back to public content immediately and re-enabling restores the paywall. Paywall checkout returns a checkout.stripe.com URL and creates a pending payment_transactions row. Cron endpoint enforces bearer secret (401 without / with wrong, 200 with correct). Site-member JWT is properly rejected by /api/apps/* endpoints.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "AppDetail > Settings", "issues": ["React hydration warning: '<span> cannot be a child of <option>' emitted from ProSettings.jsx line 55 (digest-hour select). Appears to be caused by the visual editor injecting a <span> wrapper into each <option>. Harmless in production build but pollutes the console. Consider stripping the wrapper for <option> elements or moving to a shadcn Select."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter41_calendar_digest_paid.py",
+    "/app/test_reports/pytest/iter41.xml"
+  ],
+  "action_items": [
+    "Optional: silence the <option><span> hydration warning inside ProSettings digest-hour <select>.",
+    "Optional: the backend test_duration_clamp leaves a TEST_clamp booking on 2026-09-09 09:00 (edit endpoint's date parameter is Optional so it can't be moved by the fixture). Add a cleanup path or accept the leak — non-blocking."
+  ],
+  "critical_code_review_comments": [
+    "pro_features.paywall_status uses meta.get('user_id') OR rec.get('user_id') as the fallback site_user_id — meta only contains site_user_id, so the fallback path (rec.user_id) works because we store site_user_id there, but the variable naming is misleading. Consider standardising on site_user_id everywhere.",
+    "cron/weekly-digest correctly uses hmac.compare_digest and returns immediately after enqueue via BackgroundTasks — matches the acknowledge-fast contract.",
+    "paid_settings clears the 'paid' flag on ALL pages then re-sets it only for the selected page_ids. This is correct for the 'toggle off = instant public' requirement; verified in the live test (services flipped from requires_payment to public and back).",
+    "BookingsCalendar polls every 8s — acceptable for 'live sync ~10s'. No SSE fallback needed for this iteration."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter41_calendar_digest_paid.py"],
+  "success_rate": {"backend": "100% (16/16)", "frontend": "100% smoke — every required data-testid resolves to exactly 1 element and clash detection displays red blocks + double-booked banner"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026! (cookie auth), editor client.editor@example.com / ClientEdit2026!, site member1@example.com / MemberPass123 (site JWT), cron secret pH-EBnKfcWvHU87RXSr0H_6ldoUm3gRUikekU71zXRAwn79ieLxmjg",
+  "seed_data_creation": "Auto tests create+cancel throwaway TEST_ bookings on 2026-09-08/09/10 and leave one TEST_clamp booking on 2026-09-09 09:00 (harmless residue).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend cookie auth: /api/auth/login sets httpOnly access_token cookie, use requests.Session throughout. Site-user JWT (from /api/site/{token}/auth/login) is Bearer-only. Northwind Roofing (app_6663b5de0007, pv_15f7e07b2d724b452e2a) is kept converted with paid area ON at USD 29 one_time and /services + /about paid; the 2 clashing 10:00 bookings live in submissions collection as 'Today Tina' and 'Clash Chris'. Route to app detail is /apps/:appId not /app/:appId.",
+  "rca of the issue": "N/A — all requirements met."
+}

@@ -424,6 +424,9 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         return {"name": doc.get("name"), "converted": bool(w.get("converted")),
                 "signup_mode": w.get("signup_mode", "open"),
                 "booking_mode": w.get("booking_mode", "period"),
+                "paid": {"enabled": bool((w.get("paid") or {}).get("enabled")), "mode": (w.get("paid") or {}).get("mode", "one_time"),
+                         "price": (w.get("paid") or {}).get("price"), "currency": (w.get("paid") or {}).get("currency", "usd"),
+                         "interval": (w.get("paid") or {}).get("interval", "month")},
                 "allow_self_delete": bool(w.get("allow_self_delete")),
                 "protected_slugs": [p["slug"] for p in await db.pages.find({"app_id": doc["app_id"], "protected": True}, {"_id": 0, "slug": 1}).to_list(200)]}
 
@@ -524,6 +527,14 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         if pg.get("protected") and webapp_of(doc).get("converted"):
             if not await current_site_user(request, doc):
                 return {"protected": True, "requires_login": True, "name": pg.get("name"), "slug": path}
+        if pg.get("paid") and ((doc.get("webapp") or {}).get("paid") or {}).get("enabled"):
+            u = await current_site_user(request, doc)
+            from pro_features import register as _p  # noqa: F401
+            access = await db.member_access.find_one({"app_id": doc["app_id"], "site_user_id": (u or {}).get("site_user_id"),
+                                                      "status": "active"}, {"_id": 0}) if u else None
+            if not access:
+                return {"paid": True, "requires_payment": True, "requires_login": not bool(u),
+                        "name": pg.get("name"), "slug": path}
         return {"protected": bool(pg.get("protected")), "requires_login": False, **pg}
 
     @api.get("/site/{token}/content/{col_slug}")
