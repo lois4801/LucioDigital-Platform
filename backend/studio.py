@@ -205,7 +205,12 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
 
     @api.patch("/apps/{app_id}/pages/{page_id}")
     async def update_page(app_id: str, page_id: str, body: PageUpdateIn, user: dict = Depends(get_current_user)):
-        await get_user_app(app_id, user)
+        doc = await get_user_app(app_id, user)
+        from page_guard import assert_can_edit_page, snapshot
+        prev = await db.pages.find_one({"app_id": app_id, "page_id": page_id}, {"_id": 0})
+        if not prev:
+            raise HTTPException(404, "Page not found")
+        await assert_can_edit_page(db, doc, prev, user)
         upd = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
         if "blocks" in upd:
             upd["blocks"] = _ensure_ids(upd["blocks"])
@@ -216,6 +221,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if not r.matched_count:
             raise HTTPException(404, "Page not found")
         if "blocks" in upd:
+            await snapshot(db, app_id, prev, user.get("name") or user["email"], "save")
             await log_activity(app_id, user["user_id"], "page.saved", f"Saved {len(upd['blocks'])} blocks")
             from content_lock import sync_overview
             await sync_overview(db, app_id)
@@ -242,6 +248,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         doc = await require_ai_access(app_id, user)
         from content_lock import assert_unlocked as _au
         await _au(db, app_id, "replace the saved pages")
+        from page_guard import snapshot_site
+        await snapshot_site(db, app_id, user.get("name") or user["email"], "before AI site generation")
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         wanted = body.pages or ["Home", "About", "Pricing", "Contact"]

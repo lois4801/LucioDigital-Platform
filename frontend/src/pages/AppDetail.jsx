@@ -128,7 +128,7 @@ export default function AppDetail() {
 
       <main className="px-6 lg:px-10 py-8 fade-in">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
-        {tab === "builder" && <Builder appId={appId} appDoc={appDoc} />}
+        {tab === "builder" && <Builder appId={appId} appDoc={appDoc} user={user} />}
         {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
         {tab === "cms" && <CmsPanel appId={appId} />}
         {tab === "workflows" && <WorkflowsPanel appId={appId} />}

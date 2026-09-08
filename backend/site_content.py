@@ -417,6 +417,8 @@ def build_premium_site(app, niche_key=None, brand=None):
 async def apply_premium(db, app, niche_key=None):
     from content_lock import assert_unlocked, lock_after_build, sync_overview
     await assert_unlocked(db, app["app_id"], "rebuild this site")
+    from page_guard import snapshot_site
+    await snapshot_site(db, app["app_id"], "look change", f"before {niche_key or 'premium'} rebuild")
     existing = await db.pages.find({"app_id": app["app_id"]}, {"_id": 0, "blocks": 1}).to_list(50)
     brand = extract_brand(app, existing)
     pages, theme, n = build_premium_site(app, niche_key, brand)

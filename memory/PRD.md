@@ -156,6 +156,25 @@ or overwritten by a builder prompt.** Implemented in `/app/backend/content_lock.
 - Testing: iteration_31.json — backend 17/17 pytest, frontend smoke 100%; the reported 404-before-423
   ordering nit on `import-selected` was fixed.
 
+### Jun 2026 (v23) — Page locks + dated page history with undo (iter 32)
+- **Page-level lock** (`/app/backend/page_guard.py`): a padlock on each page tab in Site Mode.
+  Only owner/admin can lock or unlock (`role_of`); a locked page is refused server-side (423, naming
+  the page) for editors/viewers on both `PATCH /pages/{id}` and version restore, while owner and admin
+  can still edit it — exactly the "clients only edit what I allow" model the user asked for.
+- **Content history**: every page save snapshots the PREVIOUS blocks into `page_versions`
+  (last 30 per page, pruned automatically) with author, timestamp, section count and reason.
+  `HistoryDialog` lists them newest-first; **Preview** loads a version into the canvas without saving,
+  **Restore** takes a "before restore" snapshot first so a restore is itself reversible.
+- **Whole-site restore points**: imports, AI site generation and look/niche rebuilds call
+  `snapshot_site()`, which tags every page snapshot with a `batch_id`.
+  `GET /apps/{id}/site/restore-points` lists those batches and
+  `POST /apps/{id}/site/restore-batch {batch_id}` puts the entire previous site back (owner/admin only,
+  snapshotting the current site first). **This is the long-requested import undo** — verified
+  round-trip: original page → replace-mode import → one-click undo restored the original.
+- Testing: iteration_32.json — backend 14/14 pytest (incl. the editor/viewer/admin matrix and the
+  30-version cap), frontend smoke 100%. Both reported nits fixed: orphaned pre-import snapshots are
+  now reachable via restore points, and cross-tenant version listing returns 404.
+
 ## Backlog (P1/P2)
 - P1: Real GitHub push — waiting on the user's Personal Access Token (currently MOCKED without one).
 - P1: Add `PEXELS_API_KEY` / `PIXABAY_API_KEY` to backend/.env to switch on free stock video sourcing

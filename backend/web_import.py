@@ -604,6 +604,8 @@ async def apply_import(db, app_id: str, imp: dict, mode: str, apply_theme: bool,
     from content_lock import assert_unlocked, lock_after_build, sync_overview
     if mode == "replace":
         await assert_unlocked(db, app_id, "replace the saved pages")
+        from page_guard import snapshot_site
+        await snapshot_site(db, app_id, "website import", f"before import from {imp.get('url')}")
         await db.pages.delete_many({"app_id": app_id})
         start = 0
     else:

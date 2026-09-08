@@ -997,6 +997,8 @@ from site_content import register as register_site_content
 from content_lock import register as register_content_lock
 register_site_content(api, db, get_current_user, get_user_app, log_activity)
 register_content_lock(api, db, get_current_user, get_user_app, log_activity)
+from page_guard import register as register_page_guard
+register_page_guard(api, db, get_current_user, get_user_app, log_activity)
 from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin

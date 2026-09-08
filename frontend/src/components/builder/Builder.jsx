@@ -14,6 +14,7 @@ import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/b
 import { LogoUpload } from "@/components/builder/LogoUpload";
 import { ImageSwapDialog } from "@/components/builder/ImageSwap";
 import { WebImportDialog } from "@/components/builder/WebImport";
+import { HistoryDialog } from "@/components/builder/PageHistory";
 import { DEFAULT_THEME, themeVars, loadFonts } from "@/lib/theme";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -67,7 +68,9 @@ function setPath(obj, path, value) {
   return out;
 }
 
-export default function Builder({ appId, appDoc }) {
+export default function Builder({ appId, appDoc, user }) {
+  const canLock = !user || !appDoc || appDoc.owner_id === user.user_id || appDoc.my_role === "admin" || user.is_admin;
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [pages, setPages] = useState([]);
   const [pageId, setPageId] = useState(null);
   const [blocks, setBlocks] = useState([]);
@@ -191,6 +194,13 @@ export default function Builder({ appId, appDoc }) {
   }
   const editProps = (id, path, value) => mutate(blocks.map(b => b.id === id ? { ...b, props: setPath(b.props, path, value) } : b));
   const editStyle = (id, style, propsPatch) => mutate(blocks.map(b => b.id === id ? { ...b, style, props: { ...b.props, ...(propsPatch || {}) } } : b));
+  async function toggleLock(p) {
+    try {
+      const { data } = await api.post(`/apps/${appId}/pages/${p.page_id}/lock`, { locked: !p.locked });
+      setPages(pages.map(x => x.page_id === p.page_id ? { ...x, locked: data.locked } : x));
+      toast.success(data.locked ? `"${p.name}" locked — clients can no longer edit it` : `"${p.name}" unlocked`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not change the page lock"); }
+  }
   async function save() {
     setSaving(true);
     try {
@@ -245,7 +255,8 @@ export default function Builder({ appId, appDoc }) {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage} />
+        <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
+          canLock={canLock} onToggleLock={toggleLock} />
         <div className="ml-auto flex items-center gap-2">
           <div className="flex card-surface !p-0.5 rounded-full">
             <button data-testid="builder-undo-btn" title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.past.length}
@@ -258,6 +269,7 @@ export default function Builder({ appId, appDoc }) {
           </div>
           {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
           <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
+          <button data-testid="page-history-btn" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><History size={14} /> History</button>
           <button data-testid="web-import-btn" onClick={() => setImportOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Globe size={14} /> Import from URL</button>
           <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
           <LogoUpload appId={appId} logo={logo} onChange={(u) => { setLogo(u); load(); }} />
@@ -265,6 +277,11 @@ export default function Builder({ appId, appDoc }) {
         </div>
       </div>
       <WebImportDialog appId={appId} open={importOpen} onOpenChange={setImportOpen} onDone={() => load()} />
+      <HistoryDialog appId={appId} pageId={pageId} pageName={pages.find(p => p.page_id === pageId)?.name || "page"}
+        open={historyOpen} onOpenChange={setHistoryOpen}
+        onPreview={(v) => { setBlocks(v.blocks); setSelected(v.blocks?.[0]?.id || null); setDirty(true); }}
+        onRestored={(pg) => { setBlocks(pg.blocks || []); setPages(pages.map(p => p.page_id === pg.page_id ? pg : p)); setDirty(false); }}
+        onSiteRestored={() => load()} />
       <NicheSwitcher appId={appId} current={appDoc?.site_niche} open={nicheOpen} onOpenChange={setNicheOpen} onPreview={(d) => { setNichePreview(d); setPreviewPage(0); }} />
       <ClientVoteBanner vote={lookVote} onPreview={previewNiche} busy={applyingNiche} />
       {draft && (

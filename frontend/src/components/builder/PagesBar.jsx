@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Plus, Trash2, FileText, Sparkles, Loader2 } from "lucide-react";
+import { Plus, Trash2, FileText, Sparkles, Loader2, Lock, Unlock } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
-export function PagesBar({ pages, current, onSelect, onCreate, onDelete }) {
+export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggleLock, canLock }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   return (
@@ -12,7 +12,12 @@ export function PagesBar({ pages, current, onSelect, onCreate, onDelete }) {
       {pages.map(p => (
         <div key={p.page_id} className={`group flex items-center gap-1 rounded-full text-xs font-mono pl-3 pr-1 py-1 border cursor-pointer ${current === p.page_id ? "bg-[var(--acc)]/12 border-[var(--acc)]/50 text-[var(--acc)]" : "border-[var(--line)] text-[var(--mut)] hover:text-white"}`}
           data-testid={`page-tab-${p.slug.replace("/", "") || "home"}`} onClick={() => onSelect(p.page_id)}>
-          <FileText size={11} /> {p.name}
+          {p.locked ? <Lock size={11} className="text-amber-400" /> : <FileText size={11} />} {p.name}
+          {canLock && <button data-testid={`page-lock-${p.slug.replace("/", "") || "home"}`} title={p.locked ? "Unlock for clients" : "Lock so clients cannot edit"}
+            onClick={e => { e.stopPropagation(); onToggleLock(p); }}
+            className={`w-5 h-5 rounded-full flex items-center justify-center hover:text-amber-300 ${p.locked ? "opacity-100 text-amber-400" : "opacity-0 group-hover:opacity-100"}`}>
+            {p.locked ? <Lock size={10} /> : <Unlock size={10} />}
+          </button>}
           {p.slug !== "/" ? <button onClick={e => { e.stopPropagation(); onDelete(p); }} className="w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:text-red-400"><Trash2 size={10} /></button> : <span className="w-1" />}
         </div>
       ))}
