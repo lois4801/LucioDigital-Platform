@@ -149,6 +149,42 @@ Respond to the user in **English** only.
      the admin edits the draft in the Bookings dialog (`booking-followup`, `followup-draft-*`, `followup-body`,
      `followup-send-btn`) and clicks send
 
+11. **Three-way Handoff & Export system** (iter 44, 10/10 backend + frontend green):
+   - `export_pkg.py` — background export jobs (`export_jobs`), `POST /apps/{id}/export/start?kind=website|fullstack|plugin`,
+     `GET /apps/{id}/export/jobs[/{job_id}]`, `GET .../download` (ZIP stored in object storage)
+   - `Bundler` localises **every** image, video and Google font (woff2 downloaded, `@font-face` rewritten) —
+     handles extension-less CDN URLs (Unsplash/Pexels) via content-type sniffing, 3 retries, capped at the
+     tenant storage quota; anything unfetchable is listed in `job.skipped` and in the package readme
+   - **Website package**: `site/` (every page + CMS item page, styles.css, fonts.css, local assets, config.js,
+     robots/sitemap/vercel/_redirects), `server/` FastAPI form server (SQLite + /admin + CSV),
+     `cms/wordpress-import.xml` (WXR), `cms/webflow-pages.csv`, `cms/collections/*.csv`, `content/pages.json`, README
+   - **Full-stack package**: React frontend (exact design, member gate, auth, `/admin` dashboard with
+     Submissions/Bookings/Members/Content/Settings), FastAPI backend (JWT + bcrypt, admin/user roles, public
+     pages/collections/submit, admin CRUD), `seed.py` + `data/data.json` preloaded with all real content,
+     `schema.sql` (Postgres), `.env.example` documented, `docker-compose.yml`, step-by-step README
+   - **Plugin package**: `plugin.json` (`format: omnistack.plugin`) with pages, blocks, theme, CMS, forms,
+     workflows, locks, settings, submissions, members + `assets/`; `POST /api/site/import-plugin` restores it as a
+     **new tenant** (`import-plugin-btn` in the dashboard header) and `POST /apps/{id}/site/import-zip` detects
+     `plugin.json` and restores into that tenant. `restore_plugin` is idempotent (clears every target collection first)
+   - UI: `ExportCards.jsx` — three labelled buttons (`export-{website,fullstack,plugin}-btn`), live progress
+     (`export-progress-{kind}`), download button + toast, and an email to the admin when ready.
+     All previous Handoff extras kept
+
+12. **Automatic lead classification (real vs test)** (iter 45, 13/13 backend + frontend green):
+   - `lead_class.py` — token-exact test-name words (qa/test/e2e/dummy/demo/v1-v9/lorem/automation…),
+     ~50 disposable domains (resend.dev, mailinator, example.*, test.com, yopmail…), test mailbox names,
+     ALL-CAPS TEST/QA in the body, non-human names (hex/no-vowel), automated-run meta →
+     `lane: "test"`; everything else `lane: "real"` with a `review` flag (free domain / no natural language / no name)
+   - Applied at write time in `_new_message` and lazily backfilled for every tenant on `GET /apps/{id}/inbox`;
+     `POST /apps/{id}/inbox/classify?rerun=true` re-sorts (never touches manual choices)
+   - `PATCH /apps/{id}/inbox/{id}/lane` — one-click manual override, `lane_manual` sticky forever
+   - Test leads excluded from the unread/hot counts, the dashboard badge and the AI weekly lead summary
+   - `POST /apps/{id}/inbox/{id}/booking-invite` — emails a real lead the tenant booking link and copies
+     `AGENCY_COPY_EMAILS` (JLBUSINESS2020@gmail.com, jaybernabe@luciodigital.com); 400 on test leads
+   - UI: tabs **Real Leads (default) · Test Leads · Archived** with counts, Hot/Unread/Starred as secondary
+     chips, `inbox-section-priority` (score > 60, flame) pinned above the list, `inbox-section-review`
+     (score < 30 or flagged) below it, per-row move button and detail-pane lane badge + invite button
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.
@@ -159,8 +195,10 @@ must forbid deleting apps/users/pages.
 - **P2** Shareable before/after comparison link for prospects
 
 ## Testing
-- Reports: `/app/test_reports/iteration_27.json … iteration_36.json` (33–36 this session, all passing)
-- Backend suites: `/app/backend/tests/test_iter33_*.py`, `test_iter34_master_and_granular_locks.py`, iter35/36 design suites
+- Reports: `/app/test_reports/iteration_27.json … iteration_45.json` (43 = AI lead summary + booking follow-ups,
+  44 = three-way export system, 45 = lead classification — all green)
+- Backend suites: `test_iter43_ai_features.py`, `test_iter44_export_pkg.py`, `test_iter45_lead_classify.py`
+  (run with `pytest -n 0` and `REACT_APP_BACKEND_URL` set in the env)
 - Credentials: `/app/memory/test_credentials.md`
 
 ## Guardrails learned

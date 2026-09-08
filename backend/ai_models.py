@@ -90,7 +90,7 @@ async def build_lead_summary(db, app_id: str, days: int = 7) -> dict:
     app_doc = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "name": 1, "industry": 1}) or {}
     since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
     msgs = await db.messages.find({"app_id": app_id, "created_at": {"$gte": since},
-                                   "kind": {"$ne": "edit_request"}}, {"_id": 0}).sort("created_at", -1).to_list(80)
+                                   "kind": {"$ne": "edit_request"}, "lane": {"$ne": "test"}}, {"_id": 0}).sort("created_at", -1).to_list(80)
     sources: dict = {}
     for m in msgs:
         key = m.get("source") or m.get("channel") or ("chat" if m.get("session_id") else "form")

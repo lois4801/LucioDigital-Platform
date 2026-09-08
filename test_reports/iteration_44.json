@@ -1,0 +1,32 @@
+{
+  "summary": "Iter 44 — 3-way Export/Handoff system (website / fullstack / plugin). Backend suite /app/backend/tests/test_iter44_export_pkg.py: 9/10 pass (~103s per full run). All three exports complete end-to-end: website 92 files/53 MB, fullstack 62 files/55 MB, plugin 16 files/52 MB. Invalid kind → 400. Website ZIP contains site/index.html + per-slug HTMLs, site/styles.css, site/fonts.css with local assets/fonts/*.woff2 (verified), site/assets/* images/video, server/server.py FastAPI form server, cms/wordpress-import.xml, cms/webflow-pages.csv, content/pages.json and README.md; a hotlink audit of every HTML found NO remote media URLs other than those listed in job.skipped. Full-stack ZIP contains backend/server.py + seed.py (both compile with python -m py_compile), backend/schema.sql, backend/.env.example, backend/data/data.json (real pages/collections/submissions/members), frontend/src/{App,Site,Auth,Admin}.jsx, frontend/public/{styles.css,fonts.css,app.css}, docker-compose.yml and README.md. Plugin ZIP contains plugin.json with format=omnistack.plugin and pages/cms_collections/cms_items/workflows/site_users/submissions/theme, plus assets/*, manifest-summary.json, README.md. POST /api/site/import-plugin with the plugin ZIP restored a NEW tenant owned by the caller (verified pages, collections >= 1; TEST_iter44_plugin_restore); a non-plugin ZIP correctly returns 400. Frontend: dashboard exposes import-plugin-btn; Handoff tab renders export-system with export-{website,fullstack,plugin}-btn and export-progress-website appeared with a live pct after clicking; existing Handoff extras (Web Export source zip, Native Builds mocked, Live Preview Link, Embed, GitHub card, transfer toggle) all still render on Northwind Roofing. Overview/Inbox/Bookings navigation still works.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "POST /api/apps/{app_id}/site/import-zip (plugin path)", "issue": "restore_plugin only delete_many's pages/cms_collections/cms_items before insert_many, but not site_users, member_access, workflows, submissions or item_locks. Re-importing the same plugin ZIP into a tenant that already has any of those (including a tenant that was itself created by /site/import-plugin moments earlier) fails with pymongo.errors.BulkWriteError E11000 duplicate key error on site_users index app_id_1_email_1 (verified in backend logs). Route returns 500 Internal Server Error. Import-into-a-fresh-tenant works fine; only re-imports break.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "POST /api/apps/{id}/export/start", "issue": "restore_plugin/_load call insert_many on empty lists is guarded, but on non-empty lists any partial dup will fail the whole batch with no cleanup — pages/cms_collections/cms_items have already been wiped by then, leaving the tenant half-restored."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter44_export_pkg.py",
+    "/app/test_reports/pytest/iter44.xml"
+  ],
+  "action_items": [
+    "In export_pkg.restore_plugin, before the insert_many calls, add db.<coll>.delete_many({'app_id': app_id}) (or switch to upsert-per-row) for site_users, member_access, workflows, submissions and item_locks — mirror what is already done for pages/cms_collections/cms_items. This makes the 'restore plugin into an existing tenant' path (via /api/apps/{id}/site/import-zip) idempotent and unblocks HIGH-priority bug."
+  ],
+  "critical_code_review_comments": [
+    "export_pkg.restore_plugin is not idempotent for site_users / submissions / workflows / member_access / item_locks — see backend_issues.critical above.",
+    "restore_plugin does replace of app_upd with $set (not $unset for absent keys) so any field on the target that wasn't in the source manifest is preserved — usually fine, but 'preview_token' is skipped so the target keeps its old token. That looks intentional; call it out in the README if not.",
+    "export_pkg.Bundler.resolve — a resolve returning None is added to skipped and later hoisted into job.skipped[:25]; for a 51 MB Pexels-heavy tenant the truncation to 25 items may hide a longer skipped list — consider bumping to 100 or making the file-count visible."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter44_export_pkg.py"],
+  "success_rate": {"backend": "90% (9/10 tests pass; 1 real backend bug — plugin restore into existing tenant)", "frontend": "100% (export UI, three buttons, progress card, dashboard import-plugin-btn all wired and rendering)"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026! — cookie session via requests.Session as in prior iterations",
+  "seed_data_creation": "Created throwaway tenant 'TEST_iter44_plugin_restore' owned by the platform owner via /api/site/import-plugin (~4 pages, 10 collections, plugin's members restored). NOT deleted per no-delete instruction.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 44 backend tests live at /app/backend/tests/test_iter44_export_pkg.py — run with `pytest -n 0` (module-scoped in-memory _cache dict shares built ZIPs across tests in the file). Each export takes 60–90s so a full run of the file is ~100–110s. After the main agent adds delete_many for site_users/submissions/workflows/member_access/item_locks in restore_plugin, only TestPluginImport::test_import_zip_route_detects_plugin needs to be re-run. Frontend UI is fully wired and tested — main agent doesn't need to retest it. Keep in mind previously restored tenants (TEST_iter44_plugin_restore, app_b61ee44668e4 'Plugin Restore Test') already exist in the DB — don't delete.",
+  "rca of the issue": "restore_plugin in /app/backend/export_pkg.py deletes only pages/cms_collections/cms_items before bulk-loading manifest data. It then calls insert_many on site_users which has a compound unique index {app_id: 1, email: 1}. On any re-import into a tenant that has ever had site_users for the source app's emails, the batch fails with E11000. Fix: add `await db.<coll>.delete_many({'app_id': app_id})` for site_users, member_access, workflows, submissions and item_locks immediately before their _load calls (lines ~592-596), OR change _load to iterate with update_one({...unique-key..}, {$set: r}, upsert=True) when id_field is None."
+}

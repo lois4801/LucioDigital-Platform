@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame, Clock, Send } from "lucide-react";
+import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame, Clock, Send, FlaskConical, ArrowLeftRight, CalendarPlus } from "lucide-react";
 import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 import { LeadReply } from "@/components/LeadReply";
 import LeadSummaryCard from "@/components/LeadSummaryCard";
 
-const FILTERS = [["all", "Inbox"], ["hot", "Hot leads"], ["unread", "Unread"], ["starred", "Starred"], ["archived", "Archived"]];
+const TABS = [["real", "Real Leads"], ["test", "Test Leads"], ["archived", "Archived"]];
+const CHIPS = [["all", "All"], ["hot", "Hot"], ["unread", "Unread"], ["starred", "Starred"]];
 const ScoreBadge = ({ m }) => m.score == null ? <span className="chip" style={{ padding: "1px 6px" }} title="Scoring…">…</span>
   : <span data-testid="lead-score" title={m.score_reason || ""} className={`chip ${m.hot ? "chip-active badge-glow" : m.score >= 40 ? "chip-maint" : ""}`} style={{ padding: "1px 6px" }}>{m.hot ? "🔥 " : ""}{m.score}</span>;
 
@@ -16,7 +17,10 @@ export default function InboxPanel({ appId }) {
   const [hot, setHot] = useState(0);
   const [scoring, setScoring] = useState(false);
   async function scoreAll() { setScoring(true); try { const { data } = await api.post(`/apps/${appId}/inbox/score`, {}, { timeout: 180000 }); toast.success(`Scored ${data.scored} leads`); load(); } catch { toast.error("Scoring failed"); } finally { setScoring(false); } }
+  const [tab, setTab] = useState("real");
   const [filter, setFilter] = useState("all");
+  const [counts, setCounts] = useState({ real: 0, test: 0, archived: 0, review: 0, priority: 0 });
+  const [laneBusy, setLaneBusy] = useState(false);
   const [sel, setSel] = useState(null);
   const [fu, setFu] = useState({ enabled: false, hours: 48, pending_drafts: 0 });
   const [fuBusy, setFuBusy] = useState(false);
@@ -50,24 +54,93 @@ export default function InboxPanel({ appId }) {
   }
 
   useEffect(() => { load(); }, [appId]);
-  async function load() { try { const { data } = await api.get(`/apps/${appId}/inbox`); setMsgs(data.messages); setUnread(data.unread); setHot(data.hot || 0); } catch { toast.error("Failed to load inbox"); } }
+  async function load() { try { const { data } = await api.get(`/apps/${appId}/inbox`); setMsgs(data.messages); setUnread(data.unread); setHot(data.hot || 0); setCounts(data.counts || counts); } catch { toast.error("Failed to load inbox"); } }
+  async function setLane(m, lane) {
+    setLaneBusy(true);
+    try {
+      const { data } = await api.patch(`/apps/${appId}/inbox/${m.message_id}/lane`, { lane });
+      setMsgs(ms => ms.map(x => x.message_id === data.message_id ? data : x));
+      if (sel?.message_id === data.message_id) setSel(data);
+      toast.success(lane === "test" ? "Moved to Test Leads" : "Moved to Real Leads");
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not move that lead"); }
+    finally { setLaneBusy(false); }
+  }
+  async function bookingInvite(m) {
+    setLaneBusy(true);
+    try {
+      const { data } = await api.post(`/apps/${appId}/inbox/${m.message_id}/booking-invite`);
+      absorb(data.message);
+      toast.success(`Booking invite sent to ${data.invite.to}${data.invite.copies?.length ? ` (copied to ${data.invite.copies.join(", ")})` : ""}`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not send the invite"); }
+    finally { setLaneBusy(false); }
+  }
   async function patch(m, body) { const { data } = await api.patch(`/apps/${appId}/inbox/${m.message_id}`, body); setMsgs(ms => { const next = ms.map(x => x.message_id === m.message_id ? data : x); setUnread(next.filter(x => x.status === "unread").length); return next; }); if (sel?.message_id === m.message_id) setSel(data); }
   function open(m) { setSel(m); if (m.status === "unread") patch(m, { status: "read" }); }
   async function del(m) { if (!confirm("Delete this message?")) return; await api.delete(`/apps/${appId}/inbox/${m.message_id}`); setMsgs(ms => ms.filter(x => x.message_id !== m.message_id)); if (sel?.message_id === m.message_id) setSel(null); }
-  const list = msgs.filter(m => filter === "all" ? m.status !== "archived" : filter === "hot" ? m.hot && m.status !== "archived" : filter === "unread" ? m.status === "unread" : filter === "starred" ? m.starred : m.status === "archived");
+  const inTab = msgs.filter(m => tab === "archived" ? m.status === "archived"
+    : m.status !== "archived" && (m.lane || "real") === tab);
+  const chipped = inTab.filter(m => filter === "all" ? true : filter === "hot" ? m.hot : filter === "unread" ? m.status === "unread" : m.starred);
+  const priority = tab === "real" ? chipped.filter(m => (m.score ?? 0) > 60) : [];
+  const review = tab === "real" ? chipped.filter(m => (m.score != null && m.score < 30) || m.review) : [];
+  const reviewIds = new Set(review.map(m => m.message_id));
+  const normal = chipped.filter(m => !reviewIds.has(m.message_id) && !(tab === "real" && (m.score ?? 0) > 60));
   const unscored = msgs.filter(m => m.score == null).length;
+
+  const Row = ({ m }) => (
+    <div key={m.message_id} data-testid={`inbox-row-${m.source}`} onClick={() => open(m)} className={`px-4 py-3 cursor-pointer hover:bg-white/3 ${sel?.message_id === m.message_id ? "bg-[var(--acc)]/8" : ""}`}>
+      <div className="flex items-center gap-2">
+        {m.source === "chat" ? <MessageSquare size={13} className="text-[var(--cyan)]" /> : <Mail size={13} className="text-[var(--acc)]" />}
+        <span className={`text-sm flex-1 truncate ${m.status === "unread" ? "font-bold text-white" : "text-[var(--mut)]"}`}>{m.from_name || m.from_email || "Visitor"}</span>
+        {(m.score ?? 0) > 60 && <Flame size={12} className="text-[var(--acc)]" data-testid="lead-priority-flame" />}
+        <ScoreBadge m={m} />
+        {m.lane === "test" && <span data-testid="lead-test-badge" className="chip text-[9px]" style={{ padding: "1px 5px" }} title={(m.lane_reasons || []).join(" · ")}>TEST</span>}
+        {m.edit_request?.state === "pending" && <span data-testid="edit-request-badge" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Edit request">EDIT</span>}
+        {m.followup?.status === "draft" && <span data-testid="followup-badge-draft" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up draft ready"><Clock size={9} /></span>}
+        {m.followup?.status === "sent" && <span data-testid="followup-badge-sent" className="chip text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up sent"><Send size={9} /></span>}
+        <span className="text-[10px] font-mono text-[var(--dim)]">{new Date(m.updated_at).toLocaleDateString()}</span>
+        <button data-testid={`lead-move-${m.lane === "test" ? "real" : "test"}-row`} title={m.lane === "test" ? "Move to Real Leads" : "Move to Test Leads"}
+          onClick={e => { e.stopPropagation(); setLane(m, m.lane === "test" ? "real" : "test"); }}
+          className="text-[var(--dim)] hover:text-[var(--acc)]"><ArrowLeftRight size={12} /></button>
+        <button onClick={e => { e.stopPropagation(); patch(m, { starred: !m.starred }); }} className={m.starred ? "text-amber-400" : "text-[var(--dim)] hover:text-amber-400"}><Star size={12} fill={m.starred ? "currentColor" : "none"} /></button>
+      </div>
+      <div className={`text-xs mt-0.5 truncate ${m.status === "unread" ? "text-[var(--fg)]" : "text-[var(--mut)]"}`}>{m.subject}</div>
+      <div className="text-[11px] text-[var(--dim)] mt-0.5 truncate flex items-center gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="truncate">{m.body}</span></div>
+    </div>
+  );
 
   return (
     <div data-testid="inbox-panel" className="space-y-4">
     <LeadSummaryCard appId={appId} />
+    <div data-testid="inbox-tabs" className="card-surface p-2 flex flex-wrap items-center gap-2">
+      {TABS.map(([k, label]) => (
+        <button key={k} data-testid={`inbox-tab-${k}`} onClick={() => { setTab(k); setSel(null); }}
+          className={`px-4 py-2 rounded-full text-sm flex items-center gap-2 transition-colors ${tab === k ? "bg-[var(--acc)] text-black font-semibold" : "text-[var(--mut)] hover:bg-white/5"}`}>
+          {k === "real" ? <Inbox size={13} /> : k === "test" ? <FlaskConical size={13} /> : <Archive size={13} />}
+          {label}
+          <span className={`text-[10px] font-mono ${tab === k ? "opacity-70" : "opacity-60"}`}>{counts[k] ?? 0}</span>
+        </button>
+      ))}
+      <div className="flex-1" />
+      {CHIPS.map(([k, label]) => (
+        <button key={k} data-testid={`inbox-filter-${k}`} onClick={() => setFilter(k)}
+          className={`chip cursor-pointer ${filter === k ? "chip-active" : ""}`}>{label}{k === "unread" && unread > 0 ? ` ${unread}` : ""}{k === "hot" && hot > 0 ? ` ${hot}` : ""}</button>
+      ))}
+    </div>
     <div className="grid lg:grid-cols-[200px_360px_1fr] gap-4 min-h-[560px]">
       <aside className="card-surface p-2 space-y-0.5">
-        {FILTERS.map(([k, l]) => <button key={k} data-testid={`inbox-filter-${k}`} onClick={() => setFilter(k)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm ${filter === k ? "bg-[var(--acc)]/10 text-[var(--acc)]" : "text-[var(--mut)] hover:bg-white/5"}`}>
-          <span className="flex items-center gap-2">{k === "all" ? <Inbox size={14} /> : k === "hot" ? <Flame size={14} /> : k === "starred" ? <Star size={14} /> : k === "archived" ? <Archive size={14} /> : <Mail size={14} />} {l}</span>
-          {k === "unread" && unread > 0 && <span data-testid="inbox-unread-count" className="text-[10px] font-mono bg-[var(--acc)] text-black rounded-full px-1.5">{unread}</span>}
-          {k === "hot" && hot > 0 && <span data-testid="inbox-hot-count" className="text-[10px] font-mono bg-[var(--acc)] text-black rounded-full px-1.5">{hot}</span>}
-        </button>)}
+        <div className="px-3 py-2 text-[11px] text-[var(--mut)] leading-relaxed">
+          Leads are auto-sorted: anything that looks like a QA, demo or disposable-email submission lands in
+          <strong className="text-[var(--fg)]"> Test Leads</strong>. Everything else is a real person.
+        </div>
+        <div className="px-3 pb-2 space-y-1 text-[10px] font-mono text-[var(--dim)]">
+          <div data-testid="inbox-count-priority">{counts.priority || 0} priority (score &gt; 60)</div>
+          <div data-testid="inbox-count-review">{counts.review || 0} in review (score &lt; 30)</div>
+          <div>{counts.test || 0} test · {counts.archived || 0} archived</div>
+        </div>
         <button data-testid="inbox-score-btn" onClick={scoreAll} disabled={scoring || unscored === 0} className="mt-2 w-full btn-ghost text-xs !py-1.5 flex items-center justify-center gap-1 disabled:opacity-40">{scoring ? <Loader2 size={11} className="animate-spin" /> : <Flame size={11} />} {unscored ? `Score ${unscored} leads` : "All leads scored"}</button>
+        <button data-testid="inbox-reclassify-btn" onClick={async () => { try { const { data } = await api.post(`/apps/${appId}/inbox/classify?rerun=true`); toast.success(`Re-sorted: ${data.real} real · ${data.test} test`); load(); } catch { toast.error("Could not re-sort"); } }}
+          className="mt-1 w-full btn-ghost text-xs !py-1.5">Re-sort real vs test</button>
         <div className="px-3 pt-4 text-[10px] text-[var(--dim)] leading-relaxed">Leads are scored 0–100 by AI on intent, budget and urgency; hottest first.</div>
         <div className="mt-3 border-t border-[var(--line)] pt-3 px-3">
           <label className="flex items-start gap-2 text-[11px] cursor-pointer">
@@ -79,23 +152,16 @@ export default function InboxPanel({ appId }) {
       </aside>
 
       <div className="card-surface divide-y divide-[var(--line)] overflow-y-auto max-h-[70vh] scrollbar-thin">
-        {list.length === 0 && <div className="p-10 text-center text-sm text-[var(--mut)]">Nothing here yet.</div>}
-        {list.map(m => (
-          <div key={m.message_id} data-testid={`inbox-row-${m.source}`} onClick={() => open(m)} className={`px-4 py-3 cursor-pointer hover:bg-white/3 ${sel?.message_id === m.message_id ? "bg-[var(--acc)]/8" : ""}`}>
-            <div className="flex items-center gap-2">
-              {m.source === "chat" ? <MessageSquare size={13} className="text-[var(--cyan)]" /> : <Mail size={13} className="text-[var(--acc)]" />}
-              <span className={`text-sm flex-1 truncate ${m.status === "unread" ? "font-bold text-white" : "text-[var(--mut)]"}`}>{m.from_name || m.from_email || "Visitor"}</span>
-              <ScoreBadge m={m} />
-              {m.edit_request?.state === "pending" && <span data-testid="edit-request-badge" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Edit request">EDIT</span>}
-              {m.followup?.status === "draft" && <span data-testid="followup-badge-draft" className="chip chip-active text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up draft ready"><Clock size={9} /></span>}
-              {m.followup?.status === "sent" && <span data-testid="followup-badge-sent" className="chip text-[9px]" style={{ padding: "1px 5px" }} title="Follow-up sent"><Send size={9} /></span>}
-              <span className="text-[10px] font-mono text-[var(--dim)]">{new Date(m.updated_at).toLocaleDateString()}</span>
-              <button onClick={e => { e.stopPropagation(); patch(m, { starred: !m.starred }); }} className={m.starred ? "text-amber-400" : "text-[var(--dim)] hover:text-amber-400"}><Star size={12} fill={m.starred ? "currentColor" : "none"} /></button>
-            </div>
-            <div className={`text-xs mt-0.5 truncate ${m.status === "unread" ? "text-[var(--fg)]" : "text-[var(--mut)]"}`}>{m.subject}</div>
-            <div className="text-[11px] text-[var(--dim)] mt-0.5 truncate flex items-center gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="truncate">{m.body}</span></div>
-          </div>
-        ))}
+        {chipped.length === 0 && <div className="p-10 text-center text-sm text-[var(--mut)]">Nothing here yet.</div>}
+        {priority.length > 0 && (
+          <div data-testid="inbox-section-priority" className="px-4 py-2 text-[10px] font-mono uppercase tracking-wider text-[var(--acc)] flex items-center gap-1.5 bg-[var(--acc)]/5"><Flame size={11} /> priority · score above 60</div>
+        )}
+        {priority.map(m => <Row key={m.message_id} m={m} />)}
+        {normal.map(m => <Row key={m.message_id} m={m} />)}
+        {review.length > 0 && (
+          <div data-testid="inbox-section-review" className="px-4 py-2 text-[10px] font-mono uppercase tracking-wider text-amber-300 bg-amber-500/5">review · score under 30, may be suspicious</div>
+        )}
+        {review.map(m => <Row key={m.message_id} m={m} />)}
       </div>
 
       <div className="card-surface p-6 flex flex-col">
@@ -104,8 +170,26 @@ export default function InboxPanel({ appId }) {
             <div className="flex items-start justify-between gap-3">
               <div><div className="font-display text-xl font-semibold">{sel.subject}</div>
                 <div className="text-xs text-[var(--mut)] mt-1 font-mono">{sel.from_name} {sel.from_email && `· ${sel.from_email}`} · via {sel.source} · {new Date(sel.created_at).toLocaleString()}</div>
-                {sel.score != null && <div data-testid="lead-score-detail" className="mt-2 flex items-center gap-2 text-xs"><ScoreBadge m={sel} /><span className="text-[var(--mut)]">{sel.intent && <span className="font-mono uppercase text-[10px] mr-2">{sel.intent}</span>}{sel.score_reason}</span></div>}</div>
+                {sel.score != null && <div data-testid="lead-score-detail" className="mt-2 flex items-center gap-2 text-xs"><ScoreBadge m={sel} /><span className="text-[var(--mut)]">{sel.intent && <span className="font-mono uppercase text-[10px] mr-2">{sel.intent}</span>}{sel.score_reason}</span></div>}
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px]">
+                  <span data-testid="lead-lane-badge" className={`chip ${sel.lane === "test" ? "chip-maint" : "chip-active"}`}>{sel.lane === "test" ? "Test lead" : "Real lead"}{sel.lane_manual ? " · manual" : ""}</span>
+                  {(sel.lane_reasons || []).map((r, i) => <span key={i} className="text-[var(--dim)]">{r}</span>)}
+                  {sel.lane !== "test" && (sel.review_reasons || []).map((r, i) => <span key={`v${i}`} className="text-amber-300/80">{r}</span>)}
+                  {sel.booking_invite && <span data-testid="lead-invite-sent" className="chip">invite sent {new Date(sel.booking_invite.sent_at).toLocaleDateString()}</span>}
+                </div></div>
               <div className="flex gap-1">
+                <button data-testid="lead-move-lane-btn" title={sel.lane === "test" ? "Move to Real Leads" : "Move to Test Leads"} disabled={laneBusy}
+                  onClick={() => setLane(sel, sel.lane === "test" ? "real" : "test")}
+                  className="h-8 px-3 rounded-full border border-[var(--line)] flex items-center gap-1.5 text-[11px] hover:bg-white/5 disabled:opacity-50">
+                  <ArrowLeftRight size={12} /> {sel.lane === "test" ? "Real" : "Test"}
+                </button>
+                {sel.lane !== "test" && sel.from_email && (
+                  <button data-testid="lead-booking-invite-btn" title="Email this lead a booking invite" disabled={laneBusy}
+                    onClick={() => bookingInvite(sel)}
+                    className="h-8 px-3 rounded-full border border-[var(--acc)]/40 text-[var(--acc)] flex items-center gap-1.5 text-[11px] hover:bg-[var(--acc)]/10 disabled:opacity-50">
+                    <CalendarPlus size={12} /> {sel.booking_invite ? "Invite again" : "Booking invite"}
+                  </button>
+                )}
                 <button data-testid="inbox-mark-unread-btn" title="Mark unread" onClick={() => patch(sel, { status: "unread" })} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5"><RotateCcw size={13} /></button>
                 <button data-testid="inbox-archive-btn" title={sel.status === "archived" ? "Unarchive" : "Archive"} onClick={() => patch(sel, { status: sel.status === "archived" ? "read" : "archived" })} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">{sel.status === "archived" ? <CheckCheck size={13} /> : <Archive size={13} />}</button>
                 <button data-testid="inbox-delete-btn" onClick={() => del(sel)} className="w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:text-red-400 hover:border-red-500/40"><Trash2 size={13} /></button>

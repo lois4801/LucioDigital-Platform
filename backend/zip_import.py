@@ -157,6 +157,20 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         raw = await file.read()
         quota = await _quota(app_doc)
         job_id = _uid("job")
+        plugin_hooks = globals().get("PLUGIN")
+        if plugin_hooks:
+            manifest, zf = plugin_hooks["read_manifest"](raw)
+            if manifest:
+                counts = await plugin_hooks["restore_plugin"](manifest, zf, app_id, user["user_id"])
+                await log_activity(app_id, user["user_id"], "import.plugin",
+                                   f"Restored a plugin package into this project ({counts.get('pages', 0)} pages)")
+                await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": file.filename,
+                                                 "kind": "plugin", "status": "done", "stage": "done",
+                                                 "stage_detail": "Plugin package restored", "created_at": _now(),
+                                                 "finished_at": _now(),
+                                                 "result": {"plugin": True, "restored": counts}})
+                return {"job_id": job_id, "status": "done", "plugin": True, "restored": counts,
+                        "filename": file.filename}
         await db.import_jobs.insert_one({"job_id": job_id, "app_id": app_id, "url": file.filename, "kind": "zip",
                                          "status": "running", "stage": "queued", "stage_detail": "Unpacking the ZIP",
                                          "created_at": _now()})

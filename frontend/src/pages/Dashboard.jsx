@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [zipFile, setZipFile] = useState(null);
   const [lockStates, setLockStates] = useState({});
   const [upBusy, setUpBusy] = useState(false);
+  const [pluginBusy, setPluginBusy] = useState(false);
   const legacyCount = apps.filter(a => !a.theme?.design_v2).length;
   async function bulkUpgrade() {
     if (!window.confirm(`Upgrade ${legacyCount} site(s) to the current design standard? Copy and images stay exactly as they are, and each site keeps an undo point in History.`)) return;
@@ -132,6 +133,23 @@ export default function Dashboard() {
               className="chip chip-maint cursor-pointer hover:!text-white disabled:opacity-50">{upBusy ? "Upgrading…" : `Upgrade ${legacyCount} legacy site${legacyCount === 1 ? "" : "s"}`}</button>}
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
+            <label data-testid="import-plugin-btn" className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex cursor-pointer">
+              {pluginBusy ? "Restoring…" : "Import plugin package"}
+              <input type="file" accept=".zip" className="hidden" disabled={pluginBusy}
+                onChange={async (e) => {
+                  const f = e.target.files?.[0]; e.target.value = "";
+                  if (!f) return;
+                  setPluginBusy(true);
+                  try {
+                    const fd = new FormData(); fd.append("file", f);
+                    const { data } = await api.post("/site/import-plugin", fd, { headers: { "Content-Type": "multipart/form-data" }, timeout: 600000 });
+                    toast.success(`Restored "${data.app.name}" — ${data.restored.pages} page(s)`);
+                    setApps((a) => [data.app, ...a]);
+                    nav(`/apps/${data.app.app_id}`);
+                  } catch (err) { toast.error(err.response?.data?.detail || "Could not restore that plugin package"); }
+                  finally { setPluginBusy(false); }
+                }} />
+            </label>
             <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
             <CursorFXPicker />
             <DropdownMenu>

@@ -61,6 +61,14 @@ class AutoSyncIn(BaseModel):
     enabled: bool
 
 
+class LaneIn(BaseModel):
+    lane: str
+
+
+AGENCY_COPY_EMAILS = [e.strip() for e in os.environ.get(
+    "AGENCY_COPY_EMAILS", "JLBUSINESS2020@gmail.com,jaybernabe@luciodigital.com").split(",") if e.strip()]
+
+
 EMBED_JS = """(function(){var s=document.currentScript;var t=s.getAttribute('data-token');var o=s.getAttribute('data-origin')||new URL(s.src).origin;
 var f=document.createElement('iframe');f.src=o+'/embed/chat/'+t;f.title='Chat';f.setAttribute('allow','microphone; autoplay');
 f.style.cssText='position:fixed;right:0;bottom:0;width:420px;height:640px;max-width:100vw;max-height:100vh;border:0;background:transparent;z-index:2147483000;color-scheme:normal';
@@ -71,10 +79,15 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     wf = wf or {}
 
     # ===== LEADS / INBOX =====
-    async def _new_message(app_id: str, source: str, name: str, email: str, subject: str, body: str, session_id: str = None):
+    async def _new_message(app_id: str, source: str, name: str, email: str, subject: str, body: str, session_id: str = None, meta: dict = None):
+        from lead_class import classify
+        cls = classify(name, email, body, subject, source, meta)
         doc = {"message_id": uid("msg"), "app_id": app_id, "source": source, "from_name": name, "from_email": email,
                "subject": subject, "body": body, "status": "unread", "starred": False, "replies": [],
-               "session_id": session_id, "score": None, "score_reason": None, "hot": False, "created_at": now_iso(), "updated_at": now_iso()}
+               "session_id": session_id, "score": None, "score_reason": None, "hot": False,
+               "lane": cls["lane"], "lane_reasons": cls["reasons"], "lane_manual": False,
+               "review": cls.get("review", False), "review_reasons": cls.get("review_reasons", []),
+               "created_at": now_iso(), "updated_at": now_iso()}
         await db.messages.insert_one(dict(doc))
         await log_activity(app_id, "public", "lead.new", f"New {source} lead from {name or email}", "info")
         asyncio.create_task(score_message(doc["message_id"]))
@@ -175,19 +188,107 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         for m in msgs:
             m["app_name"] = names.get(m["app_id"], {}).get("name")
             m["app_color"] = names.get(m["app_id"], {}).get("color")
-        unread = await db.messages.count_documents({"app_id": {"$in": list(names)}, "status": "unread"})
+        unread = await db.messages.count_documents({"app_id": {"$in": list(names)}, "status": "unread",
+                                                    "lane": {"$ne": "test"}})
         return {"messages": msgs, "unread": unread}
 
-    @api.get("/apps/{app_id}/inbox")
-    async def app_inbox(app_id: str, status: Optional[str] = None, user: dict = Depends(get_current_user)):
+    async def _classify_pending(app_id: str) -> int:
+        """Backfills lane/review on any lead that has never been classified (all tenants, lazily)."""
+        from lead_class import classify
+        rows = await db.messages.find({"app_id": app_id, "lane": {"$exists": False}}, {"_id": 0}).to_list(500)
+        for m in rows:
+            cls = classify(m.get("from_name"), m.get("from_email"), m.get("body"), m.get("subject"),
+                           m.get("source"), m.get("meta"))
+            await db.messages.update_one({"message_id": m["message_id"]}, {"$set": {
+                "lane": cls["lane"], "lane_reasons": cls["reasons"], "lane_manual": False,
+                "review": cls.get("review", False), "review_reasons": cls.get("review_reasons", [])}})
+        return len(rows)
+
+    @api.post("/apps/{app_id}/inbox/classify")
+    async def classify_inbox(app_id: str, rerun: bool = False, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
+        if rerun:
+            await db.messages.update_many({"app_id": app_id, "lane_manual": {"$ne": True}},
+                                          {"$unset": {"lane": "", "review": ""}})
+        moved = await _classify_pending(app_id)
+        return {"classified": moved,
+                "real": await db.messages.count_documents({"app_id": app_id, "lane": "real"}),
+                "test": await db.messages.count_documents({"app_id": app_id, "lane": "test"})}
+
+    @api.patch("/apps/{app_id}/inbox/{message_id}/lane")
+    async def set_lane(app_id: str, message_id: str, body: LaneIn, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        if body.lane not in ("real", "test"):
+            raise HTTPException(400, "lane must be 'real' or 'test'")
+        msg = await db.messages.find_one({"app_id": app_id, "message_id": message_id}, {"_id": 0})
+        if not msg:
+            raise HTTPException(404, "Message not found")
+        await db.messages.update_one({"message_id": message_id}, {"$set": {
+            "lane": body.lane, "lane_manual": True,
+            "lane_reasons": [f"moved to {body.lane} by {user.get('name') or user['email']}"],
+            "updated_at": now_iso()}})
+        await log_activity(app_id, user["user_id"], "lead.lane",
+                           f"{msg.get('from_name') or msg.get('from_email') or 'Lead'} moved to {body.lane} leads")
+        return await db.messages.find_one({"message_id": message_id}, {"_id": 0})
+
+    @api.post("/apps/{app_id}/inbox/{message_id}/booking-invite")
+    async def booking_invite(app_id: str, message_id: str, user: dict = Depends(get_current_user)):
+        """Emails a real lead an invitation to book, and copies the agency's own addresses."""
+        app_doc = await get_user_app(app_id, user)
+        msg = await db.messages.find_one({"app_id": app_id, "message_id": message_id}, {"_id": 0})
+        if not msg:
+            raise HTTPException(404, "Message not found")
+        if not msg.get("from_email"):
+            raise HTTPException(400, "This lead has no email address")
+        if msg.get("lane") == "test":
+            raise HTTPException(400, "That lead is in the Test tab — move it to Real Leads first")
+        link = f"{FRONTEND_URL}/p/{app_doc.get('preview_token')}#contact" if app_doc.get("preview_token") else FRONTEND_URL
+        body = (f"Hi {msg.get('from_name') or 'there'},\n\nThanks for getting in touch with {app_doc.get('name')}. "
+                f"Pick a time that suits you and we'll take it from there:\n\n{link}\n\n"
+                f"If none of the slots work, just reply to this email.\n\n{app_doc.get('name')}")
+        subject = f"Book a time with {app_doc.get('name')}"
+        sent_to, copies = None, []
+        if wf.get("send_email"):
+            try:
+                await wf["send_email"](msg["from_email"], subject, body)
+                sent_to = msg["from_email"]
+                for addr in AGENCY_COPY_EMAILS:
+                    await wf["send_email"](addr, f"[copy] {subject} — {msg.get('from_name') or msg['from_email']}", body)
+                    copies.append(addr)
+            except Exception:
+                logger.exception("booking invite email failed")
+                raise HTTPException(502, "Could not send the invitation just now")
+        invite = {"sent_at": now_iso(), "to": sent_to, "copies": copies, "link": link,
+                  "by": user.get("name") or user["email"]}
+        await db.messages.update_one({"message_id": message_id},
+                                     {"$set": {"booking_invite": invite, "status": "read", "updated_at": now_iso()}})
+        await log_activity(app_id, user["user_id"], "lead.booking_invite",
+                           f"Booking invite sent to {msg.get('from_name') or msg['from_email']}")
+        return {"invite": invite, "message": await db.messages.find_one({"message_id": message_id}, {"_id": 0})}
+
+    @api.get("/apps/{app_id}/inbox")
+    async def app_inbox(app_id: str, status: Optional[str] = None, lane: Optional[str] = None,
+                        user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        await _classify_pending(app_id)
         q = {"app_id": app_id}
         if status:
             q["status"] = status
-        msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(200).to_list(200)
-        unread = await db.messages.count_documents({"app_id": app_id, "status": "unread"})
-        hot = await db.messages.count_documents({"app_id": app_id, "hot": True, "status": {"$ne": "archived"}})
-        return {"messages": msgs, "unread": unread, "hot": hot}
+        if lane in ("real", "test"):
+            q["lane"] = lane
+        msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(300).to_list(300)
+        live = {"status": {"$ne": "archived"}}
+        counts = {
+            "real": await db.messages.count_documents({"app_id": app_id, "lane": "real", **live}),
+            "test": await db.messages.count_documents({"app_id": app_id, "lane": "test", **live}),
+            "archived": await db.messages.count_documents({"app_id": app_id, "status": "archived"}),
+            "review": await db.messages.count_documents({"app_id": app_id, "lane": "real",
+                                                         "$or": [{"score": {"$lt": 30}}, {"review": True}], **live}),
+            "priority": await db.messages.count_documents({"app_id": app_id, "lane": "real", "score": {"$gt": 60}, **live}),
+        }
+        unread = await db.messages.count_documents({"app_id": app_id, "status": "unread", "lane": {"$ne": "test"}})
+        hot = await db.messages.count_documents({"app_id": app_id, "hot": True, "lane": {"$ne": "test"}, **live})
+        return {"messages": msgs, "unread": unread, "hot": hot, "counts": counts}
 
     @api.patch("/apps/{app_id}/inbox/{message_id}")
     async def patch_message(app_id: str, message_id: str, body: InboxPatch, user: dict = Depends(get_current_user)):

@@ -1023,6 +1023,10 @@ from zip_import import register as register_zip_import
 import zip_import as _zip_import
 _zip_import.require_ai_access = GROWTH["require_ai_access"]
 register_zip_import(api, db, get_current_user, get_user_app, log_activity)
+from export_pkg import register as register_export_pkg
+EXPORT = register_export_pkg(api, db, get_current_user, get_user_app, log_activity,
+                             WF_HOOKS["send_email"], CMS_HOOKS["public_collections"], DEFAULT_THEME)
+_zip_import.PLUGIN = EXPORT
 from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin

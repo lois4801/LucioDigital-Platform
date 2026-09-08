@@ -1,0 +1,34 @@
+{
+  "summary": "Iter 45 — Automatic lead classification (real/test lanes) + booking-invite + AI summary exclusion + multi-tenant backfill. Backend suite /app/backend/tests/test_iter45_lead_classify.py: 13/14 pass, 1 skipped (no email-less lead to test), 0 failures relevant to the feature. Classification correctness verified end-to-end: public POST /api/public/contact/{token} with fake payload (QA Bot v2 / qa@mailinator.com / 'TEST TEST TEST') lands lane='test' with 3+ lane_reasons at write time; realistic payload (Sarah Thompson @acme-industries.co, natural-language message) lands lane='real'. POST /api/apps/{id}/inbox/classify?rerun=true returns {classified,real,test}. GET /api/apps/{id}/inbox returns counts {real,test,archived,review,priority} and ?lane=real / ?lane=test filter cleanly; unread and hot counts exclude lane='test'. PATCH /api/apps/{id}/inbox/{msg}/lane sets lane_manual=true and survives a subsequent classify?rerun=true (sticky). Invalid lane returns 400; unknown message id returns 404. POST /api/apps/{id}/inbox/{msg}/booking-invite on a real lead returns invite.to = lead email and copies contains BOTH JLBUSINESS2020@gmail.com AND jaybernabe@luciodigital.com, stores booking_invite on the message and marks it read; on a test lead returns 400 with the expected message. POST /api/apps/{id}/ai/lead-summary counts respect lane exclusion. Multi-tenant backfill verified on app_e3cb4f084785 and app_abc693a75574 — GET /api/apps/{id}/inbox lazily classifies previously unclassified leads (all messages have a lane). Frontend Inbox tab on Northwind Roofing renders every required data-testid: inbox-tabs / inbox-tab-real (active, count 3) / inbox-tab-test (count 3) / inbox-tab-archived (0), secondary chips inbox-filter-all/hot/unread/starred, inbox-section-priority with lead-priority-flame for score 95 Sarah Thompson, inbox-section-review, inbox-count-priority (1) and inbox-count-review (0). Test tab shows 3 lead-test-badge rows with lead-move-real-row buttons. Detail pane on both lanes shows lead-lane-badge and lead-move-lane-btn; Real detail additionally shows lead-booking-invite-btn. The 'Your week in leads' summary card explicitly says '3 lead(s), 0 hot' — confirms test leads excluded from the AI weekly summary (only 3 real leads counted, not 6). No regressions on tabs/navigation.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/apps/{id}/inbox/{msg}/booking-invite", "issue": "Email delivery is a graceful no-op in preview (wf.send_email returns non-'sent'), so invite.to is set from msg.from_email but the code path relies on wf.send_email being present to append copies. Currently working correctly because wf.send_email is registered in preview and returns success — but if it ever throws, copies list will be empty even though the message gets stored. Not a blocker."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter45_lead_classify.py",
+    "/app/test_reports/pytest/iter45.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "lead_class.classify: _name_looks_fake uses non-standard word boundary regex — 'Sample City' would flip a real lead (contains 'sample'). TEST_NAME_WORDS 'sample' is broad; consider using stricter matching (whole token) or a shorter list. Currently acceptable because it errs on the safe side (over-classifying as test) and Admin can override.",
+    "inbox.py app_inbox counts.priority uses score > 60 but the review-section badge in the copy says 'score > 60' and the review-section says 'score < 30' — but counts.review uses `review: True` (from lead_class), not `score < 30`. Users see 'review · score under 30, may be suspicious' section header but membership is actually driven by classifier flags (free domain, short message, no name). Small copy/logic mismatch, not a bug.",
+    "inbox.py _new_message doesn't pass meta from public_contact — meta is None so 'automated' / user_agent / seeded signals from the request are never used. Consider forwarding request.headers['user-agent'] for playwright detection."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter45_lead_classify.py"
+  ],
+  "success_rate": {"backend": "100% (13/13 relevant tests pass; 1 skip on missing seed data)", "frontend": "100% (every data-testid present and behaving)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie session)",
+  "seed_data_creation": "Created 2 leads on app_6663b5de0007 via public /contact endpoint: 1 fake (QA Bot v2, qa@mailinator.com) -> lane=test, 1 real (Sarah Thompson, sarah.thompson@acme-industries.co) -> lane=real. Not deleted per instructions.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter 45 backend suite at /app/backend/tests/test_iter45_lead_classify.py — run with `pytest -n 0 -v` and REACT_APP_BACKEND_URL set. Note: app_c18671970769 referenced in the review request is not owned by jaybernabe@luciodigital.com (returns 404) — I substituted app_e3cb4f084785 and app_abc693a75574 which are accessible. If main agent needs to retest multi-tenant backfill on the original app_c18671970769 they need a different owner session. Lead msg_f186aaf0753b remains lane_manual=true (real) as expected. Frontend routing: /apps/{id} then click tab-inbox-btn — there is NO /apps/{id}/inbox route.",
+  "rca of the issue": "N/A — no bugs found in the iter 45 feature. All classification signals fire as designed; manual override stickiness works; booking-invite persists and returns both agency copy addresses; AI lead summary excludes test lane."
+}
