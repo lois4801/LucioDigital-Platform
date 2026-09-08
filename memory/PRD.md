@@ -90,6 +90,20 @@ Respond to the user in **English** only.
    - Button on **every** tenant: `convert-webapp-header-btn` in the tenant header (all tabs) and
      `convert-webapp-card` in Overview, with a post-conversion summary + panel link
 
+7. **Member profile · Client invites · Bookings · Before/after links** (iter 40, 24/24 backend + UI green):
+   - **Member profile** `/site/{token}/me` (GET/PATCH), `/me/password`, `DELETE /me` (only when the tenant
+     enables `allow_self_delete`); "My account" on the live site lists the member's own submissions and booking chips
+   - **Client panel invite** `POST /api/apps/{id}/webapp/invite-client` → single-use 7-day link
+     `/site-admin/{token}?invite=CODE`; `GET/DELETE /api/apps/{id}/webapp/invites` (sent/accepted/expired,
+     resend, revoke); `GET|POST /api/site/{token}/invite/{code}[/accept]`; client lands as full admin of their own site
+   - **Bookings**: tick "This is a booking request" on any form → date + slot picker; modes `period`
+     (Morning/Afternoon/Evening) or `slots` (per-tenant `business_hours`, taken times filtered out);
+     Bookings tab in the panel with Confirm / Reschedule / Decline, each emailing the customer
+   - **Before/after share link** `POST|GET|DELETE /api/apps/{id}/compare-link` → public `/compare/{code}`
+     with an auto screenshot (mShots, retry + graceful fallback) beside the live rebuild in an `embed=1`
+     iframe, and a lead form (`POST /api/public/compare/{code}/lead`) that drops into the tenant Inbox
+   - UI: `ClientTools` card in Overview (invites + share link), `MemberAccount`, `Compare` page, `BookingPicker`
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "sonner";
-import { Inbox, Users, Layers, BarChart3, LogOut, Loader2, Check, Trash2, Plus, Shield } from "lucide-react";
+import { Inbox, Users, Layers, BarChart3, LogOut, Loader2, Check, Trash2, Plus, Shield, CalendarCheck, X } from "lucide-react";
 
 const BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const KEY = (t) => `site_admin_token_${t}`;
@@ -35,9 +35,9 @@ export default function SiteAdmin() {
   function signOut() { localStorage.removeItem(KEY(token)); setJwtToken(""); setSummary(null); }
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[var(--bg)] text-[var(--fg)]"><Loader2 className="animate-spin" /></div>;
-  if (!summary) return <SignIn token={token} resetToken={resetToken} onToken={(t) => { localStorage.setItem(KEY(token), t); setJwtToken(t); setLoading(true); }} />;
+  if (!summary) return <SignIn token={token} resetToken={resetToken} inviteCode={params.get("invite")} onToken={(t) => { localStorage.setItem(KEY(token), t); setJwtToken(t); setLoading(true); }} />;
 
-  const TABS = [["submissions", "Submissions", Inbox], ["users", "Users", Users], ["content", "Content", Layers], ["analytics", "Analytics", BarChart3]];
+  const TABS = [["submissions", "Submissions", Inbox], ["bookings", "Bookings", CalendarCheck], ["users", "Users", Users], ["content", "Content", Layers], ["analytics", "Analytics", BarChart3]];
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--fg)]" data-testid="site-admin-page">
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)] px-5 py-3 flex flex-wrap items-center gap-3">
@@ -71,6 +71,7 @@ export default function SiteAdmin() {
 
       <main className="p-5 max-w-6xl">
         {tab === "submissions" && <Submissions http={http} onChange={loadSummary} />}
+        {tab === "bookings" && <Bookings http={http} onChange={loadSummary} />}
         {tab === "users" && <SiteUsers http={http} onChange={loadSummary} />}
         {tab === "content" && <Content http={http} />}
         {tab === "analytics" && <Analytics summary={summary} />}
@@ -83,17 +84,26 @@ const Stat = ({ label, value }) => (
   <div className="card-surface p-4"><div className="text-[10px] uppercase tracking-wide text-[var(--dim)]">{label}</div><div className="font-display text-2xl font-bold mt-1">{value}</div></div>
 );
 
-function SignIn({ token, resetToken, onToken }) {
-  const [view, setView] = useState(resetToken ? "reset" : "login");
+function SignIn({ token, resetToken, inviteCode, onToken }) {
+  const [view, setView] = useState(inviteCode ? "invite" : resetToken ? "reset" : "login");
   const [f, setF] = useState({ email: "", password: "", name: "" });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [invite, setInvite] = useState(null);
   const post = (path, body) => axios.post(`${BASE}/site/${token}${path}`, body);
+
+  useEffect(() => {
+    if (!inviteCode) return;
+    axios.get(`${BASE}/site/${token}/invite/${inviteCode}`)
+      .then(r => setInvite(r.data))
+      .catch(e => { setMsg(err(e)); setView("login"); });
+  }, [inviteCode, token]);
 
   async function go() {
     setBusy(true); setMsg("");
     try {
-      if (view === "login") { const { data } = await post("/auth/login", { email: f.email, password: f.password }); onToken(data.token); }
+      if (view === "invite") { const { data } = await post(`/invite/${inviteCode}/accept`, { password: f.password }); onToken(data.token); }
+      else if (view === "login") { const { data } = await post("/auth/login", { email: f.email, password: f.password }); onToken(data.token); }
       else if (view === "reset") { const { data } = await post("/auth/reset", { token: resetToken, password: f.password }); onToken(data.token); }
       else if (view === "forgot") { await post("/auth/forgot", { email: f.email }); setMsg("If that email has an account here, a reset link is on its way."); }
     } catch (e) { setMsg(err(e)); }
@@ -103,16 +113,66 @@ function SignIn({ token, resetToken, onToken }) {
   return (
     <div className="min-h-screen grid place-items-center bg-[var(--bg)] text-[var(--fg)] px-5" data-testid="site-admin-signin">
       <div className="card-surface p-7 w-full max-w-sm space-y-3">
-        <div className="flex items-center gap-2"><Shield size={16} className="text-[var(--acc)]" /><span className="font-display font-bold">Site admin</span></div>
-        <p className="text-xs text-[var(--mut)]">{view === "reset" ? "Choose a new password to finish." : view === "forgot" ? "We'll email you a reset link." : "Sign in with your site admin account, or open this panel while signed in to your agency dashboard."}</p>
-        {view !== "reset" && <input data-testid="site-admin-email" type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} placeholder="you@company.com" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" />}
-        {view !== "forgot" && <input data-testid="site-admin-password" type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder="Password" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" />}
+        <div className="flex items-center gap-2"><Shield size={16} className="text-[var(--acc)]" /><span className="font-display font-bold">{view === "invite" ? "Welcome — set your password" : "Site admin"}</span></div>
+        <p className="text-xs text-[var(--mut)]">
+          {view === "invite" ? `You have admin access to ${invite?.site || "this site"}${invite ? ` as ${invite.email}` : ""}. Choose a password to finish.`
+            : view === "reset" ? "Choose a new password to finish."
+              : view === "forgot" ? "We'll email you a reset link."
+                : "Sign in with your site admin account, or open this panel while signed in to your agency dashboard."}
+        </p>
+        {view === "login" || view === "forgot" ? <input data-testid="site-admin-email" type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} placeholder="you@company.com" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" /> : null}
+        {view !== "forgot" && <input data-testid="site-admin-password" type="password" value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder={view === "login" ? "Password" : "New password (8+ characters)"} className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" />}
         {msg && <div data-testid="site-admin-msg" className="text-xs text-amber-300">{msg}</div>}
-        <button data-testid="site-admin-submit" onClick={go} disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? "Working…" : view === "login" ? "Sign in" : view === "reset" ? "Set password" : "Send reset link"}</button>
+        <button data-testid="site-admin-submit" onClick={go} disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? "Working…" : view === "login" ? "Sign in" : view === "invite" ? "Set password and continue" : view === "reset" ? "Set password" : "Send reset link"}</button>
         <div className="flex justify-between text-[11px] text-[var(--mut)]">
-          {view !== "login" ? <button onClick={() => setView("login")}>Back to sign in</button> : <button data-testid="site-admin-forgot" onClick={() => setView("forgot")}>Forgot password?</button>}
+          {view !== "login" ? <button onClick={() => { setView("login"); setMsg(""); }}>Back to sign in</button> : <button data-testid="site-admin-forgot" onClick={() => setView("forgot")}>Forgot password?</button>}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Bookings({ http, onChange }) {
+  const [rows, setRows] = useState([]);
+  const [mode, setMode] = useState("period");
+  const [move, setMove] = useState({});
+  const load = () => http.get("/admin/bookings").then(r => { setRows(r.data.bookings); setMode(r.data.mode); }).catch(e => toast.error(err(e)));
+  useEffect(() => { load(); }, []);
+  async function act(s, action) {
+    const body = { action };
+    if (action === "reschedule") {
+      const m = move[s.submission_id] || {};
+      if (!m.date) { toast.error("Pick the new date first"); return; }
+      body.date = m.date; body.slot = m.slot || s.booking.slot;
+    }
+    try { await http.patch(`/admin/bookings/${s.submission_id}`, body); toast.success(`Booking ${action}d — the customer has been emailed`); load(); onChange(); }
+    catch (e) { toast.error(err(e)); }
+  }
+  return (
+    <div className="space-y-3" data-testid="site-admin-bookings">
+      {rows.length === 0 && <div className="text-sm text-[var(--mut)]">No booking requests yet. Tick “This is a booking request” on any form in Site Mode and requests land here.</div>}
+      {rows.map(s => (
+        <div key={s.submission_id} data-testid="booking-row" className="card-surface p-4 space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <CalendarCheck size={14} className="text-[var(--acc)]" />
+            <span className="font-semibold">{s.booking.date} {s.booking.slot || ""}</span>
+            <span className={`chip ${s.booking.status === "confirmed" ? "chip-active" : s.booking.status === "declined" ? "chip-maint" : ""}`}>{s.booking.status}</span>
+            <span className="text-xs text-[var(--mut)]">{s.name} · {s.email}</span>
+            <span className="chip">{s.form_name}</span>
+            {s.booking.rescheduled && <span className="chip chip-maint">moved</span>}
+          </div>
+          <div className="text-xs text-[var(--mut)] space-y-0.5">{Object.entries(s.fields || {}).map(([k, v]) => <div key={k}><span className="text-[var(--dim)]">{k}:</span> {v}</div>)}</div>
+          <div className="flex flex-wrap gap-2 items-center pt-1">
+            <button data-testid={`booking-confirm-${s.submission_id}`} onClick={() => act(s, "confirm")} className="btn-primary !py-1.5 !px-3 text-[11px] flex items-center gap-1.5"><Check size={11} /> Confirm</button>
+            <input data-testid={`booking-new-date-${s.submission_id}`} type="date" value={(move[s.submission_id] || {}).date || ""} onChange={e => setMove({ ...move, [s.submission_id]: { ...(move[s.submission_id] || {}), date: e.target.value } })}
+              className="bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-[11px]" />
+            <input data-testid={`booking-new-slot-${s.submission_id}`} placeholder={mode === "period" ? "Morning" : "10:00"} value={(move[s.submission_id] || {}).slot || ""} onChange={e => setMove({ ...move, [s.submission_id]: { ...(move[s.submission_id] || {}), slot: e.target.value } })}
+              className="bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-[11px] w-24" />
+            <button data-testid={`booking-reschedule-${s.submission_id}`} onClick={() => act(s, "reschedule")} className="btn-ghost !py-1.5 !px-3 text-[11px]">Reschedule</button>
+            <button data-testid={`booking-decline-${s.submission_id}`} onClick={() => act(s, "decline")} className="btn-ghost !py-1.5 !px-3 text-[11px] flex items-center gap-1.5"><X size={11} /> Decline</button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

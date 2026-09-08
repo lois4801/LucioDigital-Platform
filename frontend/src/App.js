@@ -12,6 +12,7 @@ import Dashboard from "@/pages/Dashboard";
 import AppDetail from "@/pages/AppDetail";
 import PublicPreview from "@/pages/PublicPreview";
 import SiteAdmin from "@/pages/SiteAdmin";
+import Compare from "@/pages/Compare";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
 import { CursorFXProvider, CursorTrailThemed } from "@/components/CursorFX";
@@ -54,6 +55,7 @@ function AppRouter() {
       <Route path="/portal" element={<ProtectedRoute><PageTransition testid="page-portal"><Portal /></PageTransition></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />
       <Route path="/site-admin/:token" element={<SiteAdmin />} />
+      <Route path="/compare/:code" element={<Compare />} />
       <Route path="/embed/chat/:token" element={<ChatEmbed />} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />

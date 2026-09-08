@@ -25,7 +25,6 @@ import DataDestinationPanel from "@/components/DataDestinationPanel";
 import { LocksProvider, MasterLockButton, LockStateBadge } from "@/components/locks/LockContext";
 import ConvertToWebApp from "@/components/ConvertToWebApp";
 import SubmissionsPanel from "@/components/SubmissionsPanel";
-
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },

@@ -38,9 +38,9 @@ export default function ConvertToWebApp({ appId, appName, inline }) {
     } catch (e) { toast.error(e.response?.data?.detail || "Could not change page access"); }
   }
 
-  async function saveMode(m) {
+  async function saveMode(m, extra = {}) {
     setMode(m);
-    try { await api.patch(`/apps/${appId}/webapp/settings`, { signup_mode: m }); toast.success("Sign-up rule updated"); load(); }
+    try { await api.patch(`/apps/${appId}/webapp/settings`, { signup_mode: m, ...extra }); toast.success("Web app settings updated"); load(); }
     catch (e) { toast.error(e.response?.data?.detail || "Could not update"); }
   }
 
@@ -81,8 +81,7 @@ export default function ConvertToWebApp({ appId, appName, inline }) {
   );
 }
 
-function Panel({ open, setOpen, state, converted, panel, mode, saveMode, convert, busy, summary, setPageAccess, appName }) {
-  const s = summary || state?.summary;
+function Panel({ open, setOpen, state, converted, panel, mode, saveMode, convert, busy, summary, setPageAccess, appName }) {  const s = summary || state?.summary;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-2xl max-h-[85vh] overflow-y-auto">
@@ -111,6 +110,20 @@ function Panel({ open, setOpen, state, converted, panel, mode, saveMode, convert
               </button>
             ))}
           </div>
+        </div>
+
+        <div>
+          <div className="overline mb-2">Booking requests</div>
+          <div className="flex gap-1.5">
+            {[["period", "Morning / Afternoon / Evening"], ["slots", "Fixed time slots"]].map(([k, label]) => (
+              <button key={k} data-testid={`booking-mode-${k}`} onClick={() => saveMode(mode, { booking_mode: k })}
+                className={`flex-1 px-3 py-2 rounded-xl border text-xs ${(state?.booking_mode || "period") === k ? "border-[var(--acc)]/50 bg-[var(--acc)]/10" : "border-[var(--line)] hover:border-white/30"}`}>{label}</button>
+            ))}
+          </div>
+          <label data-testid="self-delete-toggle" className="flex items-center gap-2 text-xs mt-2.5 cursor-pointer">
+            <input type="checkbox" data-testid="self-delete-checkbox" checked={!!state?.allow_self_delete} onChange={e => saveMode(mode, { allow_self_delete: e.target.checked })} className="accent-[var(--acc)]" />
+            Let members delete their own account
+          </label>
         </div>
 
         {!converted && <button data-testid="run-conversion-btn" onClick={convert} disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? <span className="flex items-center justify-center gap-2"><Loader2 size={14} className="animate-spin" /> Converting…</span> : "Run the conversion"}</button>}

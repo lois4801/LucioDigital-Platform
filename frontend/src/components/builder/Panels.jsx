@@ -68,6 +68,10 @@ function FormRouting({ block, onChange, appId }) {
       </select>
       <input data-testid="form-notify-email-input" value={p.notify_email || ""} onChange={e => set({ notify_email: e.target.value || undefined })}
         placeholder="or any email — careers@acme.com" className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-2 text-xs font-mono outline-none" />
+      <label data-testid="form-booking-toggle" className="flex items-center gap-2 text-xs pt-1 cursor-pointer">
+        <input type="checkbox" data-testid="form-booking-checkbox" checked={!!p.booking} onChange={e => set({ booking: e.target.checked || undefined })} className="accent-[var(--acc)]" />
+        This is a booking request (shows a date and time picker)
+      </label>
     </div>
   );
 }

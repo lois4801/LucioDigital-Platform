@@ -9,14 +9,17 @@ import ChatWidget from "@/components/ChatWidget";
 import { themeVars, loadFonts, isV2 } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
+import MemberAccount from "@/components/MemberAccount";
 import { LogOut } from "lucide-react";
 import { Layers, Eye } from "lucide-react";
 
 export default function PublicPreview() {
   const { token } = useParams();
+  const embed = new URLSearchParams(window.location.search).get("embed") === "1";
   const [site, setSite] = useState(null);
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
+  const [account, setAccount] = useState(false);
   const member = useMember(token);
   useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
@@ -55,7 +58,7 @@ export default function PublicPreview() {
   return (
     <DesignCtx.Provider value={v2}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" style={{ ...themeVars(site.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
-      <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
+      {!embed && <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: site.app.color }} />
           <span className="font-semibold truncate max-w-[120px] sm:max-w-none">{site.app.name}</span>
@@ -65,23 +68,28 @@ export default function PublicPreview() {
         </div>
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {site.webapp?.converted && (member.user
-            ? <button data-testid="member-signout" onClick={member.signOut} className="flex items-center gap-1.5 text-white/60 hover:text-white"><LogOut size={11} /> {member.user.name || "Sign out"}</button>
+            ? <>
+              <button data-testid="member-account-link" onClick={() => setAccount(a => !a)} className="flex items-center gap-1.5 text-white/60 hover:text-white">{account ? "Site" : "My account"}</button>
+              <button data-testid="member-signout" onClick={member.signOut} className="flex items-center gap-1.5 text-white/60 hover:text-white"><LogOut size={11} /> {member.user.name || "Sign out"}</button>
+            </>
             : <span data-testid="member-status" className="chip">Members area</span>)}
           <span className="chip chip-handover"><Eye size={11} /> Preview</span>
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">OmniStack AI</span></Link>
         </div>
-      </div>
+      </div>}
       {navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
       <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
-          {gated
-            ? <MemberGate token={token} pageName={page?.name} signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} />
-            : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
-              <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
-                <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} />
-              </EffectWrap>
-            ))}
+          {account && member.user
+            ? <MemberAccount token={token} jwt={member.jwt} onSignedOut={() => { member.signOut(); setAccount(false); }} onClose={() => setAccount(false)} />
+            : gated
+              ? <MemberGate token={token} pageName={page?.name} signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} />
+              : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
+                <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
+                  <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null} />
+                </EffectWrap>
+              ))}
         </motion.div>
       </AnimatePresence>
       {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}

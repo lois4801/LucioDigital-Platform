@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 40 — end-to-end backend + UI checks of the four new features (member profile, web-app settings, client invites, bookings, before/after compare) plus the cross-tenant isolation regression. Backend pytest: 24/24 pass in test_iter40_profile_bookings_invite_compare.py. UI smoke: member gate + My account panel + Bookings tab in /site-admin all work; /compare/{code} renders with NO auth, no horizontal overflow at 390px, and the lead form submits (compare-lead-sent shown).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "MemberGate (login form on protected page)", "issues": ["Login form inputs and submit have no data-testid (member-login-email / member-login-password / member-login-submit not present). Not blocking but forces tests to fall back to input[type=email] / input[type=password] selectors."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter40_profile_bookings_invite_compare.py",
+    "/app/test_reports/pytest/iter40.xml"
+  ],
+  "action_items": [
+    "(Optional) Add data-testid attributes to the MemberGate sign-in form fields (email, password, submit button) for durable UI tests.",
+    "(Optional) Consider exposing data-testid=client-invite-card / client-invite-email / client-invite-btn on the App Detail (Overview) page — I verified the API path (POST /apps/{id}/webapp/invite-client, list, revoke, /site/{token}/invite/{code}, /accept) but did not visually confirm the invite card render location. UI counterpart wasn't reached because /site-admin does not host it — it's in /apps/{appId}."
+  ],
+  "critical_code_review_comments": [
+    "compare.py L58: `code = existing['code'] if existing else secrets.token_urlsafe(9)` — good, idempotent per tenant. Verified.",
+    "compare.py L53-54: 'not before and not body.before_image' raises 400. When a body has neither before_url nor before_image and preview_token exists → 400. Verified on a throwaway app.",
+    "site_app.py me_delete (L607): correctly gated on allow_self_delete. Deletion nulls submissions.site_user_id (soft) — good, keeps analytics intact.",
+    "site_app.py invite_client L696: previous invites for same email flipped to 'revoked' before writing the new one — good idempotency.",
+    "site_app.py accept_invite L740: idempotency is not enforced against 'accepted' state; a used code is caught because state != 'sent'. However there is no explicit test that a REVOKED code returns 400 — the state check does that implicitly. Verified: second /accept with used code returns 400.",
+    "site_app.py open_slots L628: fixed-mode slot generation uses <= end, so a 09-17 window with step 30 yields 09:00..16:30 (last slot fully inside window). Correct; the taken-list filter uses booking.slot equality against period names in period mode which will never intersect — fine because period mode short-circuits before that path.",
+    "site_app.py admin_booking_action L646-672: reschedule requires body.date, decline is idempotent, unknown action → 400, member role gets 403 through require_panel — all four verified in tests.",
+    "site_app.py L613: submissions.update_many after self-delete nulls out site_user_id — this correctly hides the deleted user's submissions from /me/submissions of any future account with the same email. Good.",
+    "Public routes (/api/public/compare/{code} + /lead) do NOT require auth and do NOT touch get_current_user — verified with a completely bare requests session (no cookies): 200 on public GET, 200 on lead POST, message row appears in tenant inbox.",
+    "Tenant SITE_AUD JWT is correctly rejected on agency endpoints: member1 bearer token → 401 on /api/apps/{id}/webapp, /compare-link, /apps list. Verified."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter40_profile_bookings_invite_compare.py"
+  ],
+  "success_rate": {"backend": "100% (24/24)", "frontend": "100% for the exercised flows (compare page mobile+lead, member gate → My account edit+save, admin panel 5 tabs, Bookings tab actions rendered)"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026!; Editor client.editor@example.com / ClientEdit2026!; Member1 member1@example.com / MemberPass123 (revert-verified during the password-change test, password ends up as MemberPass123).",
+  "seed_data_creation": "Created disposable TEST_iter40_* site users / apps / invites / compare leads: (a) throwaway member registered then deleted in Northwind for the self-delete flow; (b) two throwaway apps created via POST /api/apps for the invite-unconverted-409 and compare-400 assertions; (c) two invite rows on Northwind (both later revoked or DELETE'd); (d) one compare lead in the Northwind inbox from the /public/compare lead test. Also submitted a booking as member1 (subsequently confirmed → rescheduled to 2026-07-20 Afternoon → declined). Northwind /about page ends up protected=true (matches review preamble). Northwind webapp settings end at signup_mode=open, allow_self_delete=true, booking_mode=period, business_hours={start:9,end:17,slot_min:30}.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Northwind (app_6663b5de0007 / pv_15f7e07b2d724b452e2a) is in a clean-known state: signup_mode=open, booking_mode=period, allow_self_delete=true, /about protected=true, member1 password MemberPass123. Compare code OCzA2w6t7QVk headline is now 'Iter40 headline' (idempotent update kept the same code — reset via POST /apps/{id}/compare-link with a fresh headline if desired). One iter40 lead exists in the Northwind inbox. Bookings tab has three iter40 rows (one declined + one rescheduled+declined + one lingering test row). Login lockout still keys on X-Forwarded-For — use a unique XFF header per test.",
+  "rca of the issue": "No new bugs. All four features work end-to-end; the sole nit is missing data-testid on the MemberGate login form which is a design/testability improvement, not a functional bug."
+}

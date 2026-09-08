@@ -1,4 +1,4 @@
-import { useState, createContext, useContext } from "react";
+import { useState, useEffect, createContext, useContext } from "react";
 import * as Icons from "lucide-react";
 import { SwapOverlay } from "@/components/builder/ImageSwap";
 import { EditableText } from "@/components/InlineTextTools";
@@ -47,8 +47,28 @@ const Btn = ({ children, ghost }) => {
   const v2 = useV2();
   return <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "border border-[var(--tbd)] tglass" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
 };
-const H2 = (props) => {
-  const v2 = useV2();
+function BookingPicker({ token, mode = "period", value, onChange, inputCls }) {
+  const [slots, setSlots] = useState(mode === "period" ? ["Morning", "Afternoon", "Evening"] : []);
+  const today = new Date().toISOString().slice(0, 10);
+  useEffect(() => {
+    if (!token || !value.__date) return;
+    fetch(`${process.env.REACT_APP_BACKEND_URL}/api/site/${token}/slots?date=${value.__date}`)
+      .then(r => r.json()).then(d => setSlots(d.slots || [])).catch(() => { });
+  }, [token, value.__date]);
+  return (
+    <div data-testid="booking-picker" className="grid sm:grid-cols-2 gap-4">
+      <label className="block"><span className="block text-xs font-semibold mb-1.5">Preferred date <span className="text-[var(--tp)]">*</span></span>
+        <input data-testid="booking-date" type="date" required min={today} value={value.__date || ""} onChange={e => onChange({ __date: e.target.value, __slot: "" })} className={inputCls} /></label>
+      <label className="block"><span className="block text-xs font-semibold mb-1.5">{mode === "period" ? "Time of day" : "Time"}</span>
+        <select data-testid="booking-slot" value={value.__slot || ""} onChange={e => onChange({ __slot: e.target.value })} className={inputCls}>
+          <option value="">{slots.length ? "Select…" : "Pick a date first"}</option>
+          {slots.map(s => <option key={s} value={s}>{s}</option>)}
+        </select></label>
+    </div>
+  );
+}
+
+const H2 = (props) => {  const v2 = useV2();
   return <T as="h2" {...props} className={`font-[var(--tfh)] ${v2 ? "t-h2" : "text-3xl lg:text-4xl"} font-bold tracking-tight ${props.className || ""}`} />;
 };
 const Icon = ({ name, size = 18 }) => { const I = Icons[name] || Icons.Sparkles; return <I size={size} />; };
@@ -56,7 +76,7 @@ const Kicker = ({ children }) => <div className="text-xs font-bold uppercase tra
 const isYouTube = (u = "") => /youtube\.com|youtu\.be/.test(u);
 const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u;
 
-export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [] }) {
+export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [], bookingMode = "period", siteToken = null }) {
   const v2 = useV2();
   const p = block.props || {}, s = block.style || {};
   // Database-driven sections: after "Convert to Web App" the items live in a collection.
@@ -283,7 +303,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       const nameF = fields.find(f => /name/i.test(f.name) || /name/i.test(f.label));
       const lines = fields.map(f => `${f.label}: ${form[f.name] ?? ""}`).join("\n");
       try {
-        await onLead({ name: (nameF && form[nameF.name]) || "Website visitor", email: (emailF && form[emailF.name]) || "", message: `${p.heading || "Form submission"}\n\n${lines}`, form_id: block.id });
+        await onLead({ name: (nameF && form[nameF.name]) || "Website visitor", email: (emailF && form[emailF.name]) || "", message: `${p.heading || "Form submission"}\n\n${lines}`, form_id: block.id,
+                       booking_date: p.booking ? form.__date : undefined, booking_slot: p.booking ? form.__slot : undefined });
         setForm({}); setSent(true);
       } catch { }
     }
@@ -294,6 +315,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
           {p.subtitle && <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-3 ${m}`} />}
           <form onSubmit={submitForm} className={`${card} mt-8 space-y-4`} data-testid="custom-form">
             {sent ? <div data-testid="custom-form-sent" className="text-center py-8 text-[var(--ts)] font-semibold">{p.success_message || "Thanks — we'll be in touch shortly."}</div> : <>
+              {p.booking && <BookingPicker token={siteToken} mode={bookingMode} value={form} onChange={v => setForm({ ...form, ...v })} inputCls={inputCls} />}
               {fields.map((f, i) => (
                 <label key={f.name || i} className="block">
                   <span className="block text-xs font-semibold mb-1.5"><T value={f.label} {...E(`fields.${i}.label`)} />{f.required && <span className="text-[var(--tp)]"> *</span>}</span>

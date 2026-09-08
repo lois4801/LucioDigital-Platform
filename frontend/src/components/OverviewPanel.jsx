@@ -6,6 +6,7 @@ import { Activity, Cpu, HardDrive, Timer, Users, Lock, Unlock, Sparkles } from "
 import { L, UiLabelsToolbar } from "@/components/UiLabels";
 import { LockToggle, MasterLockButton, LockStateBadge, useLocks } from "@/components/locks/LockContext";
 import ConvertToWebApp from "@/components/ConvertToWebApp";
+import ClientTools from "@/components/ClientTools";
 
 const STATUS_OPTIONS = [
   { v: "active", label: "Active", cls: "chip-active" },
@@ -63,6 +64,7 @@ function SiteSnapshot({ appDoc }) {
         <button data-testid="content-lock-toggle" onClick={toggle} disabled={busy} className="btn-ghost !py-1.5 text-[11px] disabled:opacity-50">{lock.locked ? "Unlock" : "Lock"}</button>
       </div>
       <ConvertToWebApp appId={appDoc.app_id} appName={appDoc.name} />
+      <ClientTools appId={appDoc.app_id} appName={appDoc.name} converted={!!appDoc.webapp?.converted} />
       {!design && (
         <div data-testid="design-upgrade-card" className="rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/5 p-4 flex flex-wrap items-center gap-3">
           <Sparkles size={15} className="text-[var(--acc)]" />

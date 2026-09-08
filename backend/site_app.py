@@ -72,6 +72,36 @@ def site_token(app_id: str, site_user_id: str, role: str) -> str:
 
 class ConvertIn(BaseModel):
     signup_mode: str = "open"
+    allow_self_delete: Optional[bool] = None
+    booking_mode: Optional[str] = None          # period | slots
+    business_hours: Optional[Dict[str, Any]] = None   # {start: 9, end: 17, slot_min: 30}
+
+
+class ProfileIn(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class PasswordIn(BaseModel):
+    current_password: str
+    password: str
+
+
+class AcceptIn(BaseModel):
+    password: str
+
+
+class BookingAction(BaseModel):
+    action: str                      # confirm | reschedule | decline
+    date: Optional[str] = None
+    slot: Optional[str] = None
+    note: Optional[str] = None
+
+
+class ClientInviteIn(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
 
 
 class AccessIn(BaseModel):
@@ -104,6 +134,8 @@ class SubmitIn(BaseModel):
     name: str = ""
     email: Optional[EmailStr] = None
     fields: Dict[str, Any] = {}
+    booking_date: Optional[str] = None
+    booking_slot: Optional[str] = None
 
 
 class UserPatch(BaseModel):
@@ -349,9 +381,20 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
             raise HTTPException(403, "Only the agency owner or an admin can change these settings")
         if body.signup_mode not in SIGNUP_MODES:
             raise HTTPException(400, "Unknown signup mode")
-        await db.apps.update_one({"app_id": app_id}, {"$set": {"webapp.signup_mode": body.signup_mode,
-                                                              "webapp.summary.signup_mode": body.signup_mode}})
-        return {"signup_mode": body.signup_mode}
+        upd = {"webapp.signup_mode": body.signup_mode, "webapp.summary.signup_mode": body.signup_mode}
+        if body.allow_self_delete is not None:
+            upd["webapp.allow_self_delete"] = bool(body.allow_self_delete)
+        if body.booking_mode:
+            if body.booking_mode not in ("period", "slots"):
+                raise HTTPException(400, "booking_mode must be 'period' or 'slots'")
+            upd["webapp.booking_mode"] = body.booking_mode
+        if body.business_hours is not None:
+            bh = body.business_hours or {}
+            upd["webapp.business_hours"] = {"start": int(bh.get("start", 9)), "end": int(bh.get("end", 17)),
+                                            "slot_min": 60 if int(bh.get("slot_min", 30)) >= 60 else 30}
+        await db.apps.update_one({"app_id": app_id}, {"$set": upd})
+        doc = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "webapp": 1})
+        return doc.get("webapp") or {}
 
     @api.get("/apps/{app_id}/submissions")
     async def list_submissions(app_id: str, q: str = "", export: bool = False, user: dict = Depends(get_current_user)):
@@ -380,6 +423,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         w = webapp_of(doc)
         return {"name": doc.get("name"), "converted": bool(w.get("converted")),
                 "signup_mode": w.get("signup_mode", "open"),
+                "booking_mode": w.get("booking_mode", "period"),
+                "allow_self_delete": bool(w.get("allow_self_delete")),
                 "protected_slugs": [p["slug"] for p in await db.pages.find({"app_id": doc["app_id"], "protected": True}, {"_id": 0, "slug": 1}).to_list(200)]}
 
     @api.post("/site/{token}/auth/register")
@@ -507,8 +552,13 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
                "site_user_id": (u or {}).get("site_user_id"),
                "fields": {k: str(v)[:2000] for k, v in (body.fields or {}).items()},
                "status": "new", "created_at": _iso()}
+        if body.booking_date:
+            row["booking"] = {"date": body.booking_date[:10], "slot": (body.booking_slot or "")[:20] or None,
+                              "status": "requested", "requested_at": _iso(), "confirmed_at": None}
         await db.submissions.insert_one(dict(row))
         summary = "\n".join(f"{k}: {v}" for k, v in row["fields"].items())
+        if row.get("booking"):
+            summary = f"Requested date: {row['booking']['date']} {row['booking'].get('slot') or ''}\n{summary}"
         if row["email"]:
             await notify(row["email"], f"We received your message — {doc.get('name')}",
                          f"Thanks{' ' + row['name'] if row['name'] else ''}, we have your submission and will reply soon.\n\n{summary}")
@@ -524,6 +574,184 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         doc, u = await require_site_user(request, token)
         rows = await db.submissions.find({"app_id": doc["app_id"], "site_user_id": u["site_user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
         return {"submissions": rows}
+
+    # ---------- member profile ----------
+
+    @api.get("/site/{token}/me")
+    async def me_profile(token: str, request: Request):
+        doc, u = await require_site_user(request, token)
+        return {"user": {**public_user(u), "phone": u.get("phone", ""), "notes": u.get("notes", "")},
+                "allow_self_delete": bool(webapp_of(doc).get("allow_self_delete"))}
+
+    @api.patch("/site/{token}/me")
+    async def me_update(token: str, body: ProfileIn, request: Request):
+        doc, u = await require_site_user(request, token)
+        upd = {k: str(v)[:400] for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+        if not upd:
+            raise HTTPException(400, "Nothing to update")
+        await db.site_users.update_one({"site_user_id": u["site_user_id"]}, {"$set": upd})
+        row = await db.site_users.find_one({"site_user_id": u["site_user_id"]}, {"_id": 0, "password_hash": 0})
+        return {"user": {**public_user(row), "phone": row.get("phone", ""), "notes": row.get("notes", "")}}
+
+    @api.post("/site/{token}/me/password")
+    async def me_password(token: str, body: PasswordIn, request: Request):
+        doc, u = await require_site_user(request, token)
+        row = await db.site_users.find_one({"site_user_id": u["site_user_id"]})
+        if not verify_pw(body.current_password, row.get("password_hash", "")):
+            raise HTTPException(401, "Your current password is incorrect")
+        if len(body.password) < 8:
+            raise HTTPException(400, "Use at least 8 characters for your new password")
+        await db.site_users.update_one({"site_user_id": u["site_user_id"]}, {"$set": {"password_hash": hash_pw(body.password)}})
+        return {"changed": True}
+
+    @api.delete("/site/{token}/me")
+    async def me_delete(token: str, request: Request):
+        doc, u = await require_site_user(request, token)
+        if not webapp_of(doc).get("allow_self_delete"):
+            raise HTTPException(403, "Account deletion is turned off for this site — contact the site admin")
+        await db.site_users.delete_one({"site_user_id": u["site_user_id"]})
+        await db.submissions.update_many({"site_user_id": u["site_user_id"]}, {"$set": {"site_user_id": None}})
+        return {"deleted": True}
+
+    # ---------- bookings ----------
+
+    def _slots_for(w: dict) -> List[str]:
+        bh = w.get("business_hours") or {"start": 9, "end": 17, "slot_min": 30}
+        step = 60 if int(bh.get("slot_min", 30)) >= 60 else 30
+        out, mins = [], int(bh.get("start", 9)) * 60
+        end = int(bh.get("end", 17)) * 60
+        while mins + step <= end:
+            out.append(f"{mins // 60:02d}:{mins % 60:02d}")
+            mins += step
+        return out
+
+    @api.get("/site/{token}/slots")
+    async def open_slots(token: str, date: str):
+        """Available slots for a date — period buckets, or fixed times minus the ones already taken."""
+        doc = await require_webapp(token)
+        w = webapp_of(doc)
+        if w.get("booking_mode", "period") == "period":
+            return {"mode": "period", "slots": ["Morning", "Afternoon", "Evening"]}
+        taken = await db.submissions.distinct("booking.slot", {"app_id": doc["app_id"], "booking.date": date,
+                                                               "booking.status": {"$in": ["requested", "confirmed"]}})
+        return {"mode": "slots", "slots": [s for s in _slots_for(w) if s not in taken]}
+
+    @api.get("/site/{token}/admin/bookings")
+    async def admin_bookings(token: str, request: Request):
+        doc, _me = await require_panel(request, token)
+        rows = await db.submissions.find({"app_id": doc["app_id"], "booking": {"$ne": None}}, {"_id": 0}).sort("booking.date", 1).to_list(500)
+        return {"bookings": rows, "mode": webapp_of(doc).get("booking_mode", "period"),
+                "business_hours": webapp_of(doc).get("business_hours") or {"start": 9, "end": 17, "slot_min": 30}}
+
+    @api.patch("/site/{token}/admin/bookings/{submission_id}")
+    async def admin_booking_action(token: str, submission_id: str, body: BookingAction, request: Request):
+        doc, _me = await require_panel(request, token)
+        row = await db.submissions.find_one({"app_id": doc["app_id"], "submission_id": submission_id}, {"_id": 0})
+        if not row or not row.get("booking"):
+            raise HTTPException(404, "Booking not found")
+        bk = dict(row["booking"])
+        if body.action == "confirm":
+            bk.update({"status": "confirmed", "confirmed_at": _iso()})
+            subject, msg = "Your booking is confirmed", f"Your booking on {bk['date']} ({bk.get('slot') or 'any time'}) is confirmed."
+        elif body.action == "reschedule":
+            if not body.date:
+                raise HTTPException(400, "Pick a new date to reschedule to")
+            bk.update({"status": "confirmed", "date": body.date, "slot": body.slot or bk.get("slot"), "confirmed_at": _iso(), "rescheduled": True})
+            subject, msg = "Your booking has moved", f"Your booking is now on {bk['date']} ({bk.get('slot') or 'any time'})."
+        elif body.action == "decline":
+            bk.update({"status": "declined", "confirmed_at": None})
+            subject, msg = "About your booking request", "Unfortunately we cannot make that time. Reply to this email and we'll find another slot."
+        else:
+            raise HTTPException(400, "action must be confirm, reschedule or decline")
+        if body.note:
+            bk["note"] = body.note[:500]
+        await db.submissions.update_one({"submission_id": submission_id},
+                                        {"$set": {"booking": bk, "status": "handled" if body.action != "decline" else "archived"}})
+        if row.get("email"):
+            await notify(row["email"], f"{subject} — {doc.get('name')}", f"{msg}\n\n{body.note or ''}".strip())
+        return {"submission_id": submission_id, "booking": bk}
+
+    # ---------- client panel invite ----------
+
+    @api.post("/apps/{app_id}/webapp/invite-client")
+    async def invite_client(app_id: str, body: ClientInviteIn, user: dict = Depends(get_current_user)):
+        """One-click invite: the client gets a single-use link that lets them set a password and manage their own site."""
+        doc = await get_user_app(app_id, user)
+        from page_guard import role_of
+        if await role_of(db, doc, user) not in ("owner", "admin"):
+            raise HTTPException(403, "Only the agency owner or an admin can invite a client")
+        if not webapp_of(doc).get("converted"):
+            raise HTTPException(409, "Convert this site to a web app first")
+        token = doc["preview_token"]
+        email = body.email.lower()
+        row = await db.site_users.find_one({"app_id": app_id, "email": email}, {"_id": 0})
+        if not row:
+            row = {"site_user_id": _uid("su"), "app_id": app_id, "email": email,
+                   "name": (body.name or email.split("@")[0])[:80], "role": "admin", "status": "active",
+                   "password_hash": "", "created_at": _iso(), "last_login": None}
+            await db.site_users.insert_one(dict(row))
+        else:
+            await db.site_users.update_one({"site_user_id": row["site_user_id"]}, {"$set": {"role": "admin", "status": "active"}})
+        code = secrets.token_urlsafe(24)
+        await db.client_invites.update_many({"app_id": app_id, "email": email, "state": "sent"}, {"$set": {"state": "revoked"}})
+        inv = {"invite_id": _uid("inv"), "app_id": app_id, "email": email, "site_user_id": row["site_user_id"],
+               "code_hash": hashlib.sha256(code.encode()).hexdigest(), "role": "admin", "state": "sent",
+               "created_at": _iso(), "expires_at": (_now() + timedelta(days=7)).isoformat(),
+               "invited_by": user.get("name") or user["email"]}
+        await db.client_invites.insert_one(dict(inv))
+        link = f"/site-admin/{token}?invite={code}"
+        await notify(email, f"Your {doc.get('name')} admin access is ready",
+                     f"{user.get('name') or 'Your agency'} set up an admin panel for {doc.get('name')}.\n\n"
+                     f"Open this link to choose a password and sign in (valid for 7 days):\n{link}\n\n"
+                     "From the panel you can review form submissions, manage accounts and edit your site content.")
+        await log_activity(app_id, user["user_id"], "webapp.client_invited", f"Panel invite sent to {email}")
+        inv.pop("code_hash", None)
+        return {"invite": inv, "link": link}
+
+    @api.get("/apps/{app_id}/webapp/invites")
+    async def list_invites(app_id: str, user: dict = Depends(get_current_user)):
+        await get_user_app(app_id, user)
+        rows = await db.client_invites.find({"app_id": app_id}, {"_id": 0, "code_hash": 0}).sort("created_at", -1).to_list(50)
+        for r in rows:
+            if r["state"] == "sent" and r["expires_at"] < _iso():
+                r["state"] = "expired"
+        return {"invites": rows}
+
+    @api.delete("/apps/{app_id}/webapp/invites/{invite_id}")
+    async def revoke_invite(app_id: str, invite_id: str, user: dict = Depends(get_current_user)):
+        doc = await get_user_app(app_id, user)
+        from page_guard import role_of
+        if await role_of(db, doc, user) not in ("owner", "admin"):
+            raise HTTPException(403, "Only the agency owner or an admin can revoke an invite")
+        r = await db.client_invites.update_one({"app_id": app_id, "invite_id": invite_id}, {"$set": {"state": "revoked"}})
+        if not r.matched_count:
+            raise HTTPException(404, "Invite not found")
+        return {"invite_id": invite_id, "state": "revoked"}
+
+    @api.get("/site/{token}/invite/{code}")
+    async def check_invite(token: str, code: str):
+        doc = await require_webapp(token)
+        inv = await db.client_invites.find_one({"app_id": doc["app_id"], "state": "sent",
+                                                "code_hash": hashlib.sha256(code.encode()).hexdigest()}, {"_id": 0})
+        if not inv or inv["expires_at"] < _iso():
+            raise HTTPException(400, "This invitation has expired or was already used")
+        return {"email": inv["email"], "site": doc.get("name"), "role": inv["role"]}
+
+    @api.post("/site/{token}/invite/{code}/accept")
+    async def accept_invite(token: str, code: str, body: AcceptIn):
+        doc = await require_webapp(token)
+        inv = await db.client_invites.find_one({"app_id": doc["app_id"], "state": "sent",
+                                                "code_hash": hashlib.sha256(code.encode()).hexdigest()}, {"_id": 0})
+        if not inv or inv["expires_at"] < _iso():
+            raise HTTPException(400, "This invitation has expired or was already used")
+        if len(body.password) < 8:
+            raise HTTPException(400, "Use at least 8 characters for your password")
+        await db.site_users.update_one({"site_user_id": inv["site_user_id"]},
+                                       {"$set": {"password_hash": hash_pw(body.password), "status": "active",
+                                                 "role": inv["role"], "last_login": _iso()}})
+        await db.client_invites.update_one({"invite_id": inv["invite_id"]}, {"$set": {"state": "accepted", "accepted_at": _iso()}})
+        u = await db.site_users.find_one({"site_user_id": inv["site_user_id"]}, {"_id": 0, "password_hash": 0})
+        return {"token": site_token(doc["app_id"], u["site_user_id"], u.get("role", "admin")), "user": public_user(u)}
 
     # ---------- admin panel API ----------
 
