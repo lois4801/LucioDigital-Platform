@@ -37,7 +37,7 @@ export default function PublicPreview() {
   if (err) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
       <Eye size={28} className="text-[var(--mut)]" /><div className="font-display text-2xl">{err}</div>
-      <Link to="/" className="btn-ghost text-sm">Back to OmniStack AI</Link>
+      <Link to="/" className="btn-ghost text-sm">Back to Lois-Tech</Link>
     </div>
   );
   if (!site) return <div className="min-h-screen flex items-center justify-center"><div className="overline">Loading preview…</div></div>;
@@ -77,7 +77,7 @@ export default function PublicPreview() {
             </>
             : <span data-testid="member-status" className="chip">Members area</span>)}
           <span className="chip chip-handover"><Eye size={11} /> Preview</span>
-          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">OmniStack AI</span></Link>
+          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">Lois-Tech</span></Link>
         </div>
       </div>}
       {navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}

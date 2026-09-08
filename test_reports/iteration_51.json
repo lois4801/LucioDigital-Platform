@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 51 — dynamic landing showcase (templates + tenants). Wrote /app/backend/tests/test_iter51_landing_showcase.py (7 tests, all PASS) and ran a Playwright pass on the landing page signed-out and signed-in. Backend endpoints /api/public/landing/templates and /api/public/landing/tenants are correct, public, and reactive to POST/PATCH/DELETE on /api/apps. Frontend renders 8 niche cards + '16 industry templates' line, 4 showcase cards with real names, tags and LIVE/TEMPLATE badges, correct counts line, no admin controls, no broken images, no 'Maximum update depth' loops. 'View all tenants' routes to /login when signed out and /dashboard when signed in. Clicking a tenant card with a preview token opens /p/{token}. Only console errors are the expected 401s from the pre-login /auth/me probe.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter51_landing_showcase.py",
+    "/app/test_reports/pytest/iter51.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py AppUpdateIn does not accept preview_enabled — the review request asked to 'flip status via PATCH /api/apps/{id}' with preview_enabled, but Pydantic silently drops unknown fields so the status will not flip that way. Consumers must use POST /api/apps/{id}/preview/toggle instead. Consider adding preview_enabled to AppUpdateIn for consistency (or explicitly document that only /preview/toggle mutates it). Not a landing bug — endpoint output is correct — but a minor API surface inconsistency.",
+    "landing_cms.py public_tenants: preview_token is exposed publicly whenever preview_enabled is true (by design), so anyone hitting /api/public/landing/tenants can enumerate live preview URLs. This is intentional per spec but worth flagging as a security-review item.",
+    "landing_cms.py still uses DEFAULTS with hardcoded card list for the legacy /public/landing endpoint — landing page no longer uses it but the constant is dead code; safe to remove."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter51_landing_showcase.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "test_iter51_* throwaway app created and deleted by the auto-sync test — no residual data.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Workspace currently has 4 admin-owned tenants (Northwind Roofing LIVE, Studio Booking TEMPLATE, Aura Wellness LIVE, Nexus Commerce TEMPLATE) and 16 niches. Note the review-request context said '7 tenants / 4 live' but on this run the endpoint reports 4 tenants / 2 live and the DB matches the endpoint — likely earlier cleanup removed the extras. Not a regression of this iteration. When testing status-flip, use POST /api/apps/{id}/preview/toggle (PATCH does NOT accept preview_enabled). Niche titles include 'Restaurants', 'SaaS Portals' and 'Internal Tools' — the review's alternative list ('Restaurant', 'SaaS', 'Logistics') is a naming variant; count is 16 which is the contract."
+}

@@ -245,7 +245,7 @@ NICHES = {
 
  "education": dict(brand="Brightwater Academy", industry="Education", mood="clinical", primary="#0EA5E9", secondary="#FBBF24",
   badge="JK–Grade 12 · Now enrolling for September", title="Small classes. Big futures.", sub="An independent day school where 14-student classes, a project-based curriculum and dedicated learning specialists prepare every student for university and for life.",
-  cta="Book a campus tour", cta2="Apply now", hero=img("photo-1523050854058-8df90110c9f1"), video=YT.format("independent+school+campus+tour"),
+  cta="Book a campus tour", cta2="Apply now", hero=img("photo-1509062522246-3755977927d7"), video=YT.format("independent+school+campus+tour"),
   gallery=["photo-1509062522246-3755977927d7", "photo-1427504494785-3a9ca7044f45", "photo-1503676260728-1c00da094a0b", "photo-1524178232363-1fb2b075b655", "photo-1571260899304-425eee4c7efc", "photo-1580582932707-520aed937b7b"],
   sections=["services", "team", "stats", "plans", "video", "testimonials", "certs", "tour", "faq"],
   services=("Programs", "A curriculum built around how children actually learn.", [("Lower School (JK–5)", "Literacy and numeracy foundations, daily outdoor learning and French from JK.", "Heart"), ("Middle School (6–8)", "Advisory groups, interdisciplinary projects and a 1:1 laptop program.", "Star"), ("Upper School (9–12)", "AP courses, university counselling from Grade 9 and a capstone research project.", "Sparkles"), ("Learning support", "Certified learning specialists and individualized education plans at no extra cost.", "Shield"), ("Arts & athletics", "Orchestra, theatre, robotics and 22 competitive teams.", "Zap"), ("Before & after care", "7:15 AM to 6:00 PM with homework club and enrichment clubs.", "Clock")]),

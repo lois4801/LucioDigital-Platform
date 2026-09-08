@@ -73,7 +73,7 @@ class TestDefaultAndPlatform:
         assert r.status_code == 200, r.text
         body = r.json()
         assert body.get("ok") is True
-        assert "OmniStack" in body.get("message", "")
+        assert "Lois-Tech" in body.get("message", "")
 
 
 class TestPostgresSaveAndSecrecy:

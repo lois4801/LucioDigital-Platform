@@ -5,7 +5,8 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star } from "lucide-react";
+import ShowcaseManager from "@/components/ShowcaseManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
@@ -60,6 +61,14 @@ export default function Dashboard() {
     catch (e) { toast.error("Failed to load apps"); }
     finally { setLoading(false); }
   }
+  async function toggleFeatured(a) {
+    try {
+      const { data } = await api.patch(`/apps/${a.app_id}/showcase`, { featured: !a.featured });
+      setApps(list => list.map(x => x.app_id === a.app_id ? { ...x, featured: data.featured, showcase_order: data.showcase_order } : x));
+      toast.success(data.featured ? `${a.name} is now featured on the landing page` : `${a.name} removed from the landing page`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not update that tenant"); }
+  }
+
   async function loadNotifs() {
     try { const { data } = await api.get("/notifications"); setNotifs(data); }
     catch (e) { console.warn("Could not load notifications", e?.response?.status || e?.message); }
@@ -125,7 +134,7 @@ export default function Dashboard() {
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div>
-              <div className="font-display font-semibold tracking-tight text-lg leading-none">OmniStack<span className="text-[var(--acc)]"> AI</span></div>
+              <div className="font-display font-semibold tracking-tight text-lg leading-none">Lois-<span className="text-[var(--acc)]">Tech</span></div>
               <div className="overline mt-1">Agency Workspace</div>
             </div>
           </div>
@@ -217,6 +226,7 @@ export default function Dashboard() {
         </div>
 
         {/* Filter bar */}
+        <ShowcaseManager apps={apps} onChange={(next) => setApps(list => list.map(x => next.find(n => n.app_id === x.app_id) || x))} />
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
@@ -257,9 +267,9 @@ export default function Dashboard() {
               <DialogHeader><DialogTitle className="font-display">Create a new project</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2">
-                  {[["website", "Website", "Framer-style site with pages, theme & AI"], ["app", "App", "Lovable-style app blueprint + starter code"]].map(([k, l, d]) => (
+                  {[["website", "Website"], ["app", "App"]].map(([k, l]) => (
                     <button key={k} data-testid={`new-project-kind-${k}`} onClick={() => setNewApp({ ...newApp, kind: k })} className={`text-left p-3 rounded-xl border ${newApp.kind === k ? "border-[var(--acc)] bg-[var(--acc)]/10" : "border-[var(--line)] hover:bg-white/5"}`}>
-                      <div className="font-display font-semibold">{l}</div><div className="text-[11px] text-[var(--mut)] mt-1">{d}</div></button>
+                      <div className="font-display font-semibold">{l}</div></button>
                   ))}
                 </div>
                 <label className="block"><span className="overline block mb-1">Name</span>
@@ -328,6 +338,11 @@ export default function Dashboard() {
                       {!a.theme?.design_v2 && <span data-testid={`card-legacy-badge-${a.app_id}`} className="chip chip-maint">Legacy look</span>}
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                      <button data-testid={`feature-toggle-${a.app_id}`} title={a.featured ? "Remove from the landing showcase" : "Feature on the landing page"}
+                        onClick={(e) => { e.stopPropagation(); toggleFeatured(a); }}
+                        className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
+                        <Star size={13} fill={a.featured ? "currentColor" : "none"} />
+                      </button>
                       <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
                       <LockStateBadge state={lockStates[a.app_id]?.state} testid={`card-lock-badge-${a.app_id}`} />
                     </div>

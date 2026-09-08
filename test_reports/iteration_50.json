@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 50 verified the OmniStack -> Lois-Tech branding sweep and the create-project-modal cleanup. All 4 backend tests pass (test_iter50_branding.py: served <title>/<meta> Lois-Tech, GET /api/settings/email from_name='Lois-Tech', plugin export ZIP contains 'Lois-Tech' and zero user-visible 'OmniStack' occurrences, and re-importing that ZIP via /api/site/import-plugin restores a fresh tenant app_652c512b7c20 with 4 pages / 10 collections / 35 items / 3 workflows / 8 submissions / 20 members). Frontend Playwright is fully green: 'OmniStack' appears NOWHERE in the rendered HTML of /, /login, /register, /dashboard, /apps/{id} (Overview, Inbox, Workflows, Handoff, Data & Storage tabs all checked), /leads, /deploy, /p/pv_15f7e07b2d724b452e2a and /site-admin/pv_15f7e07b2d724b452e2a. Brand lockup renders 'Lois-Tech' on the landing navbar, footer ('© 2026 Lois-Tech · Agency Multi-Tenant Platform'), login and register (no ' AI' suffix, no doubled 'Tech Tech'). Create-project modal shows exactly 'Website' and 'App' as the two card labels with NO Framer / Lovable subtitles; selection highlight works, Name/Industry/Description/URL/ZIP inputs and Create button all render, and creating the throwaway 'TEST_iter50_1788892784' website succeeded and landed on the dashboard list. Regression: lead-insights-card renders on the tenant Inbox tab, the three inbox tabs inbox-tab-real/test/archived render, and export-website-btn / export-fullstack-btn / export-plugin-btn all render on Handoff. Zero 'Maximum update depth exceeded' console errors during owner login and app-detail navigation.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter50_branding.py",
+    "/app/test_reports/pytest/iter50.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Two internal identifiers deliberately keep the 'omnistack' string (as the request calls out): plugin manifest format id 'omnistack.plugin' at export_pkg.py:419/618 and the storage-prefix constant APP_NAME='omnistack' in storage.py:11 & files_lib.py:15. Verified untouched and confirmed to keep the plugin-import round-trip green. NOT a bug — flagged only so future refactors don't accidentally rename them.",
+    "web_import.py:33 UA string is 'Mozilla/5.0 (compatible; LoisTechImporter/1.0; +https://omnistack.ai)' — the User-Agent product name was renamed but the +URL still points at omnistack.ai. This is only a HTTP header sent by the crawler (never rendered in the UI), but if omnistack.ai is not owned/redirected it's a minor cosmetic leak of the old brand. Optional: update to https://lois-tech.ai (or drop the +URL).",
+    "server.py:693 the mobile Capacitor manifest still uses appId='com.omnistack.{slug}' — this is baked into every generated mobile export's capacitor.config.json and IS user-visible if anyone inspects the downloaded ZIP or ships to a store. Not covered by the request's 'internal identifiers stay' clause. Suggest 'com.loistech.{slug}' (or introduce a versioned appId so existing installs don't break).",
+    "Cosmetic: /apps/{id} DialogContent (both the new-project modal and others) warns 'Missing Description or aria-describedby={undefined} for {DialogContent}' — accessibility nit from Radix. Add aria-describedby or a DialogDescription."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter50_branding.py"
+  ],
+  "success_rate": {"backend": "100% (4/4)", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (owner) — accepted. Client editor not needed this iteration.",
+  "seed_data_creation": "1 throwaway website tenant 'TEST_iter50_1788892784' created on the owner account via the new-project modal (proves the create flow is unbroken). 1 fresh tenant app_652c512b7c20 restored by the plugin-import round-trip test. No apps/users/pages deleted.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The Site Mode tab is exposed as data-testid='tab-builder-btn' (NOT tab-site-mode-btn) and App Mode is 'tab-blueprint-btn' — noted here to save the next agent one retry cycle. Full tab-testid list from Playwright: overview, builder, cms, blueprint, workflows, inbox, bookings, media, videos, files, data, billing, domain, handoff, activity. Plugin export ZIP takes ~15s (much faster than the 60-120s stated in the request) and clocks in well under the 240s timeout used in the pytest. The intentional 'omnistack.plugin' format id and APP_NAME='omnistack' storage prefix are respected by the assertion (it greps only text files inside the ZIP for user-visible 'OmniStack' and did not fire on the format id JSON key). See critical_code_review_comments for two minor OmniStack leftovers (web_import UA URL and mobile capacitor appId) that were NOT in the tested feature scope but may be worth a follow-up rename by the main agent."
+}

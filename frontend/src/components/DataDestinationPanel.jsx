@@ -14,7 +14,7 @@ import {
 import api from "@/lib/api";
 
 const PROVIDERS = [
-  { key: "platform", label: "OmniStack workspace", icon: Cloud },
+  { key: "platform", label: "Lois-Tech workspace", icon: Cloud },
   { key: "postgres", label: "PostgreSQL", icon: Database },
   { key: "supabase", label: "Supabase PostgreSQL", icon: Database },
   { key: "rest_api", label: "Custom storage API", icon: FolderCog },
@@ -197,7 +197,7 @@ function ProviderFields({ provider, draft, setDraft }) {
           value={config.folder_path}
           onChange={(value) => setConfig("folder_path", value)}
           testid="data-destination-dropbox-folder-input"
-          placeholder="/OmniStack/client-name"
+          placeholder="/Lois-Tech/client-name"
         />
       </div>
     );
@@ -278,7 +278,7 @@ export default function DataDestinationPanel({ appId }) {
       const { data } = await api.put(`/apps/${appId}/data-destination`, { provider, ...draft });
       setDestination(data);
       setDraft({ label: data.label || "", configuration: data.configuration || {}, secrets: {} });
-      toast.success(provider === "platform" ? "OmniStack workspace selected" : "Secure destination saved");
+      toast.success(provider === "platform" ? "Lois-Tech workspace selected" : "Secure destination saved");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Could not save destination");
     } finally {
@@ -306,7 +306,7 @@ export default function DataDestinationPanel({ appId }) {
       setDestination(data);
       setProvider("platform");
       setDraft({ label: data.label, configuration: {}, secrets: {} });
-      toast.success("Returned to the OmniStack workspace");
+      toast.success("Returned to the Lois-Tech workspace");
     } catch (error) {
       toast.error(error.response?.data?.detail || "Could not reset destination");
     } finally {
@@ -418,7 +418,7 @@ export default function DataDestinationPanel({ appId }) {
                 className="btn-ghost text-sm inline-flex items-center gap-2 disabled:opacity-50"
               >
                 <RotateCcw size={14} />
-                Use OmniStack workspace
+                Use Lois-Tech workspace
               </button>
             )}
           </div>

@@ -216,6 +216,33 @@ Respond to the user in **English** only.
    - Client change requests (`kind=edit_request`) are pinned to the real lane at insert and on backfill;
      `_classify_pending` now does a single `bulk_write`
 
+15. **Dynamic landing showcase** (iter 51, 7/7 backend + frontend green):
+   - `GET /api/public/landing/templates` — the niche template cards are derived live from `site_content.NICHES`
+     (16 templates: key, industry title, brand, description, hero image, accent, section count). Add or remove a
+     niche and the landing cards follow automatically
+   - `GET /api/public/landing/tenants` — the showcase cards are the real tenants in the `ADMIN_EMAIL` owner's
+     workspace: name, cover image, niche tag, preview token, summary, and a **LIVE / TEMPLATE** status computed
+     from the deployment state (`domain_status == "verified"`, or `status == "active"` with preview enabled).
+     Creating a tenant makes it appear, deleting one removes it — verified by the testing agent
+   - `Landing.jsx`: hardcoded `SHOWCASE` array and the CMS card editor for that section are gone; one effect
+     loads both endpoints, refreshes every 30s and on window focus; cards expose `showcase-name-{i}`,
+     `showcase-tag-{i}`, `showcase-status-{i}` and a `showcase-counts` line; broken images degrade to a branded
+     gradient; "View all tenants" → `/dashboard` (or `/login` when signed out)
+   - Fixed a dead Unsplash hero on the Education template; `preview_enabled` is now accepted by `PATCH /api/apps/{id}`
+
+16. **Featured toggle + drag-to-reorder showcase** (iter 52, 11/11 backend + frontend green):
+   - `PATCH /api/apps/{id}/showcase {featured}` — star/unstar a tenant for the landing page; starring assigns
+     `showcase_order = max+1`, unstarring clears the order
+   - `PUT /api/apps/showcase/order {app_ids}` — authoritative resequence: the given ids take 0..n-1, other
+     starred tenants are appended keeping their relative order, and `featured` is forced on so reordering can
+     never drop a star. 400 on an empty payload, 404 on a tenant you don't own
+   - `public_tenants`: when anything is starred the landing page shows **only** starred tenants in the chosen
+     order; with nothing starred it falls back to newest-first, so the section is never empty
+   - `ShowcaseManager.jsx` on the dashboard — collapsible "Landing page showcase" panel with drag-and-drop rows,
+     up/down arrows, unstar and a landing-page preview link; every tenant card has a `feature-toggle-{app_id}` star
+   - Known trade-off (flagged twice in review, intentional): `/api/public/landing/tenants` exposes the preview
+     token of preview-enabled tenants, so live preview URLs are publicly enumerable
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.

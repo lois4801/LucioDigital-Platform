@@ -7,15 +7,9 @@ import { Words, Spotlight, fast } from "@/components/motion";
 import ChatWidget from "@/components/ChatWidget";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { AdminText, CardEditor, MarqueeEditor, CardAdminControls, saveLanding } from "@/components/LandingAdmin";
-import { Settings2, Plus } from "lucide-react";
+import { AdminText, MarqueeEditor, saveLanding } from "@/components/LandingAdmin";
+import { Settings2 } from "lucide-react";
 
-const SHOWCASE = [
-  { title: "Nexus Commerce", tag: "E-commerce", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4", blurb: "Featured products, categories, offers, loyalty program and a store locator — built for independent retailers and DTC brands.", sections: ["Featured Products", "Categories", "Offers", "Loyalty Program", "Store Locator"] },
-  { title: "Orbit SaaS Portal", tag: "SaaS Portals", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4", blurb: "Dark, product-led SaaS marketing site with platform features, logo cloud, pricing tiers and customer proof.", sections: ["Platform", "Trusted by", "Stats", "Pricing", "Testimonials", "FAQ"] },
-  { title: "Fleet Command", tag: "Internal Tools", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4", blurb: "Logistics and operations sites with service areas, safety record charts, certifications and instant quote requests.", sections: ["Services", "Service Areas", "Safety Record", "Certifications", "Request a Quote"] },
-  { title: "Aura Wellness", tag: "Service Booking", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4", blurb: "Fitness and wellness studios: class schedule, trainers, membership plans, transformation stories and a free-trial CTA.", sections: ["Class Schedule", "Trainers", "Membership Plans", "Transformation Stories", "Free Trial"] },
-];
 const LOGOS = ["Nexus", "Orbit", "Fleet", "Aura", "Ledger", "Studio", "Vanta", "Halo"];
 const BENTO = [
   { icon: GripVertical, t: "Drag-and-drop builder", d: "Reorder hero, features, pricing and chart blocks with real physics — then ask Claude to rewrite any block in plain English.", span: "lg:col-span-7" },
@@ -29,11 +23,12 @@ const fade = { hidden: { opacity: 0, y: 18 }, show: (i = 0) => ({ opacity: 1, y:
 
 function ShowcaseCard({ s, i, onOpen }) {
   const [playing, setPlaying] = useState(true);
+  const live = s.status ? s.status === "LIVE" : !!s.token;
   return (
     <motion.div variants={fade} custom={i} data-testid={`showcase-card-${i}`} layoutId={`showcase-${i}`} onClick={() => onOpen(s, i)} whileHover={{ y: -6 }} whileTap={{ scale: 0.98 }}
       className="card-lift group relative rounded-2xl overflow-hidden border border-white/10 bg-[var(--card)] cursor-pointer">
       <div className="aspect-[4/3] relative overflow-hidden">
-        {s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" /> :
+        {s.thumbnail ? <img src={s.thumbnail} alt="" onError={e => { e.currentTarget.style.display = "none"; }} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" /> :
           <video src={s.video} autoPlay muted loop playsInline ref={el => { if (el) playing ? el.play().catch(() => {}) : el.pause(); }} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg)] via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="rounded-full bg-[var(--acc)] text-black text-xs font-semibold px-4 py-2 flex items-center gap-1.5 shadow-[0_0_30px_rgba(16,185,129,0.5)]">{s.token ? "Open live demo" : "See what's included"} <ArrowRight size={12} /></span></div>
@@ -41,11 +36,13 @@ function ShowcaseCard({ s, i, onOpen }) {
           className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-black/60 backdrop-blur border border-white/10 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
           {playing ? <Pause size={13} /> : <Play size={13} className="ml-0.5" />}
         </button>}
-        <div className="absolute top-3 left-3 chip">{s.tag}</div>
+        <div className="absolute top-3 left-3 chip" data-testid={`showcase-tag-${i}`}>{s.tag}</div>
       </div>
-      <div className="p-4 flex items-center justify-between">
-        <div className="font-display text-lg">{s.brand || s.title}</div>
-        <span className="chip chip-active badge-glow" style={{ padding: "2px 8px" }}><span className="pulse-dot" />{s.token ? "Live" : "Template"}</span>
+      <div className="p-4 flex items-center justify-between gap-2">
+        <div className="font-display text-lg truncate" data-testid={`showcase-name-${i}`}>{s.title}</div>
+        <span data-testid={`showcase-status-${i}`} className={`chip ${live ? "chip-active badge-glow" : ""} shrink-0`} style={{ padding: "2px 8px" }}>
+          {live && <span className="pulse-dot" />}{live ? "LIVE" : "TEMPLATE"}
+        </span>
       </div>
     </motion.div>
   );
@@ -58,8 +55,8 @@ function NicheModal({ s, i, onClose, onStart }) {
         <div className="aspect-[21/9] relative">{s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <video src={s.video} autoPlay muted loop playsInline className="w-full h-full object-cover" />}<div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] to-transparent" /><div className="absolute top-4 left-4 chip">{s.tag}</div>
           <button data-testid="niche-modal-close" onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-black/80"><X size={14} /></button></div>
         <div className="p-7">
-          <div className="overline mb-2">{s.tag} template</div>
-          <h3 className="font-display text-2xl font-bold tracking-tight">{s.brand || s.title}</h3>
+          <div className="overline mb-2">{s.tag}{s.status === "TEMPLATE" ? " template" : " · live tenant"}</div>
+          <h3 className="font-display text-2xl font-bold tracking-tight">{s.title || s.name}</h3>
           <p className="text-[var(--mut)] mt-3">{s.summary || s.blurb}</p>
           <div className="mt-5 flex flex-wrap gap-2">{(s.sections || []).map(x => <span key={x} className="chip normal-case tracking-normal">{typeof x === "string" ? x.replace(/_/g, " ") : x}</span>)}</div>
           <p className="text-xs text-[var(--dim)] mt-4">Includes: dark premium design system, glass cards, niche hero imagery, AI chat widget, lead inbox, workflows, CMS and one-click export.</p>
@@ -103,7 +100,8 @@ export default function Landing() {
   const { user } = useAuth();
   const go = () => nav(user ? "/dashboard" : "/register");
   const [activeNav, setActiveNav] = useState("Showcase");
-  const [showcase, setShowcase] = useState(SHOWCASE);
+  const [showcase, setShowcase] = useState([]);
+  const [templates, setTemplates] = useState([]);
   const [modal, setModal] = useState(null);
   const [leaving, setLeaving] = useState(false);
   const isAdmin = !!user?.is_admin;
@@ -111,7 +109,6 @@ export default function Landing() {
   const admin = isAdmin && editMode;
   const toggleEditMode = () => setEditMode(v => { localStorage.setItem("os_landing_edit", v ? "0" : "1"); return !v; });
   const [cms, setCms] = useState({ cards: [], marquee: LOGOS, texts: {} });
-  const [editCard, setEditCard] = useState(null);
   const [tickerOpen, setTickerOpen] = useState(false);
   const chatColorTimer = useRef(null);
   useEffect(() => { api.get("/public/landing").then(r => setCms(r.data)).catch(() => {}); }, []);
@@ -121,16 +118,23 @@ export default function Landing() {
   const demoAt = (i) => ({ ...DEMOS[i], title: tx(`demo_${i}_title`, DEMOS[i].title), tag: tx(`demo_${i}_tag`, DEMOS[i].tag), len: tx(`demo_${i}_len`, DEMOS[i].len), video: tx(`demo_${i}_video`, DEMOS[i].video),
     titleNode: <Tx k={`demo_${i}_title`} f={DEMOS[i].title} />,
     onVideoUrl: admin ? async () => { const u = window.prompt("Paste the video URL (MP4 or YouTube embed link) for this demo", tx(`demo_${i}_video`, DEMOS[i].video)); if (u && u.trim()) { try { await saveText(`demo_${i}_video`)(u.trim()); toast.success("Demo video updated"); } catch { toast.error("Save failed"); } } } : undefined });
-  async function saveCard(f) {
-    const cards = f.id ? cms.cards.map(c => c.id === f.id ? { ...c, ...f } : c) : [...cms.cards, f];
-    try { setCms(await saveLanding({ cards })); setEditCard(null); toast.success("Card saved"); } catch { toast.error("Save failed"); }
-  }
-  async function deleteCard(c) {
-    if (!window.confirm(`Delete the “${c.title}” card? This removes it for all visitors.`)) return;
-    try { setCms(await saveLanding({ cards: cms.cards.filter(x => x.id !== c.id) })); toast.success("Card deleted"); } catch { toast.error("Delete failed"); }
-  }
   async function saveMarquee(list) { try { setCms(await saveLanding({ marquee: list })); setTickerOpen(false); toast.success("Ticker updated"); } catch { toast.error("Save failed"); } }
-  useEffect(() => { api.get("/public/showcase").then(r => setShowcase(SHOWCASE.map(s => ({ ...s, ...(r.data.find(d => d.name === s.title) || {}) })))).catch(() => {}); }, []);
+  // Tenant cards + niche template cards are 100% database-driven and refresh on focus / every 30s.
+  useEffect(() => {
+    let alive = true;
+    const load = async () => {
+      try {
+        const [t, n] = await Promise.all([api.get("/public/landing/tenants"), api.get("/public/landing/templates")]);
+        if (!alive) return;
+        setShowcase((t.data.tenants || []).map(x => ({ ...x, title: x.name, thumbnail: x.cover, blurb: x.summary })));
+        setTemplates(n.data.templates || []);
+      } catch (e) { console.warn("Could not load showcase data", e?.response?.status || e?.message); }
+    };
+    load();
+    const timer = setInterval(load, 30000);
+    window.addEventListener("focus", load);
+    return () => { alive = false; clearInterval(timer); window.removeEventListener("focus", load); };
+  }, []);
   function openShowcase(s, i) {
     if (s.token) { setLeaving(true); setTimeout(() => nav(`/p/${s.token}`), 380); } else setModal({ s, i });
   }
@@ -154,7 +158,7 @@ export default function Landing() {
         <nav data-testid="landing-nav-pill" className="flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
           <Link to="/" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10">
             <Layers size={16} className="text-[var(--acc)]" />
-            <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="OmniStack" /><span className="text-[var(--acc)]"> <Tx k="brand_suffix" f="AI" /></span></span>
+            <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="Lois-" /><span className="text-[var(--acc)]"><Tx k="brand_suffix" f="Tech" /></span></span>
           </Link>
           {[["Showcase", "#showcase"], ["Platform", "#platform"], ["Pricing", "#pricing"]].map(([l, h]) => (
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
@@ -216,19 +220,30 @@ export default function Landing() {
         </div>
       </section>
       <MarqueeEditor items={cms.marquee} open={tickerOpen} onClose={() => setTickerOpen(false)} onSave={saveMarquee} />
-      <CardEditor card={editCard} open={!!editCard} onClose={() => setEditCard(null)} onSave={saveCard} />
 
-      {/* Image strip */}
+      {/* Niche templates — pulled live from the platform's template library */}
       <section className="relative z-10 px-6 lg:px-14 py-16" data-testid="niche-cards-section">
-        {admin && <div className="max-w-7xl mx-auto mb-4 flex justify-end"><button data-testid="card-add-btn" onClick={() => setEditCard({ title: "", description: "", image: "" })} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1"><Plus size={12} /> Add card</button></div>}
+        <div className="max-w-7xl mx-auto mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="overline">Niche templates</div>
+            <div className="text-sm text-[var(--mut)] mt-1">{templates.length} industry template{templates.length === 1 ? "" : "s"} ready to spin up — this list updates itself as templates are added or removed.</div>
+          </div>
+        </div>
         <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4">
-          {cms.cards.map((c, i) => (
-            <div key={c.id} data-testid={`landing-image-${i}`} className={`group card-lift relative rounded-2xl overflow-hidden border border-white/10 hover:scale-[1.02] ${i % 2 ? "md:mt-8" : ""}`}>
-              {admin && <CardAdminControls onEdit={() => setEditCard(c)} onDelete={() => deleteCard(c)} />}
-              <img src={c.image} alt={c.title} className="w-full aspect-[4/5] object-cover hover:scale-105 transition-transform duration-700" />
-              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/85 to-transparent"><div className="text-sm font-semibold" data-testid={`landing-card-title-${i}`}>{c.title}</div>{c.description && <div className="text-[11px] text-white/70 mt-1 line-clamp-2">{c.description}</div>}</div>
+          {templates.slice(0, 8).map((c, i) => (
+            <div key={c.key} data-testid={`landing-image-${i}`} className={`group card-lift relative rounded-2xl overflow-hidden border border-white/10 hover:scale-[1.02] ${i % 2 ? "md:mt-8" : ""}`}>
+              <div className="w-full aspect-[4/5]" style={{ background: `linear-gradient(160deg, ${c.primary}40, #0B0F14)` }}>
+                <img src={c.image} alt="" onError={e => { e.currentTarget.style.display = "none"; }}
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+              </div>
+              <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/85 to-transparent">
+                <div className="text-sm font-semibold" data-testid={`landing-card-title-${i}`}>{c.title}</div>
+                {c.description && <div className="text-[11px] text-white/70 mt-1 line-clamp-2">{c.description}</div>}
+                <div className="text-[10px] font-mono text-white/50 mt-1">{c.sections} sections</div>
+              </div>
             </div>
           ))}
+          {templates.length === 0 && <div className="col-span-2 md:col-span-4 text-sm text-[var(--mut)]">Loading templates…</div>}
         </div>
       </section>
 
@@ -239,11 +254,13 @@ export default function Landing() {
             <motion.div variants={fade}>
               <AdminText admin={admin} value={tx("products_overline", "Products we ship")} onSave={saveText("products_overline")} as="div" className="overline mb-3" testid="text-products-overline" />
               <AdminText admin={admin} value={tx("products_heading", "Every tenant, on-brand and always live.")} onSave={saveText("products_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-products-heading" />
+              <div className="text-sm text-[var(--mut)] mt-2" data-testid="showcase-counts">{showcase.length} tenant{showcase.length === 1 ? "" : "s"} in the workspace · {showcase.filter(s => s.status === "LIVE").length} live</div>
             </motion.div>
             <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start"><Tx k="showcase_view_all" f="View all tenants" /> <ArrowRight size={14} /></motion.button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {showcase.map((s, i) => <ShowcaseCard key={s.title} s={s} i={i} onOpen={openShowcase} />)}
+            {showcase.slice(0, 8).map((s, i) => <ShowcaseCard key={s.app_id || s.title} s={s} i={i} onOpen={openShowcase} />)}
+            {showcase.length === 0 && <div data-testid="showcase-empty" className="col-span-full text-sm text-[var(--mut)]">No tenants in the workspace yet — create one and it appears here automatically.</div>}
           </div>
         </motion.div>
       </section>
@@ -253,7 +270,7 @@ export default function Landing() {
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
           <motion.div variants={fade} className="mb-12 max-w-2xl">
             <AdminText admin={admin} value={tx("demos_overline", "See it in action")} onSave={saveText("demos_overline")} as="div" className="overline mb-3" testid="text-demos-overline" />
-            <AdminText admin={admin} value={tx("demos_heading", "Watch OmniStack build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
+            <AdminText admin={admin} value={tx("demos_heading", "Watch Lois-Tech build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
             <p className="text-[var(--mut)] mt-3"><Tx k="demos_sub" f="Three short walkthroughs: Site Mode, App Mode with industry templates, and the export & handoff pipeline." /></p>
           </motion.div>
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
@@ -315,10 +332,10 @@ export default function Landing() {
       </section>
 
       <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span><Tx k="footer_copy" f="© 2026 OmniStack AI · Agency Multi-Tenant Platform" /></span>
+        <span><Tx k="footer_copy" f="© 2026 Lois-Tech · Agency Multi-Tenant Platform" /></span>
         <span>Built for Emergent</span>
       </footer>
-      <ChatWidget token="studio" brand="OmniStack AI" accent="#10B981" textColor={tx("chat_text_color", "#000000")} admin={admin}
+      <ChatWidget token="studio" brand="Lois-Tech" accent="#10B981" textColor={tx("chat_text_color", "#000000")} admin={admin}
         onTextColor={(v) => {
           setCms(c => ({ ...c, texts: { ...c.texts, chat_text_color: v } }));
           clearTimeout(chatColorTimer.current);

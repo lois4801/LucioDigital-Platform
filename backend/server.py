@@ -140,6 +140,7 @@ class AppUpdateIn(BaseModel):
     video_url: Optional[str] = None
     live_url: Optional[str] = None
     transfer_mode: Optional[bool] = None
+    preview_enabled: Optional[bool] = None
 
 
 class Block(BaseModel):
@@ -684,7 +685,7 @@ async def build_export_files(app_doc: dict) -> dict:
     files["site/pages.json"] = json.dumps(pages, indent=2)
     files["site/theme.json"] = json.dumps(theme, indent=2)
     files["site/vercel.json"] = json.dumps({"cleanUrls": True}, indent=2)
-    readme = f"# {app_doc['name']}\n\nExported from OmniStack AI.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
+    readme = f"# {app_doc['name']}\n\nExported from Lois-Tech.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
     if app_doc.get("app_spec"):
         for path, content in starter_app_files(app_doc["app_spec"], {**theme, "logo": (f"/{logo_asset}" if logo_asset else (f"{FRONTEND_URL}{logo}" if logo else None))}).items():
             files[f"app/{path}"] = content
@@ -695,7 +696,7 @@ async def build_export_files(app_doc: dict) -> dict:
     files["mobile/README.md"] = (f"# {app_doc['name']} — App Store & Google Play\n\nThis folder wraps the exported site as a native app with Capacitor.\n\n"
                                 "1. `cd mobile && npm i`\n2. `npm run add:ios` / `npm run add:android`\n3. `npm run sync`\n4. `npm run open:ios` → Xcode → Archive → App Store Connect\n"
                                 "5. `npm run open:android` → Android Studio → Build → Generate Signed Bundle (.aab) → Google Play Console\n\n"
-                                "Icons/splash: `npx @capacitor/assets generate`. Store listing images: use the AI Media Studio in OmniStack.\n")
+                                "Icons/splash: `npx @capacitor/assets generate`. Store listing images: use the AI Media Studio in Lois-Tech.\n")
     files["README.md"] = readme + "\n## mobile/\nCapacitor wrapper for publishing to the Apple App Store and Google Play (see mobile/README.md).\n"
     return files
 
@@ -1030,7 +1031,7 @@ _zip_import.PLUGIN = EXPORT
 from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin
-register_landing(api, db, get_current_user)
+register_landing(api, db, get_current_user, get_user_app, log_activity)
 from ui_cms import register as register_ui_cms
 register_ui_cms(api, db, get_current_user, get_user_app)
 from files_lib import register as register_files, bundle_media

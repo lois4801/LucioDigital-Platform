@@ -119,7 +119,7 @@ def _public(doc: Optional[dict]) -> dict:
     if not doc:
         return {
             "provider": "platform",
-            "label": "OmniStack workspace",
+            "label": "Lois-Tech workspace",
             "status": "active",
             "configuration": {},
             "secret_fields": [],
@@ -226,7 +226,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             app_id,
             user["user_id"],
             "data.destination.reset",
-            "Returned data storage to the OmniStack workspace",
+            "Returned data storage to the Lois-Tech workspace",
         )
         return _public(None)
 
@@ -237,7 +237,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         public = _public(doc)
         provider = public["provider"]
         if provider == "platform":
-            return {"ok": True, "message": "OmniStack workspace is active"}
+            return {"ok": True, "message": "Lois-Tech workspace is active"}
         if not public["can_test"]:
             raise HTTPException(409, "Add the required secure connection details before testing.")
 

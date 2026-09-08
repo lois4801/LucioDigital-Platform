@@ -491,7 +491,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
             login = me["login"]
             r = await http.get(f"https://api.github.com/repos/{login}/{slug}")
             if r.status_code == 404:
-                r = await http.post("https://api.github.com/user/repos", json={"name": slug, "private": private, "auto_init": True, "description": f"{app_doc['name']} — exported from OmniStack AI"})
+                r = await http.post("https://api.github.com/user/repos", json={"name": slug, "private": private, "auto_init": True, "description": f"{app_doc['name']} — exported from Lois-Tech"})
                 if r.status_code not in (200, 201):
                     raise HTTPException(500, f"GitHub repo create failed: {r.text[:160]}")
                 await asyncio.sleep(2)
@@ -507,7 +507,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                 b = await http.post(f"https://api.github.com/repos/{login}/{slug}/git/blobs", json={"content": base64.b64encode(content.encode()).decode(), "encoding": "base64"})
                 tree.append({"path": path, "mode": "100644", "type": "blob", "sha": b.json()["sha"]})
             t = await http.post(f"https://api.github.com/repos/{login}/{slug}/git/trees", json={"base_tree": base_tree, "tree": tree})
-            c = await http.post(f"https://api.github.com/repos/{login}/{slug}/git/commits", json={"message": f"OmniStack AI export · {now_iso()[:16]}", "tree": t.json()["sha"], "parents": [head_sha]})
+            c = await http.post(f"https://api.github.com/repos/{login}/{slug}/git/commits", json={"message": f"Lois-Tech export · {now_iso()[:16]}", "tree": t.json()["sha"], "parents": [head_sha]})
             await http.patch(f"https://api.github.com/repos/{login}/{slug}/git/refs/heads/{branch}", json={"sha": c.json()["sha"]})
         result = {"status": "pushed", "repo": repo["html_url"], "files": len(files), "commit": c.json()["sha"][:7], "branch": branch, "pushed_at": now_iso()}
         await db.apps.update_one({"app_id": app_id}, {"$set": {"github": result}})

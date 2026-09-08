@@ -30,7 +30,7 @@ store_video = None
 IMPORTANT_RE = re.compile(r"service|about|product|pricing|price|contact|team|work|portfolio|menu|solution|industr|faq|gallery|book|quote|location|schedule|career", re.I)
 EMBED_RE = re.compile(r"(youtube\.com|youtu\.be|player\.vimeo\.com|vimeo\.com|wistia|loom\.com)", re.I)
 
-UA = "Mozilla/5.0 (compatible; OmniStackImporter/1.0; +https://omnistack.ai)"
+UA = "Mozilla/5.0 (compatible; LoisTechImporter/1.0; +https://omnistack.ai)"
 MAX_BYTES = 1_500_000
 MAX_PAGES = 100
 MAX_DEPTH = 3
