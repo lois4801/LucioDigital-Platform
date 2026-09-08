@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Mail, CreditCard, Eye, Send } from "lucide-react";
+import { Mail, CreditCard, Eye, Send, Sparkles } from "lucide-react";
 
 /** Per-tenant weekly digest settings + the paid members area. */
 export default function ProSettings({ appId }) {
@@ -10,12 +10,17 @@ export default function ProSettings({ appId }) {
   const [paid, setPaid] = useState({ enabled: false, mode: "one_time", price: 19, currency: "usd", interval: "month", page_ids: [] });
   const [pages, setPages] = useState([]);
   const [members, setMembers] = useState({ members: [], payments: [] });
+  const [ai, setAi] = useState({ models: [], features: [], override: {}, effective: {}, platform: {} });
+  const [seo, setSeo] = useState(null);
   const [busy, setBusy] = useState("");
 
   const load = () => {
     api.get(`/apps/${appId}/digest/preview`).then(r => { setDigest({ ...r.data.settings }); setPreview(r.data); }).catch(() => { });
     api.get(`/apps/${appId}/webapp`).then(r => { setPages(r.data.pages || []); if (r.data.paid) setPaid(p => ({ ...p, ...r.data.paid })); }).catch(() => { });
     api.get(`/apps/${appId}/paid-members`).then(r => { setMembers(r.data); if (r.data.paid?.enabled !== undefined) setPaid(p => ({ ...p, ...r.data.paid })); }).catch(() => { });
+    Promise.all([api.get("/ai/models"), api.get(`/apps/${appId}/ai-model`)])
+      .then(([m, t]) => setAi({ models: m.data.models, features: m.data.features, platform: m.data.platform, override: t.data.override || {}, effective: t.data.effective || {} }))
+      .catch(() => { });
   };
   useEffect(() => { load(); }, [appId]);
 
@@ -34,10 +39,52 @@ export default function ProSettings({ appId }) {
     try { const { data } = await api.patch(`/apps/${appId}/webapp/paid`, next); setPaid(p => ({ ...p, ...data })); toast.success(next.enabled ? "Paid members area is live" : "Paid members area off — those pages are open again"); load(); }
     catch (e) { toast.error(e.response?.data?.detail || "Could not save"); } finally { setBusy(""); }
   }
+  async function saveAi(override) {
+    setAi(a => ({ ...a, override }));
+    try { await api.patch(`/apps/${appId}/ai-model`, override); toast.success("AI model updated"); load(); }
+    catch (e) { toast.error(e.response?.data?.detail || "Could not save the model"); }
+  }
+  async function writeSeo() {
+    setBusy("seo");
+    try { const { data } = await api.post(`/apps/${appId}/ai/seo`); setSeo(data); toast.success(`SEO written for ${data.pages.length} page(s) with ${data.model}`); }
+    catch (e) { toast.error(e.response?.data?.detail || "SEO generation failed"); } finally { setBusy(""); }
+  }
   const togglePage = (id) => savePaid({ ...paid, page_ids: paid.page_ids.includes(id) ? paid.page_ids.filter(x => x !== id) : [...paid.page_ids, id] });
 
   return (
     <div className="space-y-3">
+      <div data-testid="ai-model-card" className="rounded-xl border border-[var(--line)] p-4 space-y-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <Sparkles size={15} className="text-[var(--acc)]" />
+          <div className="text-xs flex-1 min-w-[220px]">
+            <div className="font-semibold">AI model</div>
+            <div className="text-[var(--mut)]">Choose the brain behind this tenant's site generation, chat widget, lead scoring, copy rewrites and SEO. Leave a feature on “Platform default” to follow your global setting.</div>
+          </div>
+          <button data-testid="ai-seo-btn" onClick={writeSeo} disabled={busy === "seo"} className="btn-ghost !py-2 !px-4 text-xs">{busy === "seo" ? "Writing…" : "Write SEO for all pages"}</button>
+        </div>
+        <label className="block text-xs text-[var(--mut)]">Tenant default
+          <select data-testid="ai-model-tenant" value={ai.override?.model || ""} onChange={e => saveAi({ ...ai.override, model: e.target.value || undefined })}
+            className="ml-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-xs">
+            <option value="">{`Platform default (${ai.platform?.model || "claude-sonnet-5"})`}</option>
+            {(ai.models || []).map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+        </label>
+        <div className="grid sm:grid-cols-2 gap-1.5">
+          {(ai.features || []).map(f => (
+            <label key={f} className="text-[11px] text-[var(--mut)] flex items-center gap-2">
+              <span className="w-28 capitalize shrink-0">{f.replace("_", " ")}</span>
+              <select data-testid={`ai-model-${f}`} value={(ai.override?.features || {})[f] || ""}
+                onChange={e => saveAi({ ...ai.override, features: { ...(ai.override?.features || {}), [f]: e.target.value || undefined } })}
+                className="flex-1 bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-[11px]">
+                <option value="">{`default (${(ai.effective || {})[f]?.model || "—"})`}</option>
+                {(ai.models || []).map(m => <option key={m.id} value={m.id}>{m.id}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+        {seo && <div data-testid="ai-seo-result" className="text-[11px] text-[var(--mut)]">SEO written for {seo.pages.length} page(s) using {seo.model}.</div>}
+      </div>
+
       <div data-testid="digest-card" className="rounded-xl border border-[var(--line)] p-4 space-y-2">
         <div className="flex flex-wrap items-center gap-3">
           <Mail size={15} className="text-[var(--acc)]" />

@@ -1,0 +1,37 @@
+{
+  "summary": "Iter 42 — Gemini AI models routing. Backend: 10/16 pytest cases pass. The registry, tenant override, tenant precedence, Gemini SEO run (persisted seo objects on pages with model=gemini-3-flash-preview, blocks untouched), and AI editor routing under both Gemini and Claude all work correctly. HOWEVER — the platform admin gate on PATCH /api/ai/models is broken: it checks user.get('is_admin') but get_current_user (server.py:167) never sets that flag (only /auth/me augments it at line 293). Result: the platform-admin owner (jaybernabe@luciodigital.com, matches ADMIN_EMAIL) is himself blocked by 403 from PATCH /api/ai/models, so nobody can set the platform default at all. 4 failing tests stem from this single bug; a 5th failing test depends on the platform default having been set. Frontend: all required data-testids in the Bookings tab AI-model card resolve (ai-model-card, ai-model-tenant, ai-model-site_generation/chat_widget/lead_scoring/copy_rewrite/seo, ai-seo-btn) and changing ai-model-tenant persists across reload. Regression smoke on Overview / Bookings / AI Media / Members / Site Mode / CMS renders clean (only a single unrelated 401 in console, no React errors). Tenant app_6663b5de0007 has been restored to gemini-3-flash-preview with site_generation on gemini-3.1-pro-preview.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "PATCH /api/ai/models", "issue": "Admin check uses user.get('is_admin') but get_current_user never populates that field. Even the account matching ADMIN_EMAIL gets 403 → the platform default is unsettable via API. Fix: compare user['email'].lower().strip() == os.environ['ADMIN_EMAIL'].lower().strip() (same pattern used in /auth/me line 293). Located in /app/backend/ai_models.py `set_platform_model` (line ~104).", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter42_ai_models.py",
+    "/app/test_reports/pytest/iter42.xml"
+  ],
+  "action_items": [
+    "Fix admin gate in ai_models.set_platform_model — check ADMIN_EMAIL, not the missing user['is_admin']. Once fixed, re-run test_iter42_ai_models.py and all 6 failing platform-default tests should flip green (owner PATCH /api/ai/models with junk model → 400, unknown feature → 400, valid payload → 200, TestTenantOverride.test_platform_feature_wins_when_no_tenant_override, TestFallback.test_falls_back_to_builtin_defaults, test_zz_restore_tenant_gemini).",
+    "Optional: ai_models.resolve_sync ignores app_id/platform doc entirely and returns FEATURE_DEFAULTS — misleading name and it silently sidesteps the whole precedence chain if any caller uses it. It has no current callers but consider deleting or making it raise."
+  ],
+  "critical_code_review_comments": [
+    "ai_models.set_platform_model: broken admin gate (see critical above).",
+    "ai_models.set_tenant_model does an unconditional $set on apps.ai_model even with empty body, so passing {} wipes the override. That's the behavior our tests rely on to 'clear' an override, and it works, but it is not documented; a merge/upsert-per-feature would be safer.",
+    "ai_models.write_seo silently continues on per-page exception and returns len(out) pages — good, but log_activity always fires even when out is empty. Consider gating the activity write on len(out) > 0.",
+    "resolve_model falls back to DEFAULT_MODEL when the stored model id is unknown — verified via API (unknown ids are rejected on write, but a stale value in the db resolves cleanly). Nano Banana image_model id 'gemini-2.5-flash-image-preview' is exposed via GET /api/ai/models as required.",
+    "server.py:766 correctly calls resolve_for(app_id, 'chat_widget') for the AI editor and the endpoint returned 200 under both a Gemini and a Claude tenant setting during the test."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter42_ai_models.py"],
+  "success_rate": {"backend": "62% (10/16) — every failure traces to the single broken admin gate", "frontend": "100% smoke — every required data-testid present, select persists across reload, no React errors"},
+  "test_credentials": "Owner jaybernabe@luciodigital.com / Lucio2026! (cookie auth), editor client.editor@example.com / ClientEdit2026!",
+  "seed_data_creation": "Gemini wrote SEO metadata on Northwind Roofing pages (4 pages, model=gemini-3-flash-preview) — persisted on pages.seo. Tenant override restored to {model: gemini-3-flash-preview, features:{site_generation: gemini-3.1-pro-preview}} as required. Platform default was left EMPTY (couldn't set it or clear it due to the admin-gate bug — an earlier partial write set platform.model=gemini-3-flash-preview and platform.features.seo=gemini-3.1-pro-preview before the bug was recognised; the restore PATCH also failed). Main agent should verify platform_settings _id='ai' state after fixing.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "After the admin-gate fix in ai_models.set_platform_model, re-run: pytest /app/backend/tests/test_iter42_ai_models.py -v. All 16 should pass. Note the platform_settings 'ai' doc currently has partial values (model=gemini-3-flash-preview, features.seo=gemini-3.1-pro-preview) that could not be cleared during teardown; the test file's TestFallback and test_zz_restore call PATCH {} which will now succeed and clean it up automatically.",
+  "rca of the issue": "get_current_user in server.py returns the raw user dict without an is_admin field; that field is only added inside /auth/me. ai_models.set_platform_model unconditionally checks user.get('is_admin') and 403s any caller — including the ADMIN_EMAIL account. Fix: replace `if not user.get('is_admin')` with an email compare against os.environ['ADMIN_EMAIL'] (same idiom already used at server.py:293). One-line fix."
+}

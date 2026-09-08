@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Inbox, Star, Archive, Trash2, MessageSquare, Mail, Loader2, CheckCheck, RotateCcw, Flame, Clock, Send } from "lucide-react";
 import { Attachments, AttachmentPill, attachmentCount } from "@/components/Attachments";
 import { LeadReply } from "@/components/LeadReply";
+import LeadSummaryCard from "@/components/LeadSummaryCard";
 
 const FILTERS = [["all", "Inbox"], ["hot", "Hot leads"], ["unread", "Unread"], ["starred", "Starred"], ["archived", "Archived"]];
 const ScoreBadge = ({ m }) => m.score == null ? <span className="chip" style={{ padding: "1px 6px" }} title="Scoring…">…</span>
@@ -57,7 +58,9 @@ export default function InboxPanel({ appId }) {
   const unscored = msgs.filter(m => m.score == null).length;
 
   return (
-    <div data-testid="inbox-panel" className="grid lg:grid-cols-[200px_360px_1fr] gap-4 min-h-[560px]">
+    <div data-testid="inbox-panel" className="space-y-4">
+    <LeadSummaryCard appId={appId} />
+    <div className="grid lg:grid-cols-[200px_360px_1fr] gap-4 min-h-[560px]">
       <aside className="card-surface p-2 space-y-0.5">
         {FILTERS.map(([k, l]) => <button key={k} data-testid={`inbox-filter-${k}`} onClick={() => setFilter(k)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm ${filter === k ? "bg-[var(--acc)]/10 text-[var(--acc)]" : "text-[var(--mut)] hover:bg-white/5"}`}>
           <span className="flex items-center gap-2">{k === "all" ? <Inbox size={14} /> : k === "hot" ? <Flame size={14} /> : k === "starred" ? <Star size={14} /> : k === "archived" ? <Archive size={14} /> : <Mail size={14} />} {l}</span>
@@ -153,6 +156,7 @@ export default function InboxPanel({ appId }) {
           </>
         )}
       </div>
+    </div>
     </div>
   );
 }

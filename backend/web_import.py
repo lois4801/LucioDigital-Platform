@@ -416,7 +416,6 @@ async def _claude(system: str, prompt: str, session: str) -> str:
     reply = await chat.send_message(UserMessage(text=prompt))
     return reply if isinstance(reply, str) else str(reply)
 
-
 GLOBAL_SYSTEM = (
     "You analyse a crawled website and define its global identity for a visual site builder. Return ONLY valid JSON (no markdown): "
     "{\"business\": {\"name\", \"email\", \"phone\", \"address\", \"industry\", \"tagline\"}, "

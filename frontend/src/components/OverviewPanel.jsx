@@ -7,6 +7,7 @@ import { L, UiLabelsToolbar } from "@/components/UiLabels";
 import { LockToggle, MasterLockButton, LockStateBadge, useLocks } from "@/components/locks/LockContext";
 import ConvertToWebApp from "@/components/ConvertToWebApp";
 import ClientTools from "@/components/ClientTools";
+import LeadSummaryCard from "@/components/LeadSummaryCard";
 
 const STATUS_OPTIONS = [
   { v: "active", label: "Active", cls: "chip-active" },
@@ -129,6 +130,7 @@ export default function OverviewPanel({ appDoc, patch }) {
       </div>
 
       <div className="space-y-6">
+        <LeadSummaryCard appId={appDoc.app_id} compact />
         <div className="card-surface p-6">
           <L k="section_hosting_metrics" d="Live hosting metrics" as="div" className="overline mb-4" testid="label-hosting-metrics" />
           <div className="grid grid-cols-2 gap-4">

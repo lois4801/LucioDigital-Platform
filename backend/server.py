@@ -763,11 +763,13 @@ async def ai_edit_block(app_id: str, body: AIPromptIn, user: dict = Depends(get_
         f"CURRENT BLOCK JSON:\n{json.dumps(body.block, indent=2)}\n\n"
         "Return updated JSON only."
     )
+    from ai_models import resolve_for as _rm
+    _prov, _mdl = await _rm(app_id, "chat_widget")
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
         session_id=f"editor-{app_id}-{user['user_id']}",
         system_message=system_message,
-    ).with_model("anthropic", "claude-sonnet-5")
+    ).with_model(_prov, _mdl)
 
     try:
         reply = await chat.send_message(UserMessage(text=prompt_text))
@@ -1015,6 +1017,8 @@ from compare import register as register_compare
 register_compare(api, db, get_current_user, get_user_app, log_activity, None, WF_HOOKS["send_email"])
 from pro_features import register as register_pro
 PRO = register_pro(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS["send_email"])
+from ai_models import register as register_ai_models
+register_ai_models(api, db, get_current_user, get_user_app, log_activity)
 from zip_import import register as register_zip_import
 import zip_import as _zip_import
 _zip_import.require_ai_access = GROWTH["require_ai_access"]

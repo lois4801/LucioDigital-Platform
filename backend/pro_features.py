@@ -41,6 +41,11 @@ class BookingEdit(BookingIn):
     date: Optional[str] = None
 
 
+class FollowupSendIn(BaseModel):
+    kind: str = "reminder"
+    body: str = ""
+
+
 class DigestIn(BaseModel):
     enabled: bool = True
     hour: int = 8
@@ -157,6 +162,63 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
                          f"Your booking on {bk['date']} {bk.get('slot') or ''} has been cancelled. Reply to this email to rebook.")
         return {"submission_id": submission_id, "booking": bk}
 
+    # ---------- AI booking follow-ups (draft, review, send) ----------
+
+    FOLLOWUP_KINDS = {
+        "reminder": ("a friendly reminder sent before the appointment: confirm the date and time, say what to "
+                     "prepare or bring, and invite them to reply if they need to reschedule"),
+        "thankyou": ("a warm thank-you sent after the appointment: thank them, check they are happy, ask for a "
+                     "short public review and mention they can book again any time"),
+    }
+
+    @api.post("/site/{token}/admin/bookings/{submission_id}/ai-followup")
+    async def draft_booking_followup(token: str, submission_id: str, request: Request, kind: str = "reminder"):
+        doc, _me = await _panel(request, token)
+        if kind not in FOLLOWUP_KINDS:
+            raise HTTPException(400, "kind must be 'reminder' or 'thankyou'")
+        row = await db.submissions.find_one({"app_id": doc["app_id"], "submission_id": submission_id}, {"_id": 0})
+        if not row or not row.get("booking"):
+            raise HTTPException(404, "Booking not found")
+        bk = row["booking"]
+        import ai_models
+        system = (f"You write short booking follow-up emails on behalf of {doc.get('name')} "
+                  f"({doc.get('industry') or 'local business'}). Write {FOLLOWUP_KINDS[kind]}. "
+                  "Plain text, no subject line, under 110 words, warm and professional, sign off with the business name.")
+        prompt = (f"Customer: {row.get('name')}\nService: {row.get('form_name')}\n"
+                  f"Date: {bk.get('date')} {bk.get('slot') or ''} ({bk.get('duration_min', 60)} minutes)\n"
+                  f"Notes: {(row.get('fields') or {}).get('notes') or '-'}")
+        try:
+            text, model = await ai_models.run_text(doc["app_id"], "copy_rewrite", system, prompt,
+                                                   f"bookfu-{submission_id}-{kind}")
+        except Exception as e:
+            logger.exception("booking follow-up draft failed")
+            raise HTTPException(500, f"Draft failed: {str(e)[:140]}")
+        draft = {"kind": kind, "body": text[:2000], "model": model, "drafted_at": _iso()}
+        await db.submissions.update_one({"app_id": doc["app_id"], "submission_id": submission_id},
+                                        {"$set": {f"booking.followups.{kind}": draft}})
+        return draft
+
+    @api.post("/site/{token}/admin/bookings/{submission_id}/followup-send")
+    async def send_booking_followup(token: str, submission_id: str, body: FollowupSendIn, request: Request):
+        doc, _me = await _panel(request, token)
+        if body.kind not in FOLLOWUP_KINDS:
+            raise HTTPException(400, "kind must be 'reminder' or 'thankyou'")
+        row = await db.submissions.find_one({"app_id": doc["app_id"], "submission_id": submission_id}, {"_id": 0})
+        if not row or not row.get("booking"):
+            raise HTTPException(404, "Booking not found")
+        text = (body.body or "").strip()
+        if not text:
+            raise HTTPException(400, "Write or draft a message first")
+        if not row.get("email"):
+            raise HTTPException(400, "This booking has no email address")
+        subject = (f"Your booking on {row['booking'].get('date')} — {doc.get('name')}" if body.kind == "reminder"
+                   else f"Thanks for visiting {doc.get('name')}")
+        await notify(row["email"], subject, text)
+        sent = {"kind": body.kind, "body": text[:2000], "sent_at": _iso(), "to": row["email"]}
+        await db.submissions.update_one({"app_id": doc["app_id"], "submission_id": submission_id},
+                                        {"$set": {f"booking.followups.{body.kind}": sent}})
+        return sent
+
     # ---------- weekly client digest ----------
 
     async def build_digest(app_id: str) -> dict:
@@ -168,9 +230,15 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         bookings = await db.submissions.find({"app_id": app_id, "booking.date": {"$gte": today, "$lte": upto},
                                               "booking.status": {"$ne": "cancelled"}}, {"_id": 0}).sort("booking.date", 1).to_list(50)
         edits = await db.messages.find({"app_id": app_id, "kind": "edit_request", "edit_request.state": "pending"}, {"_id": 0}).to_list(30)
+        ai_summary = ""
+        try:
+            import ai_models
+            ai_summary = (await ai_models.build_lead_summary(db, app_id, 7))["summary"]
+        except Exception:
+            logger.exception("digest AI lead summary failed for %s", app_id)
         return {"app": {"name": (app_doc or {}).get("name"), "logo": (app_doc or {}).get("logo") or "",
                         "token": (app_doc or {}).get("preview_token")},
-                "submissions": subs, "bookings": bookings, "edit_requests": edits,
+                "submissions": subs, "bookings": bookings, "edit_requests": edits, "ai_summary": ai_summary,
                 "counts": {"submissions": len(subs), "bookings": len(bookings), "edit_requests": len(edits)}}
 
     def digest_text(d: dict) -> str:
@@ -178,6 +246,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         lines = [f"{a['name']} — your week at a glance", ""]
         if a.get("logo"):
             lines += [a["logo"], ""]
+        if d.get("ai_summary"):
+            lines += ["AI SUMMARY OF YOUR LEADS", d["ai_summary"], ""]
         lines.append(f"NEW SUBMISSIONS (last 7 days): {d['counts']['submissions']}")
         for s in d["submissions"][:10]:
             lines.append(f"  · {s.get('form_name')} — {s.get('name') or 'Anonymous'} <{s.get('email') or '-'}> [{s.get('status')}]")

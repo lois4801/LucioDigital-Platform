@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { CalendarDays, Plus, X, AlertTriangle, Loader2 } from "lucide-react";
+import { CalendarDays, Plus, X, AlertTriangle, Loader2, Sparkles, Send } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -27,6 +27,33 @@ export default function BookingsCalendar({ appId, token }) {
   const [draft, setDraft] = useState(null);    // new booking form
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [fuKind, setFuKind] = useState("reminder");
+  const [fuText, setFuText] = useState("");
+  const [fuBusy, setFuBusy] = useState(false);
+
+  useEffect(() => {
+    setFuKind("reminder");
+    setFuText(open?.booking?.followups?.reminder?.body || "");
+  }, [open?.submission_id]);
+
+  async function draftFu(r, kind) {
+    setFuKind(kind); setFuBusy(true);
+    try {
+      const { data } = await api.post(`/site/${token}/admin/bookings/${r.submission_id}/ai-followup`, {}, { params: { kind }, timeout: 180000 });
+      setFuText(data.body || "");
+      toast.success("Draft ready — edit it, then send");
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not draft the follow-up"); }
+    finally { setFuBusy(false); }
+  }
+  async function sendFu(r) {
+    setFuBusy(true);
+    try {
+      await api.post(`/site/${token}/admin/bookings/${r.submission_id}/followup-send`, { kind: fuKind, body: fuText });
+      toast.success("Follow-up sent to the client");
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not send"); }
+    finally { setFuBusy(false); }
+  }
 
   const load = () => api.get(`/site/${token}/admin/bookings`).then(r => { setRows(r.data.bookings || []); setLoading(false); })
     .catch(() => setLoading(false));
@@ -146,6 +173,24 @@ export default function BookingsCalendar({ appId, token }) {
               <div><span className="chip">{open.form_name}</span> <span className="chip">{open.booking.status}</span> {open.__clash && <span className="chip chip-maint">clashes</span>}</div>
               <div className="text-xs">{open.booking.date} {open.booking.slot || ""} · {open.booking.duration_min || 60} min</div>
               {open.fields?.notes && <div className="text-xs text-[var(--mut)]">{open.fields.notes}</div>}
+              <div data-testid="booking-followup" className="rounded-xl border border-[var(--line)] p-3 space-y-2">
+                <div className="text-[11px] font-semibold flex items-center gap-1.5"><Sparkles size={12} className="text-[var(--acc)]" /> AI follow-up</div>
+                <div className="flex gap-2">
+                  {[["reminder", "Reminder before"], ["thankyou", "Thanks after"]].map(([k, label]) => (
+                    <button key={k} data-testid={`followup-draft-${k}`} onClick={() => draftFu(open, k)} disabled={fuBusy}
+                      className={`btn-ghost !py-1.5 !px-3 text-[11px] ${fuKind === k ? "!border-[var(--acc)] text-[var(--acc)]" : ""} disabled:opacity-50`}>
+                      {fuBusy && fuKind === k ? "Drafting…" : label}
+                    </button>
+                  ))}
+                </div>
+                <textarea data-testid="followup-body" rows={5} value={fuText} onChange={e => setFuText(e.target.value)}
+                  placeholder="Draft a reminder or thank-you, edit it here, then send."
+                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2 text-xs outline-none focus:border-[var(--acc)] resize-none" />
+                <button data-testid="followup-send-btn" onClick={() => sendFu(open)} disabled={fuBusy || !fuText.trim() || !open.email}
+                  className="btn-primary !py-2 !px-4 text-xs flex items-center gap-1.5 disabled:opacity-50"><Send size={12} /> Review & send to client</button>
+                {!open.email && <div className="text-[10px] text-[var(--mut)]">No email on this booking, so it cannot be sent.</div>}
+                {open.booking?.followups?.[fuKind]?.sent_at && <div className="text-[10px] text-[var(--mut)]">Last sent {new Date(open.booking.followups[fuKind].sent_at).toLocaleString()}</div>}
+              </div>
               <div className="flex gap-2 pt-2">
                 <button data-testid="booking-edit-btn" onClick={() => { setDraft({ ...BLANK, ...open.fields, submission_id: open.submission_id, name: open.name, email: open.email, service: open.form_name, date: open.booking.date, slot: open.booking.slot || "09:00", duration_min: open.booking.duration_min || 60, notify: true }); setOpen(null); }} className="btn-primary !py-2 !px-4 text-xs">Reschedule / edit</button>
                 <button data-testid="booking-cancel-btn" onClick={() => cancel(open, true)} className="btn-ghost !py-2 !px-4 text-xs flex items-center gap-1.5"><X size={12} /> Cancel & notify</button>

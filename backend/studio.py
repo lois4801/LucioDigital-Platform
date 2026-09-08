@@ -126,8 +126,10 @@ def _parse_json(text: str) -> Any:
         raise
 
 
-async def _claude(system: str, prompt: str, session: str) -> str:
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session, system_message=system).with_model("anthropic", "claude-sonnet-5")
+async def _claude(system: str, prompt: str, session: str, app_id: str = None, feature: str = "site_generation") -> str:
+    from ai_models import resolve_for
+    provider, model = await resolve_for(app_id, feature)
+    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session, system_message=system).with_model(provider, model)
     reply = await chat.send_message(UserMessage(text=prompt))
     return reply if isinstance(reply, str) else str(reply)
 

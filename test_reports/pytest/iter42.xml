@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="6" skipped="0" tests="16" time="15.925" timestamp="2026-09-08T14:41:59.509791+00:00" hostname="agent-env-0807f207-82c5-46c2-b347-b787bd4fe45d"><testcase classname="tests.test_iter42_ai_models.TestPlatformDefault" name="test_editor_forbidden" time="0.627" /><testcase classname="tests.test_iter42_ai_models.TestTenantOverride" name="test_editor_forbidden" time="0.715" /><testcase classname="tests.test_iter42_ai_models.TestPlatformDefault" name="test_unknown_model_rejected" time="0.581"><failure message="assert 403 == 400&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iter42_ai_models.py:71: in test_unknown_model_rejected
+    assert r.status_code == 400
+E   assert 403 == 400
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter42_ai_models.TestTenantOverride" name="test_unknown_model_rejected" time="0.590" /><testcase classname="tests.test_iter42_ai_models.TestPlatformDefault" name="test_unknown_feature_rejected" time="0.142"><failure message="assert 403 == 400&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iter42_ai_models.py:76: in test_unknown_feature_rejected
+    assert r.status_code == 400
+E   assert 403 == 400
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter42_ai_models.TestTenantOverride" name="test_unknown_feature_rejected" time="0.075" /><testcase classname="tests.test_iter42_ai_models.TestPlatformDefault" name="test_set_platform_default_and_verify_list" time="0.119"><failure message="AssertionError: {&quot;detail&quot;:&quot;Only a platform admin can change the default model&quot;}&#10;assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iter42_ai_models.py:83: in test_set_platform_default_and_verify_list
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"Only a platform admin can change the default model"}
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter42_ai_models.TestTenantOverride" name="test_override_and_effective_resolution" time="0.148" /><testcase classname="tests.test_iter42_ai_models.TestSEOGemini" name="test_seo_run_writes_pages" time="13.819" /><testcase classname="tests.test_iter42_ai_models.TestTenantOverride" name="test_platform_feature_wins_when_no_tenant_override" time="0.280"><failure message="AssertionError: assert 'gemini-3-flash-preview' == 'gemini-3.1-pro-preview'&#10;  &#10;  - gemini-3.1-pro-preview&#10;  ?         -- ^^^&#10;  + gemini-3-flash-preview&#10;  ?          ^^^^^">backend/tests/test_iter42_ai_models.py:135: in test_platform_feature_wins_when_no_tenant_override
+    assert eff["seo"]["model"] == "gemini-3.1-pro-preview"  # platform-feature
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: assert 'gemini-3-flash-preview' == 'gemini-3.1-pro-preview'
+E     
+E     - gemini-3.1-pro-preview
+E     ?         -- ^^^
+E     + gemini-3-flash-preview
+E     ?          ^^^^^</failure></testcase><testcase classname="tests.test_iter42_ai_models.TestEditorRouting" name="test_ai_edit_under_gemini" time="2.737" /><testcase classname="tests.test_iter42_ai_models.TestEditorRouting" name="test_ai_edit_under_claude" time="2.846" /><testcase classname="tests.test_iter42_ai_models.TestFallback" name="test_falls_back_to_builtin_defaults" time="0.098"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iter42_ai_models.py:144: in test_falls_back_to_builtin_defaults
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter42_ai_models" name="test_zz_restore_tenant_gemini" time="0.599"><failure message="assert 403 == 200&#10; +  where 403 = &lt;Response [403]&gt;.status_code">backend/tests/test_iter42_ai_models.py:239: in test_zz_restore_tenant_gemini
+    assert r.status_code == 200
+E   assert 403 == 200
+E    +  where 403 = &lt;Response [403]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter42_ai_models.TestSEOGemini" name="test_seo_did_not_alter_block_content" time="0.147" /><testcase classname="tests.test_iter42_ai_models.TestModelRegistry" name="test_list_models" time="0.110" /></testsuite></testsuites>

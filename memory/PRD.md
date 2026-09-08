@@ -122,6 +122,33 @@ Respond to the user in **English** only.
      history; turning the toggle off reverts every paid page to public **immediately** (verified)
    - Paywall UI signs the visitor in with the existing auth first, then Stripe Checkout (card, Apple Pay, Google Pay)
 
+9. **Gemini AI models integration** (iter 42):
+   - `ai_models.py`: registry of six selectable text models (Claude Sonnet 5 / Haiku, **Gemini 3 Flash**,
+     **Gemini 3.1 Pro**, GPT-5.4 / mini) via the Emergent Universal Key; Nano Banana
+     (`gemini-2.5-flash-image-preview`) exposed for image generation
+   - Precedence: tenant per-feature → tenant default → platform per-feature → platform default → built-in,
+     resolved by `resolve_for(app_id, feature)` and used by site generation, the chat widget / AI editor,
+     lead scoring, copy rewrite and SEO; unknown models fall back instead of erroring
+   - `GET|PATCH /api/ai/models` (platform default, platform-admin only), `GET|PATCH /api/apps/{id}/ai-model`
+   - **New Gemini capability**: `POST /api/apps/{id}/ai/seo` writes an SEO title + meta description for every
+     page from its real content and stores it on `pages.seo` — content itself untouched
+   - UI: `ai-model-card` in the tenant Bookings/settings tab with a tenant default plus a per-feature picker
+     and a "Write SEO for all pages" button
+
+10. **AI lead summary · booking follow-ups · platform-model fix** (iter 43, backend 15/16 + frontend green):
+   - Fixed P0 from iter 42: `PATCH /api/ai/models` gated on a non-existent `user['is_admin']`; now also
+     compares the caller's email to `ADMIN_EMAIL`. `PATCH {}` now `$unset`s the platform default (clears cleanly)
+   - `ai_models.run_text(app_id, feature, system, prompt, session)` — shared one-shot generation on the
+     tenant/feature-resolved model; `build_lead_summary(db, app_id, days=7)`
+   - `GET|POST /api/apps/{id}/ai/lead-summary` — AI paragraph over the last 7 days of leads (volume, sources,
+     hottest leads + one next action each), cached on `apps.ai_lead_summary`
+   - `LeadSummaryCard.jsx` (`lead-summary-card`, `lead-summary-btn`, `lead-summary-text`) at the top of the
+     Inbox and in the Overview right column; the Monday digest body now carries an `AI SUMMARY OF YOUR LEADS` section
+   - Booking follow-ups: `POST /api/site/{token}/admin/bookings/{sid}/ai-followup?kind=reminder|thankyou` drafts,
+     `POST .../followup-send {kind, body}` sends. Stored on `booking.followups.{kind}`. **Never auto-sends** —
+     the admin edits the draft in the Bookings dialog (`booking-followup`, `followup-draft-*`, `followup-body`,
+     `followup-send-btn`) and clicks send
+
 ## Testing noteA testing pass (iter 36) deleted two tenants during cleanup; they were recreated as
 `app_6663b5de0007` (Northwind Roofing) and `app_c18671970769` (Design V2 Demo). Future test briefs
 must forbid deleting apps/users/pages.
