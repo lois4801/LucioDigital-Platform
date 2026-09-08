@@ -1,0 +1,46 @@
+{
+  "summary": "Iter56 — Verified main agent's fixes for the iter55 data-integrity regression. seed_sites.ensure_editor_tenant() correctly and idempotently recreates canonical tenant app_6663b5de0007 'Northwind Roofing' with 4 pages (/, /about, /services, /contact) and re-attaches client.editor@example.com as an editor member — verified across two consecutive backend restarts (id stable, no duplicates, startup log clean, no 423 content-lock error). client.editor login now correctly shows exactly 1 tenant card (Northwind Roofing) instead of an empty state. GET /api/public/showcase is now data-driven (queries preview_enabled apps) and returns 7 tenants; the public landing showcase section renders them. No 'OmniStack' text present anywhere in the UI or public payloads. iter53 and iter54 dynamic regression suites (35 tests, hitting overview auto-sync from Site Mode, industry non-pollution, landing page names/niches, granular sync endpoint) all pass 100%. Iter56-focused suite (11 tests: canonical restore, page structure, editor visibility, showcase data-driven, overview sync, inbox lanes, master/granular locks, export start for website/webapp/plugin, showcase star toggle, id stability, no-OmniStack) — 10 of 11 pass. ONE unresolved criterion: review asked admin to see 7 tenants with NO Iter53 leftovers, but admin currently sees 9 (Iter53 Rebuild + Iter53 EmptyTenant still present from an earlier test run). Verified both via API (GET /api/apps returns 9) and via admin dashboard screenshot.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/apps (as admin)", "issue": "Returns 9 tenants including 2 leftover throwaway tenants from iter53 testing pass ('Iter53 Rebuild' app_be325161e249, 'Iter53 EmptyTenant' app_83013a17e2bf). Review criterion required 7 tenants after cleanup. Iter55 already flagged this but the leftovers were not removed. Recommend adding an is_test flag + admin-only 'Archive test tenants' bulk action, or manually deleting app_be325161e249 and app_83013a17e2bf."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Admin master workspace dashboard", "issue": "Iter53 Rebuild and Iter53 EmptyTenant cards still render in the grid — same as iter55 report. Not a functional regression, just uncleaned test data. Tenant count reads 9/9 active instead of the expected 7/7.", "selector": "tenant grid cards labelled 'Iter53 Rebuild' / 'Iter53 EmptyTenant'", "priority": "LOW"},
+      {"component": "Admin dashboard load", "issue": "Two 401 console errors appear briefly on load before session cookie is re-validated. Non-blocking noise, same as iter55.", "selector": "n/a", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter56_canonical_restore.py",
+    "/app/backend/tests/test_iter53_overview_sync.py",
+    "/app/backend/tests/test_iter54_overview_card_sync.py",
+    "/app/test_reports/pytest/iter56.xml"
+  ],
+  "action_items": [
+    "Clean up leftover iter53 test tenants app_be325161e249 (Iter53 Rebuild) and app_83013a17e2bf (Iter53 EmptyTenant) — either delete them or add an is_test flag and hide from the master workspace grid so the admin sees the expected 7-tenant view.",
+    "Optional: guard against future leaks by making all test-created tenants use a TEST_ name prefix and adding a scheduled cleanup for TEST_ tenants older than 24h."
+  ],
+  "critical_code_review_comments": [
+    "ensure_editor_tenant() in seed_sites.py is well-designed — matches by app_id with upsert on membership, uses site_content.build_premium_site() for the pages so the tenant renders premium-v3 style consistently. Startup order (reseed_demo_sites → ensure_editor_tenant) is correct.",
+    "public_showcase() now correctly filters {preview_enabled: True, preview_token: {$ne: null}} — no more hardcoded APP_MAP mismatch. However, NICHES.get(key) still falls back to NICHES['saas'] when the key isn't found; for Northwind's 'construction' niche this is fine, but a defensive log line for unknown niches would help future debugging.",
+    "storage.py APP_NAME='omnistack' and export_pkg plugin manifest format='omnistack.plugin' are still present in code (checked via grep). They do NOT leak into the UI, but a customer downloading a plugin zip would see 'omnistack' in the manifest. Iter55 already flagged this; still open.",
+    "The 50+ legacy tests under /app/backend/tests/test_iter{11..52}*.py hardcode long-dead tenant ids and will keep failing on 404 until they are either (a) refactored to use a shared dynamic-tenant conftest fixture or (b) deleted. Per instructions from the review, they are legacy and out of scope."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter56_canonical_restore.py (new — 11 focused regression tests for iter55 fixes)"
+  ],
+  "success_rate": {
+    "backend": "97% (45/46 targeted iter53+54+56 tests pass; the 1 failure is the Iter53-leftover cleanup criterion, not a functional regression)",
+    "frontend": "95% (all target flows verified — canonical restored, editor sees exactly one tenant, public showcase renders, no OmniStack; only cosmetic issue is 2 leftover admin cards)"
+  },
+  "test_credentials": "Read from /app/memory/test_credentials.md — both admin (jaybernabe@luciodigital.com / Lucio2026!) and editor (client.editor@example.com / ClientEdit2026!) work correctly.",
+  "seed_data_creation": "None — per policy, did not create any test tenants; canonical tenant is now created idempotently by backend startup itself.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "iter55 CRITICAL regression is fully fixed and validated. Remaining known open items: (1) two Iter53-leftover tenants in the admin grid (cosmetic, iter55 already flagged), (2) 'omnistack' strings in storage.py APP_NAME + export_pkg plugin manifest format string (never surfaces in UI). Legacy suites iter11-iter52 hardcode dead tenant ids and are expected to 404 — do NOT rewrite unless requested. Only stable hardcodable tenant is app_6663b5de0007; use _live_tenants() from tests/test_iter54_overview_card_sync.py for others. Mocked and out of scope: GitHub push, ElevenLabs voice.",
+  "rca of the issue": "iter55 root cause was a non-idempotent demo-tenant seed that generated fresh random app_ids on every wipe, breaking the client.editor→app_6663b5de0007 membership link and cascading into 53 test failures. Main agent fix (verified this iteration): added seed_sites.ensure_editor_tenant(db, admin_id, hash_password) called from server startup right after reseed_demo_sites, which (a) upserts the canonical Northwind Roofing app with the fixed id app_6663b5de0007, (b) rebuilds its 4-page premium construction site if pages are missing, (c) creates the client.editor user with the correct bcrypt password if absent, (d) upserts the editor→app_6663b5de0007 membership row. Also fixed /api/public/showcase in site_content.py to query preview_enabled apps instead of the stale APP_MAP name filter, so the public showcase is now data-driven. Backend restart is now idempotent — restarting twice keeps the id stable and total tenant count constant (verified via consecutive supervisorctl restart backend + GET /api/apps)."
+}

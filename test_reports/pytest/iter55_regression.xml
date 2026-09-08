@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="53" skipped="2" tests="109" time="42.965" timestamp="2026-09-08T19:54:16.750320+00:00" hostname="agent-env-0807f207-82c5-46c2-b347-b787bd4fe45d"><testcase classname="tests.test_iter54_overview_card_sync" name="test_overview_card_title_syncs_from_navbar_brand" time="0.888" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_overview_card_desc_syncs_from_hero_subtitle" time="0.616" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_hero_description_takes_precedence" time="0.392" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_ui_label_override_does_not_shadow_overview_title" time="0.591" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_b96a63e4b700-Creative Studio]" time="0.649" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_77d30fefb622-Finance]" time="0.612" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_b86054a26f34-Fitness]" time="0.631" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_cca4d5dd736d-Internal Tools]" time="0.813" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_04366e4b6d97-SaaS Portals]" time="0.556" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_009e5e117f77-E-commerce]" time="0.598" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_b96a63e4b700-Creative Studio]" time="0.393" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_77d30fefb622-Finance]" time="0.404" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_b86054a26f34-Fitness]" time="0.396" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_cca4d5dd736d-Internal Tools]" time="0.406" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_04366e4b6d97-SaaS Portals]" time="0.471" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_009e5e117f77-E-commerce]" time="0.501" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_landing_shows_names_and_niches" time="0.250" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_sync_overview_endpoint_still_works" time="0.090" /><testcase classname="tests.test_iter53_overview_sync" name="test_hero_patch_syncs_snapshot" time="0.902" /><testcase classname="tests.test_iter53_overview_sync" name="test_navbar_brand_syncs_tenant_name" time="0.473" /><testcase classname="tests.test_iter53_overview_sync" name="test_page_add_delete_updates_counts" time="0.539" /><testcase classname="tests.test_iter53_overview_sync" name="test_block_add_remove_updates_sections" time="0.583" /><testcase classname="tests.test_iter53_overview_sync" name="test_theme_save_updates_snapshot" time="1.408" /><testcase classname="tests.test_iter53_overview_sync" name="test_resync_endpoint_ok" time="0.212" /><testcase classname="tests.test_iter53_overview_sync" name="test_resync_endpoint_unauth" time="0.165" /><testcase classname="tests.test_iter53_overview_sync" name="test_resync_endpoint_empty_tenant" time="0.218"><skipped type="pytest.skip" message="New tenant seeded with pages; can't test 400 path">/app/backend/tests/test_iter53_overview_sync.py:206: New tenant seeded with pages; can't test 400 path</skipped></testcase><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_b96a63e4b700]" time="0.201" /><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_77d30fefb622]" time="0.182" /><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_b86054a26f34]" time="0.261" /><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_cca4d5dd736d]" time="0.209" /><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_04366e4b6d97]" time="0.194" /><testcase classname="tests.test_iter53_overview_sync" name="test_seeded_tenants_have_snapshot[app_009e5e117f77]" time="0.199" /><testcase classname="tests.test_iter53_overview_sync" name="test_premium_rebuild_updates_snapshot" time="2.847" /><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_patch_requires_auth" time="2.257" /><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_patch_404_for_not_owned" time="0.096" /><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_star_assigns_max_plus_one" time="0.769"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter52_showcase_star_reorder.py:71: in test_star_assigns_max_plus_one
+    assert r1.status_code == 200, r1.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_unstar" time="0.088"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter52_showcase_star_reorder.py:87: in test_unstar
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_public_starred_only_and_sorted" time="0.176"><failure message="AssertionError: expected only starred sorted, got ['app_009e5e117f77', 'app_04366e4b6d97', 'app_cca4d5dd736d', 'app_b86054a26f34', 'app_77d30fefb622', 'app_b96a63e4b700']&#10;assert ['app_009e5e1...b96a63e4b700'] == ['app_6663b5d...1cb6f2b89eb6']&#10;  &#10;  At index 0 diff: 'app_009e5e117f77' != 'app_6663b5de0007'&#10;  Left contains 4 more items, first extra item: 'app_cca4d5dd736d'&#10;  &#10;  Full diff:&#10;    [&#10;  -     'app_6663b5de0007',...&#10;  &#10;  ...Full output truncated (8 lines hidden), use '-vv' to show">backend/tests/test_iter52_showcase_star_reorder.py:96: in test_public_starred_only_and_sorted
+    assert ids == [NORTHWIND, NEXUS], f"expected only starred sorted, got {ids}"
+E   AssertionError: expected only starred sorted, got ['app_009e5e117f77', 'app_04366e4b6d97', 'app_cca4d5dd736d', 'app_b86054a26f34', 'app_77d30fefb622', 'app_b96a63e4b700']
+E   assert ['app_009e5e1...b96a63e4b700'] == ['app_6663b5d...1cb6f2b89eb6']
+E     
+E     At index 0 diff: 'app_009e5e117f77' != 'app_6663b5de0007'
+E     Left contains 4 more items, first extra item: 'app_cca4d5dd736d'
+E     
+E     Full diff:
+E       [
+E     -     'app_6663b5de0007',...
+E     
+E     ...Full output truncated (8 lines hidden), use '-vv' to show</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_public_fallback_when_none_starred" time="0.715"><failure message="AssertionError: assert 'app_6663b5de0007' in ['app_009e5e117f77', 'app_04366e4b6d97', 'app_cca4d5dd736d', 'app_b86054a26f34', 'app_77d30fefb622', 'app_b96a63e4b700']">backend/tests/test_iter52_showcase_star_reorder.py:109: in test_public_fallback_when_none_starred
+    assert aid in ids
+E   AssertionError: assert 'app_6663b5de0007' in ['app_009e5e117f77', 'app_04366e4b6d97', 'app_cca4d5dd736d', 'app_b86054a26f34', 'app_77d30fefb622', 'app_b96a63e4b700']</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_reorder_empty_400" time="0.179" /><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_reorder_not_owned_404" time="0.088" /><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_reorder_and_public_reflects" time="1.301"><failure message="AssertionError: {&quot;detail&quot;:&quot;Not your tenant: app_abc693a75574&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter52_showcase_star_reorder.py:134: in test_reorder_and_public_reflects
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"Not your tenant: app_abc693a75574"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_reorder_reverse_round_trip" time="0.705"><failure message="KeyError: 'sequence'">backend/tests/test_iter52_showcase_star_reorder.py:158: in test_reorder_reverse_round_trip
+    assert r.json()["sequence"] == [NORTHWIND, NEXUS, AURA]
+           ^^^^^^^^^^^^^^^^^^^^
+E   KeyError: 'sequence'</failure></testcase><testcase classname="tests.test_iter52_showcase_star_reorder" name="test_unstar_removes_and_no_collision" time="0.582"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter52_showcase_star_reorder.py:171: in test_unstar_removes_and_no_collision
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter51_landing_showcase" name="test_public_templates_returns_16_sorted" time="0.207" /><testcase classname="tests.test_iter51_landing_showcase" name="test_public_tenants_shape_and_owner_match" time="1.304" /><testcase classname="tests.test_iter51_landing_showcase" name="test_create_tenant_appears_as_template" time="0.875" /><testcase classname="tests.test_iter51_landing_showcase" name="test_status_flips_to_live_when_active_and_preview" time="0.758" /><testcase classname="tests.test_iter51_landing_showcase" name="test_status_flips_back_to_template" time="0.740" /><testcase classname="tests.test_iter51_landing_showcase" name="test_delete_tenant_disappears" time="0.745" /><testcase classname="tests.test_iter51_landing_showcase" name="test_endpoints_are_public" time="0.355" /><testcase classname="tests.test_iter50_branding.TestServedHtml" name="test_title_and_meta_lois_tech" time="0.174" /><testcase classname="tests.test_iter50_branding.TestEmailSettings" name="test_email_from_name_is_lois_tech" time="0.490" /><testcase classname="tests.test_iter50_branding.TestPluginExportImport" name="test_export_zip_uses_lois_tech" time="0.121"><failure message="AssertionError: start export: 404 {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 in (200, 201, 202)&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter50_branding.py:91: in test_export_zip_uses_lois_tech
+    job_id, _ = self._start_and_wait(owner, TARGET_APP, timeout_s=240)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter50_branding.py:68: in _start_and_wait
+    assert r.status_code in (200, 201, 202), f"start export: {r.status_code} {r.text[:200]}"
+E   AssertionError: start export: 404 {"detail":"App not found"}
+E   assert 404 in (200, 201, 202)
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter50_branding.TestPluginExportImport" name="test_import_zip_restores_new_tenant" time="0.000"><skipped type="pytest.skip" message="no cached export ZIP">/app/backend/tests/test_iter50_branding.py:121: no cached export ZIP</skipped></testcase><testcase classname="tests.test_iter49_leads_lanes.TestGlobalInbox" name="test_returns_lane_on_every_message" time="0.481" /><testcase classname="tests.test_iter49_leads_lanes.TestGlobalInbox" name="test_unread_excludes_test_lane" time="0.093" /><testcase classname="tests.test_iter49_leads_lanes.TestGlobalInbox" name="test_lanes_populated_across_tenants" time="0.087" /><testcase classname="tests.test_iter49_leads_lanes.TestManualLaneOverride" name="test_move_lead_between_lanes_persists" time="0.363" /><testcase classname="tests.test_iter49_leads_lanes.TestManualLaneOverride" name="test_invalid_lane_rejected" time="0.180" /><testcase classname="tests.test_iter49_leads_lanes.TestEditRequestLane" name="test_client_edit_request_lands_in_real_lane" time="0.494"><failure message="IndexError: list index out of range">backend/tests/test_iter49_leads_lanes.py:119: in test_client_edit_request_lands_in_real_lane
+    first = page_list[0]
+            ^^^^^^^^^^^^
+E   IndexError: list index out of range</failure></testcase><testcase classname="tests.test_iter49_leads_lanes.TestEditRequestLane" name="test_generic_edit_request_also_real" time="0.103"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter49_leads_lanes.py:152: in test_generic_edit_request_also_real
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter49_leads_lanes.TestTenantInboxRegression" name="test_tenant_inbox_counts" time="0.104"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter49_leads_lanes.py:160: in test_tenant_inbox_counts
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter47_smoke" name="test_get_apps" time="0.481"><failure message="assert False&#10; +  where False = any(&lt;generator object test_get_apps.&lt;locals&gt;.&lt;genexpr&gt; at 0xfc0e3fb6dfc0&gt;)">backend/tests/test_iter47_smoke.py:26: in test_get_apps
+    assert any(a.get("app_id") == APP_ID for a in apps)
+E   assert False
+E    +  where False = any(&lt;generator object test_get_apps.&lt;locals&gt;.&lt;genexpr&gt; at 0xfc0e3fb6dfc0&gt;)</failure></testcase><testcase classname="tests.test_iter47_smoke" name="test_get_inbox" time="0.099"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter47_smoke.py:31: in test_get_inbox
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter47_smoke" name="test_get_inbox_insights" time="0.088"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter47_smoke.py:39: in test_get_inbox_insights
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter47_smoke" name="test_get_settings_email" time="0.086" /><testcase classname="tests.test_iter47_smoke" name="test_notifications" time="0.092" /><testcase classname="tests.test_iter47_smoke" name="test_export_start_returns_job_id" time="0.089"><failure message="AssertionError: got 404: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 in (200, 202)&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter47_smoke.py:62: in test_export_start_returns_job_id
+    assert r.status_code in (200, 202), f"got {r.status_code}: {r.text[:200]}"
+E   AssertionError: got 404: {"detail":"App not found"}
+E   assert 404 in (200, 202)
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_public_contact_fake_lands_in_test" time="0.524"><failure message="AssertionError: {&quot;detail&quot;:&quot;Site not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:25: in test_public_contact_fake_lands_in_test
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"Site not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_public_contact_realistic_lands_in_real" time="0.194"><failure message="assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:39: in test_public_contact_realistic_lands_in_real
+    assert r.status_code == 200
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_classify_rerun_and_counts" time="0.092"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:49: in test_classify_rerun_and_counts
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_lane_filter" time="0.170"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:61: in test_lane_filter
+    assert all(m["lane"] == "real" for m in real["messages"])
+                                            ^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_unread_hot_exclude_test" time="0.087"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:68: in test_unread_hot_exclude_test
+    test_unread = sum(1 for m in inbox["messages"] if m["lane"] == "test" and m["status"] == "unread")
+                                 ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_manual_override_sticky" time="0.085"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:77: in test_manual_override_sticky
+    if not inbox["messages"]:
+           ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_lane_invalid" time="0.083"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:93: in test_lane_invalid
+    mid = inbox["messages"][0]["message_id"]
+          ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_lane_unknown_message" time="0.089" /><testcase classname="tests.test_iter45_lead_classify" name="test_booking_invite_real_lead" time="0.096"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:106: in test_booking_invite_real_lead
+    real_with_email = next((m for m in inbox["messages"] if m.get("from_email")), None)
+                                       ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_booking_invite_test_lead_rejected" time="0.094"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:121: in test_booking_invite_test_lead_rejected
+    if not inbox["messages"]:
+           ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_booking_invite_no_email" time="0.094"><failure message="KeyError: 'messages'">backend/tests/test_iter45_lead_classify.py:131: in test_booking_invite_no_email
+    empty = next((m for m in inbox["messages"] if not m.get("from_email")), None)
+                             ^^^^^^^^^^^^^^^^^
+E   KeyError: 'messages'</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_ai_lead_summary_excludes_test" time="0.103"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:143: in test_ai_lead_summary_excludes_test
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_other_tenant_backfill[app_e3cb4f084785]" time="0.097"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:157: in test_other_tenant_backfill
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter45_lead_classify" name="test_other_tenant_backfill[app_abc693a75574]" time="0.083"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter45_lead_classify.py:157: in test_other_tenant_backfill
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportWebsite" name="test_invalid_kind_400" time="0.465"><failure message="assert 404 == 400&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter44_export_pkg.py:84: in test_invalid_kind_400
+    assert r.status_code == 400
+E   assert 404 == 400
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportWebsite" name="test_website_export_completes" time="0.082"><failure message="AssertionError: start website failed: 404 {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter44_export_pkg.py:87: in test_website_export_completes
+    job = _start_and_wait(owner, "website")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter44_export_pkg.py:61: in _start_and_wait
+    assert r.status_code == 200, f"start {kind} failed: {r.status_code} {r.text[:200]}"
+E   AssertionError: start website failed: 404 {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportWebsite" name="test_website_zip_contents" time="0.000"><failure message="AssertionError: prior test must have run&#10;assert 'website' in {}">backend/tests/test_iter44_export_pkg.py:95: in test_website_zip_contents
+    assert "website" in _cache, "prior test must have run"
+E   AssertionError: prior test must have run
+E   assert 'website' in {}</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportFullstack" name="test_fullstack_export_completes" time="0.082"><failure message="AssertionError: start fullstack failed: 404 {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter44_export_pkg.py:155: in test_fullstack_export_completes
+    job = _start_and_wait(owner, "fullstack")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter44_export_pkg.py:61: in _start_and_wait
+    assert r.status_code == 200, f"start {kind} failed: {r.status_code} {r.text[:200]}"
+E   AssertionError: start fullstack failed: 404 {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportFullstack" name="test_fullstack_zip_contents_and_compile" time="0.000"><failure message="AssertionError: assert 'fullstack' in {}">backend/tests/test_iter44_export_pkg.py:160: in test_fullstack_zip_contents_and_compile
+    assert "fullstack" in _cache
+E   AssertionError: assert 'fullstack' in {}</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportPlugin" name="test_plugin_export_completes" time="0.110"><failure message="AssertionError: start plugin failed: 404 {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter44_export_pkg.py:202: in test_plugin_export_completes
+    job = _start_and_wait(owner, "plugin")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter44_export_pkg.py:61: in _start_and_wait
+    assert r.status_code == 200, f"start {kind} failed: {r.status_code} {r.text[:200]}"
+E   AssertionError: start plugin failed: 404 {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestExportPlugin" name="test_plugin_zip_contents" time="0.000"><failure message="AssertionError: assert 'plugin' in {}">backend/tests/test_iter44_export_pkg.py:207: in test_plugin_zip_contents
+    assert "plugin" in _cache
+E   AssertionError: assert 'plugin' in {}</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestPluginImport" name="test_import_plugin_creates_new_tenant" time="0.000"><failure message="AssertionError: plugin export must run first&#10;assert 'plugin_raw' in {}">backend/tests/test_iter44_export_pkg.py:231: in test_import_plugin_creates_new_tenant
+    assert "plugin_raw" in _cache, "plugin export must run first"
+E   AssertionError: plugin export must run first
+E   assert 'plugin_raw' in {}</failure></testcase><testcase classname="tests.test_iter44_export_pkg.TestPluginImport" name="test_import_non_plugin_zip_returns_400" time="0.085" /><testcase classname="tests.test_iter44_export_pkg.TestPluginImport" name="test_import_zip_route_detects_plugin" time="0.000"><failure message="AssertionError: assert 'plugin_raw' in {}">backend/tests/test_iter44_export_pkg.py:265: in test_import_zip_route_detects_plugin
+    assert "plugin_raw" in _cache
+E   AssertionError: assert 'plugin_raw' in {}</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestMasterLockAll" name="test_lock_all_then_unlock_all" time="0.658"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:111: in test_lock_all_then_unlock_all
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestMasterLockAll" name="test_editor_forbidden_on_lock_all" time="0.669"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 403&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:128: in test_editor_forbidden_on_lock_all
+    assert r.status_code == 403, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 403
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGranularLocks" name="test_lock_single_item_shows_partial" time="0.231"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:133: in test_lock_single_item_shows_partial
+    col = _ensure_collection(admin)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:73: in _ensure_collection
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGranularLocks" name="test_unknown_kind_returns_400" time="0.239"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 400&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:148: in test_unknown_kind_returns_400
+    assert r.status_code == 400, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 400
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGranularLocks" name="test_editor_forbidden_on_lock_item" time="0.263"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 403&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:153: in test_editor_forbidden_on_lock_item
+    assert r.status_code == 403, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 403
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGranularLocks" name="test_route_order_all_vs_item" time="0.230"><failure message="assert (404 == 200)&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:158: in test_route_order_all_vs_item
+    assert r.status_code == 200 and "state" in r.json()
+E   assert (404 == 200)
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestEditAccess" name="test_owner_can_edit_locked" time="0.226"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:163: in test_owner_can_edit_locked
+    wf = _ensure_workflow(admin)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:96: in _ensure_workflow
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestEditAccess" name="test_editor_locked_cannot_edit_can_request" time="0.228"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:174: in test_editor_locked_cannot_edit_can_request
+    wf = _ensure_workflow(admin)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:96: in _ensure_workflow
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestEditAccess" name="test_page_edit_access_route_not_shadowed" time="0.236"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:184: in test_page_edit_access_route_not_shadowed
+    pg = _first_page(admin)
+         ^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:65: in _first_page
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGates423" name="test_editor_cannot_edit_locked_cms_item" time="0.261"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:192: in test_editor_cannot_edit_locked_cms_item
+    col = _ensure_collection(admin)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:73: in _ensure_collection
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGates423" name="test_owner_can_edit_locked_cms_item" time="0.263"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:204: in test_owner_can_edit_locked_cms_item
+    col = _ensure_collection(admin)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:73: in _ensure_collection
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGates423" name="test_editor_cannot_edit_or_delete_locked_workflow" time="0.268"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:215: in test_editor_cannot_edit_or_delete_locked_workflow
+    wf = _ensure_workflow(admin)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:96: in _ensure_workflow
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGates423" name="test_owner_can_save_page_while_all_locked" time="0.345"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:227: in test_owner_can_save_page_while_all_locked
+    pg = _first_page(admin)
+         ^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:65: in _first_page
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestLocksSummaryDashboard" name="test_summary_reports_this_tenant" time="0.329"><failure message="AssertionError: our tenant must appear in dashboard rollup&#10;assert 'app_7a2cd286a360' in {'app_009e5e117f77': {'app_id': 'app_009e5e117f77', 'state': 'unlocked', 'locked': 0, 'total': 36, ...}, 'app_04366e4b6d97': {'app_id': 'app_04366e4b6d97', 'state': 'unlocked', 'locked': 0, 'total': 37, ...}, 'app_cca4d5dd736d': {'app_id': 'app_cca4d5dd736d', 'state': 'unlocked', 'locked': 0, 'total': 35, ...}, 'app_b86054a26f34': {'app_id': 'app_b86054a26f34', 'state': 'unlocked', 'locked': 0, 'total': 35, ...}, ...}">backend/tests/test_iter34_master_and_granular_locks.py:239: in test_summary_reports_this_tenant
+    assert APP_ID in tenants, "our tenant must appear in dashboard rollup"
+E   AssertionError: our tenant must appear in dashboard rollup
+E   assert 'app_7a2cd286a360' in {'app_009e5e117f77': {'app_id': 'app_009e5e117f77', 'state': 'unlocked', 'locked': 0, 'total': 36, ...}, 'app_04366e4b6d97': {'app_id': 'app_04366e4b6d97', 'state': 'unlocked', 'locked': 0, 'total': 37, ...}, 'app_cca4d5dd736d': {'app_id': 'app_cca4d5dd736d', 'state': 'unlocked', 'locked': 0, 'total': 35, ...}, 'app_b86054a26f34': {'app_id': 'app_b86054a26f34', 'state': 'unlocked', 'locked': 0, 'total': 35, ...}, ...}</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGenericEditRequestFlow" name="test_request_approve_single_use_grant" time="0.266"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 200&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:250: in test_request_approve_single_use_grant
+    col = _ensure_collection(admin)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter34_master_and_granular_locks.py:73: in _ensure_collection
+    assert r.status_code == 200, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 200
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase><testcase classname="tests.test_iter34_master_and_granular_locks.TestGenericEditRequestFlow" name="test_generic_edit_request_unknown_kind" time="0.253"><failure message="AssertionError: {&quot;detail&quot;:&quot;App not found&quot;}&#10;assert 404 == 400&#10; +  where 404 = &lt;Response [404]&gt;.status_code">backend/tests/test_iter34_master_and_granular_locks.py:292: in test_generic_edit_request_unknown_kind
+    assert r.status_code == 400, r.text
+E   AssertionError: {"detail":"App not found"}
+E   assert 404 == 400
+E    +  where 404 = &lt;Response [404]&gt;.status_code</failure></testcase></testsuite></testsuites>

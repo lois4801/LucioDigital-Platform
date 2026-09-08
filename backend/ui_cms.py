@@ -114,8 +114,15 @@ def register(api, db, get_current_user, get_user_app):
         if not await _can_edit(doc, user):
             raise HTTPException(403, "Only the platform admin or tenant owner can edit labels")
         labels = _clean(body.labels or {})
+        # These three now follow Site Mode, so an override here would only become dead data.
+        from content_lock import SYNCED_LABEL_KEYS
+        ignored = [k for k in labels if k in SYNCED_LABEL_KEYS]
+        labels = {k: v for k, v in labels.items() if k not in SYNCED_LABEL_KEYS}
         styles = _clean_styles(body.styles or {})
         if not labels and not styles:
+            if ignored:
+                return {"ok": True, "ignored": ignored,
+                        "note": "The Overview title and summary follow Site Mode — edit the Navbar brand and hero copy instead."}
             raise HTTPException(400, "No labels or styles provided")
         ts = datetime.now(timezone.utc).isoformat()
         if body.scope == "global":

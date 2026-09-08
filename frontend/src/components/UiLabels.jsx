@@ -70,7 +70,7 @@ export function UiLabelsToolbar() {
   if (!can_edit) return null;
   return (
     <div data-testid="ui-labels-toolbar" className="flex flex-wrap items-center gap-2 justify-end">
-      <span className="text-xs text-[var(--dim)] mr-auto">Click any label to rename it, pick a font or colour · Ctrl+Z undoes while typing.</span>
+      <span className="text-xs text-[var(--dim)] mr-auto">Click any label to rename it, pick a font or colour · Ctrl+Z undoes while typing. The Overview title and summary follow Site Mode and can't be renamed here.</span>
       <button data-testid="ui-labels-apply-all-btn" onClick={applyAllTenants}
         className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Globe2 size={12} /> Apply to all tenants</button>
       <button data-testid="ui-labels-reset-btn"

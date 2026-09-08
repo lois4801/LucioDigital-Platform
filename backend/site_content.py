@@ -450,11 +450,12 @@ class RebuildIn(BaseModel):
 def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/public/showcase")
     async def public_showcase():
-        apps = await db.apps.find({"name": {"$in": list(APP_MAP)}, "preview_enabled": True}, {"_id": 0, "name": 1, "industry": 1, "preview_token": 1, "thumbnail": 1, "video_url": 1, "site_niche": 1}).to_list(20)
+        apps = await db.apps.find({"preview_enabled": True, "preview_token": {"$ne": None}}, {"_id": 0, "name": 1, "industry": 1, "preview_token": 1, "thumbnail": 1, "video_url": 1, "site_niche": 1}).to_list(20)
         out = []
         for a in apps:
-            n = NICHES.get(a.get("site_niche") or APP_MAP.get(a["name"], "saas"))
-            out.append({"name": a["name"], "industry": a.get("industry"), "token": a.get("preview_token"), "thumbnail": a.get("thumbnail"), "video": a.get("video_url"), "niche": a.get("site_niche") or APP_MAP.get(a["name"]),
+            key = a.get("site_niche") or niche_for(a)
+            n = NICHES.get(key) or NICHES["saas"]
+            out.append({"name": a["name"], "industry": a.get("industry"), "token": a.get("preview_token"), "thumbnail": a.get("thumbnail"), "video": a.get("video_url"), "niche": key,
                         "brand": n["brand"], "tagline": n["title"], "summary": n["sub"], "sections": n["sections"], "primary": n["primary"]})
         return out
 

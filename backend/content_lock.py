@@ -47,6 +47,7 @@ async def sync_overview(db, app_id: str):
     props = (hero or {}).get("props") or {}
     nav = next((b for b in blocks if b.get("type") == "navbar"), None)
     brand = str(((nav or {}).get("props") or {}).get("brand") or "").strip()[:120]
+    # 'description' wins over legacy 'body'/'text'/'lead'/'blurb' when a hero carries more than one.
     description = next((str(props.get(k)).strip() for k in ("description", "body", "text", "lead", "blurb")
                         if isinstance(props.get(k), str) and props.get(k).strip()), "")
     # Prefer the hero's own artwork so the thumbnail stays visually stable across builders.
@@ -69,12 +70,27 @@ async def sync_overview(db, app_id: str):
     if brand:
         # The Navbar brand is the tenant's public name — keep the workspace header in step with it.
         upd["name"] = brand
+    blurb = (description or snap["subtitle"] or "").strip()
+    if blurb:
+        # The Overview summary line tracks the live hero copy.
+        upd["description"] = blurb[:400]
     await db.apps.update_one({"app_id": app_id}, {"$set": upd})
     return snap
 
 
 class LockIn(BaseModel):
     locked: bool
+
+
+SYNCED_LABEL_KEYS = ("header_tenant_name", "overview_card_title", "overview_card_description")
+
+
+async def clear_synced_label_overrides(db) -> int:
+    """These three fields now follow Site Mode, so any saved label override is dead data."""
+    res = await db.apps.update_many(
+        {"$or": [{f"ui_overrides.{k}": {"$exists": True}} for k in SYNCED_LABEL_KEYS]},
+        {"$unset": {f"ui_overrides.{k}": "" for k in SYNCED_LABEL_KEYS}})
+    return res.modified_count
 
 
 async def sync_all_overviews(db) -> int:

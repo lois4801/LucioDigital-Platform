@@ -120,8 +120,9 @@ export default function OverviewPanel({ appDoc, patch }) {
               <span className="chip">{appDoc.industry}</span>
               {(appDoc.tags || []).map((t) => <span key={t} className="chip">{t}</span>)}
             </div>
-            <L k="overview_card_title" d={appDoc.name} as="h2" className="font-display text-2xl font-semibold tracking-tight mt-4 block" testid="label-overview-card-title" />
-            <L k="overview_card_description" d={appDoc.description || "—"} as="p" className="text-[var(--mut)] mt-2 block" testid="label-overview-card-desc" />
+            <h2 data-testid="label-overview-card-title" className="font-display text-2xl font-semibold tracking-tight mt-4 block">{appDoc.name}</h2>
+            <p data-testid="label-overview-card-desc" className="text-[var(--mut)] mt-2 block">{appDoc.description || "—"}</p>
+            <div className="text-[10px] text-[var(--dim)] mt-1">Name and summary follow Site Mode — edit them in the Navbar brand and hero copy.</div>
             <SiteSnapshot appDoc={appDoc} />
           </div>
         </div>

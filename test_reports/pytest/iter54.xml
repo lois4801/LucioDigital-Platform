@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="14" time="9.415" timestamp="2026-09-08T19:36:38.315837+00:00" hostname="agent-env-0807f207-82c5-46c2-b347-b787bd4fe45d"><testcase classname="tests.test_iter54_overview_card_sync" name="test_overview_card_title_syncs_from_navbar_brand" time="1.521" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_overview_card_desc_syncs_from_hero_subtitle" time="0.924" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_hero_description_takes_precedence" time="0.356" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_ui_label_override_does_not_shadow_overview_title" time="0.847"><failure message="AssertionError: {&quot;detail&quot;:&quot;No labels or styles provided&quot;}&#10;assert 400 in (200, 201, 204)&#10; +  where 400 = &lt;Response [400]&gt;.status_code">s = &lt;requests.sessions.Session object at 0xfa2761615f10&gt;
+
+    def test_ui_label_override_does_not_shadow_overview_title(s):
+        app_id = "app_e3cb4f084785"
+        home = _get_home(s, app_id)
+        original_blocks = copy.deepcopy(home["blocks"])
+        nav_idx = next(i for i, b in enumerate(home["blocks"]) if b.get("type") == "navbar")
+        original_brand = original_blocks[nav_idx].get("props", {}).get("brand") \
+            or _get_app(s, app_id).get("name")
+    
+        stale_label = f"STALE-Override-{int(time.time()) % 100000}"
+        live_brand = f"Iter54Live{int(time.time()) % 100000}"
+    
+        # 1) Save a ui_labels override for overview_card_title
+        put = s.put(f"{BASE}/api/apps/{app_id}/ui_labels",
+                    json={"key": "overview_card_title", "text": stale_label}, timeout=30)
+        # accept 200/201/204
+&gt;       assert put.status_code in (200, 201, 204), put.text
+E       AssertionError: {"detail":"No labels or styles provided"}
+E       assert 400 in (200, 201, 204)
+E        +  where 400 = &lt;Response [400]&gt;.status_code
+
+backend/tests/test_iter54_overview_card_sync.py:149: AssertionError</failure></testcase><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_e3cb4f084785-Events]" time="1.076" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_6663b5de0007-Construction]" time="1.397" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_abc693a75574-Fitness]" time="0.556" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_industry_not_polluted_by_site_mode[app_1cb6f2b89eb6-E-commerce]" time="0.609" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_e3cb4f084785-Events]" time="0.387" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_6663b5de0007-Construction]" time="0.423" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_abc693a75574-Fitness]" time="0.426" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_cross_tenant_brand_and_subtitle_sync[app_1cb6f2b89eb6-E-commerce]" time="0.430" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_landing_shows_names_and_niches" time="0.209" /><testcase classname="tests.test_iter54_overview_card_sync" name="test_sync_overview_endpoint_still_works" time="0.133" /></testsuite></testsuites>

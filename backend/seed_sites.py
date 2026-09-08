@@ -136,3 +136,48 @@ async def reseed_demo_sites(db, owner_id):
             await db.pages.insert_one({"page_id": _id("pg"), "app_id": app["app_id"], "name": pname, "slug": slug, "order": i, "blocks": blocks, "updated_at": _now()})
         await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"theme": n["theme"], "kind": n["kind"], "demo_site_v": 2, "thumbnail": n["hero_img"], "video_url": n["video"],
                                                                   "preview_enabled": True, "preview_token": app.get("preview_token") or _id("pv") + uuid.uuid4().hex[:8]}})
+
+
+
+# Canonical tenant the client-editor account is a member of. Recreated idempotently by app_id so a
+# wiped database never leaves the editor account with zero tenants.
+EDITOR_TENANT_ID = "app_6663b5de0007"
+EDITOR_EMAIL = "client.editor@example.com"
+EDITOR_PASSWORD = "ClientEdit2026!"
+
+
+async def ensure_editor_tenant(db, owner_id, hash_password):
+    app = await db.apps.find_one({"app_id": EDITOR_TENANT_ID}, {"_id": 0})
+    if not app:
+        app = {
+            "app_id": EDITOR_TENANT_ID, "owner_id": owner_id, "name": "Northwind Roofing",
+            "industry": "Construction", "status": "active",
+            "description": "Residential and commercial roofing with 24/7 storm response and financing.",
+            "tags": ["Roofing", "Bookings", "Leads"], "color": "#F97316",
+            "thumbnail": U + "photo-1632759145355-8c1d0a1bff2a?w=1400&q=80",
+            "transfer_mode": False, "preview_enabled": True, "preview_token": _id("pv") + uuid.uuid4().hex[:8],
+            "metrics": {"uptime": 99.95, "cpu": 28, "ram": 54, "response_ms": 92, "visitors_24h": 1840},
+            "created_at": _now(), "updated_at": _now(),
+        }
+        await db.apps.insert_one(dict(app))
+    if await db.pages.count_documents({"app_id": EDITOR_TENANT_ID}) == 0:
+        from site_content import build_premium_site
+        pages, theme, n = build_premium_site(app, "construction", {"name": app["name"]})
+        for i, (pname, slug, blocks) in enumerate(pages):
+            await db.pages.insert_one({"page_id": _id("pg"), "app_id": EDITOR_TENANT_ID, "name": pname, "slug": slug, "order": i, "blocks": blocks, "updated_at": _now()})
+        await db.apps.update_one({"app_id": EDITOR_TENANT_ID}, {"$set": {"theme": theme, "premium_site_v": 3, "site_niche": "construction", "video_url": n["video"], "preview_enabled": True, "updated_at": _now()}})
+
+    user = await db.users.find_one({"email": EDITOR_EMAIL}, {"_id": 0})
+    if not user:
+        await db.users.insert_one({
+            "user_id": _id("user"), "email": EDITOR_EMAIL, "name": "Client Editor", "role": "user",
+            "password_hash": hash_password(EDITOR_PASSWORD), "auth_provider": "jwt",
+            "picture": None, "created_at": _now(),
+        })
+        user = await db.users.find_one({"email": EDITOR_EMAIL}, {"_id": 0})
+
+    await db.memberships.update_one(
+        {"app_id": EDITOR_TENANT_ID, "user_id": user["user_id"]},
+        {"$set": {"role": "editor"}, "$setOnInsert": {"created_at": _now()}},
+        upsert=True,
+    )

@@ -19,12 +19,27 @@ BASE = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 EMAIL = "jaybernabe@luciodigital.com"
 PASSWORD = "Lucio2026!"
 
-SEEDED = [
-    "app_6663b5de0007",
-    "app_e3cb4f084785",
-    "app_abc693a75574",
-    "app_1cb6f2b89eb6",
-]
+def _first_tenant_id():
+    """Tenant ids are environment data — resolve one at runtime."""
+    import requests as _rq
+    _s = _rq.Session()
+    _s.post(f"{BASE}/api/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
+    rows = _s.get(f"{BASE}/api/apps", timeout=30).json()
+    return rows[0]["app_id"] if rows else ""
+
+
+TENANT_ID = _first_tenant_id()
+
+
+def _live_tenant_ids():
+    """Tenant ids are environment data, so resolve them at runtime instead of hardcoding."""
+    sess = requests.Session()
+    sess.post(f"{BASE}/api/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
+    return [a["app_id"] for a in sess.get(f"{BASE}/api/apps", timeout=30).json()]
+
+
+SEEDED = _live_tenant_ids()
+PRIMARY = SEEDED[0] if SEEDED else ""
 
 
 @pytest.fixture(scope="module")
@@ -53,7 +68,7 @@ def _get_home_page(s, app_id):
 
 # ---------- 1. Hero sync ----------
 def test_hero_patch_syncs_snapshot(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     home = _get_home_page(s, app_id)
     original_blocks = copy.deepcopy(home["blocks"])
     hero_idx = next(i for i, b in enumerate(home["blocks"]) if b.get("type") == "hero")
@@ -83,7 +98,7 @@ def test_hero_patch_syncs_snapshot(s):
 
 # ---------- 2. Navbar brand → tenant name ----------
 def test_navbar_brand_syncs_tenant_name(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     home = _get_home_page(s, app_id)
     original_blocks = copy.deepcopy(home["blocks"])
     nav_idx = next(i for i, b in enumerate(home["blocks"]) if b.get("type") == "navbar")
@@ -110,7 +125,7 @@ def test_navbar_brand_syncs_tenant_name(s):
 
 # ---------- 3. Counts and timestamp on add/remove page + block ----------
 def test_page_add_delete_updates_counts(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     before = (_get_app(s, app_id).get("site_snapshot") or {}).get("pages")
     r = s.post(f"{BASE}/api/apps/{app_id}/pages",
                json={"name": "Iter53 Throwaway", "slug": "/iter53-tmp", "blocks": []}, timeout=30)
@@ -128,7 +143,7 @@ def test_page_add_delete_updates_counts(s):
 
 
 def test_block_add_remove_updates_sections(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     home = _get_home_page(s, app_id)
     original_blocks = copy.deepcopy(home["blocks"])
     snap_before = _get_app(s, app_id).get("site_snapshot") or {}
@@ -152,7 +167,7 @@ def test_block_add_remove_updates_sections(s):
 
 # ---------- 4. Theme save refreshes updated_at ----------
 def test_theme_save_updates_snapshot(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     app = _get_app(s, app_id)
     theme = app.get("theme") or {}
     before = (app.get("site_snapshot") or {}).get("updated_at")
@@ -166,7 +181,7 @@ def test_theme_save_updates_snapshot(s):
 
 # ---------- 5. Manual resync endpoint ----------
 def test_resync_endpoint_ok(s):
-    app_id = "app_e3cb4f084785"
+    app_id = PRIMARY
     r = s.post(f"{BASE}/api/apps/{app_id}/site/sync-overview", timeout=30)
     assert r.status_code == 200, r.text
     snap = r.json()
@@ -174,7 +189,7 @@ def test_resync_endpoint_ok(s):
 
 
 def test_resync_endpoint_unauth():
-    r = requests.post(f"{BASE}/api/apps/app_e3cb4f084785/site/sync-overview", timeout=30)
+    r = requests.post(f"{BASE}/api/apps/{TENANT_ID}/site/sync-overview", timeout=30)
     assert r.status_code in (401, 403), r.status_code
 
 
