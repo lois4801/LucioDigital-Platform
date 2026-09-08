@@ -218,6 +218,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             await log_activity(app_id, user["user_id"], "page.saved", f"Saved {len(upd['blocks'])} blocks")
             if hooks.get("maybe_autosync"):
                 await hooks["maybe_autosync"](app_id, user["user_id"])
+            if hooks.get("maybe_site_sync"):
+                await hooks["maybe_site_sync"](app_id, user["user_id"])
         return await db.pages.find_one({"page_id": page_id}, {"_id": 0})
 
     @api.delete("/apps/{app_id}/pages/{page_id}")

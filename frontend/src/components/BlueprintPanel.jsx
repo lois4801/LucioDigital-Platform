@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Table, FormInput, BarChart3, LayoutGrid, MessageSquare, Settings, KanbanSquare, Calendar, LogIn, FileUp } from "lucide-react";
+import { Sparkles, Loader2, Database, Route, Layout, Shield, Plug, Download, Table, FormInput, BarChart3, LayoutGrid, MessageSquare, Settings, KanbanSquare, Calendar, LogIn, FileUp, RefreshCw } from "lucide-react";
 
 const COMP_ICON = { table: Table, list: Table, form: FormInput, stats: BarChart3, chart: BarChart3, cards: LayoutGrid, chat: MessageSquare, settings: Settings, kanban: KanbanSquare, calendar: Calendar, auth: LogIn, detail: Layout, hero: Layout, navbar: Layout };
 const EXAMPLES = ["Patient booking app for a dental clinic: appointments, patients, treatments, invoices, SMS reminders", "Field-service CRM for HVAC technicians with jobs, dispatch board, quotes and customer portal", "Internal tool for tracking influencer campaigns, budgets and content approvals"];
@@ -67,6 +67,31 @@ export default function BlueprintPanel({ appId, apiRoot }) {
     try { const { data } = await api.post(`/apps/${appId}/ai/refine-app`, { message: text, target }, { timeout: 300000 }); setSpec(data.spec); setChat(c => [...c, { role: "assistant", content: data.summary }]); setTarget(null); toast.success("Blueprint updated"); }
     catch (e) { toast.error(e.response?.data?.detail || "Refinement failed"); } finally { setRefining(false); }
   }
+  const [sync, setSync] = useState({ enabled: false, last_sync: null, last_summary: null });
+  const [syncing, setSyncing] = useState(false);
+  useEffect(() => { api.get(`/apps/${appId}/site-sync`).then(r => setSync(r.data)).catch(() => {}); }, [appId]);
+  async function toggleSync(enabled) {
+    setSync(s => ({ ...s, enabled }));
+    try { await api.post(`/apps/${appId}/site-sync`, { enabled }); toast.success(enabled ? "Auto-sync on — saving a page will rebuild this app" : "Auto-sync off"); }
+    catch (e) { setSync(s => ({ ...s, enabled: !enabled })); toast.error(e.response?.data?.detail || "Failed"); }
+  }
+  async function syncFromSite() {
+    setSyncing(true);
+    try {
+      const { data: job } = await api.post(`/apps/${appId}/ai/app-from-site`, { mode: spec ? "merge" : "overwrite" });
+      let data = null;
+      for (let i = 0; i < 100 && !data; i++) {
+        await new Promise(r => setTimeout(r, 4000));
+        const { data: st } = await api.get(`/apps/${appId}/ai/app-sync-job/${job.job_id}`);
+        if (st.status === "done") data = st.result;
+        else if (st.status === "error") throw new Error(st.error || "Sync failed");
+      }
+      if (!data) throw new Error("Sync timed out — try again");
+      setSpec(data.spec); setScreen(0); setSync(s => ({ ...s, ...data.sync }));
+      setChat(c => [...c, { role: "assistant", content: `Synced from Site Mode — ${data.summary}` }]);
+      toast.success(`App built from your site · ${data.spec.screens?.length} screens`);
+    } catch (e) { toast.error(e.response?.data?.detail || e.message || "Sync failed"); } finally { setSyncing(false); }
+  }
   const [templates, setTemplates] = useState([]);
   const [tplOpen, setTplOpen] = useState(false);
   const [dark, setDark] = useState(false);
@@ -100,9 +125,18 @@ export default function BlueprintPanel({ appId, apiRoot }) {
           <div className="flex flex-col gap-2 shrink-0">
             <button data-testid="app-generate-btn" onClick={generate} disabled={busy || brief.trim().length < 10} className="btn-primary flex items-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {busy ? "Architecting (30–60s)…" : spec ? "Regenerate blueprint" : "Generate blueprint"}</button>
             <button data-testid="app-long-brief-btn" onClick={() => setBriefOpen(true)} className="btn-ghost flex items-center gap-2 text-sm"><FileUp size={14} /> Upload doc / long brief</button>
+            <button data-testid="app-sync-btn" onClick={syncFromSite} disabled={syncing} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--cyan,#14B8A6)]/50 text-[var(--acc)] disabled:opacity-50">{syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {syncing ? "Reading your site…" : spec ? "Re-sync app from my site" : "Build app from my site"}</button>
             <button data-testid="app-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--acc)]/50 text-[var(--acc)]"><LayoutGrid size={14} /> Industry templates ({templates.length})</button>
           </div>
         </div>
+        <div data-testid="app-sync-bar" className="mt-4 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-3">
+          <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <input data-testid="app-sync-toggle" type="checkbox" checked={sync.enabled} onChange={e => toggleSync(e.target.checked)} className="accent-[var(--acc)]" />
+            <span className="text-[var(--mut)]">Keep this app in sync with Site Mode — rebuild it automatically whenever the website changes</span>
+          </label>
+          {sync.last_sync && <span data-testid="app-sync-status" className="font-mono text-[10px] text-[var(--dim)] ml-auto">Last synced {new Date(sync.last_sync).toLocaleString()}</span>}
+        </div>
+        {sync.last_summary && <div data-testid="app-sync-summary" className="mt-2 text-xs text-[var(--mut)] bg-white/5 rounded-xl px-3 py-2">{sync.last_summary}</div>}
         {tplOpen && <div data-testid="template-library" className="mt-5 grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {templates.map(t => <button key={t.key} data-testid={`template-${t.key}`} onClick={() => applyTemplate(t.key)} className="card-lift text-left p-4 rounded-2xl border border-[var(--line)] bg-[var(--bg-2)] relative overflow-hidden">
             <span className="absolute inset-x-0 top-0 h-1" style={{ background: `linear-gradient(90deg, ${t.primary}, ${t.secondary})` }} />

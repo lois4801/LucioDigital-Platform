@@ -1,0 +1,46 @@
+{
+  "summary": "Iter-27 verified Site→App AI sync and Website Import (scrape/preview/apply). Backend pytest: 10/10 pass across two files. Fast suite (test_iter27_site_sync_web_import.py, 9 tests): GET /site-sync shape, POST /site-sync toggle persistence, invalid URL rejected inline for 'not a url' and 'http://localhost:3000', nonexistent domain resolved via job with status='error' + error message, viewer-role 403 on app-from-site + import-preview + import-apply, and cross-tenant outsider denied on site-sync. Slow suite (test_iter27_slow_ai.py, 3 tests): (a) POST /ai/app-from-site mode=overwrite on the seeded 'Vote Banner Test Co' tenant completed in ~45s (well under the 60s ingress cap), returned a valid spec with screens+models, persisted to apps.app_spec (verified via GET /blueprint), and appended a 'Synced from Site Mode — …' assistant message to /ai/app-chat; (b) mode=merge run completed in ~25s and preserved 100% of prior screen names and >=50% of models with a change summary; (c) full roto-rooter.com import job flow finished in ~88s — scraped phone '800-768-6911', extracted brand hex colours, returned 3-5 pages each with >=5 blocks, apply mode=append preserved existing pages and generated '/imported-*' slugs for the '/' collision, then mode=replace with apply_theme=true reduced pages to exactly the imported set and updated apps.theme.primary. Frontend Playwright smoke: login → /apps/app_bdbf27abe643 → App Mode: app-sync-btn + app-sync-toggle + app-sync-summary + app-sync-status all render; toggling app-sync-toggle triggers backend POST (confirmed by 'Auto-sync on' toast) and the new state persists after a full page reload. Site Mode: web-import-btn opens the WebImportDialog with web-import-url-input + web-import-scan-btn. Dashboard: new-app-btn opens the modal exposing new-app-url-input with the correct placeholder+helper text. No console errors.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter27_site_sync_web_import.py",
+    "/app/backend/tests/test_iter27_slow_ai.py",
+    "/app/test_reports/pytest/iter27_fast.xml",
+    "/app/test_reports/pytest/iter27_validation.xml",
+    "/app/test_reports/pytest/iter27_slow_overwrite.xml",
+    "/app/test_reports/pytest/iter27_slow_merge.xml",
+    "/app/test_reports/pytest/iter27_slow_roto.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "site_sync.py maybe_site_sync(): kicks off asyncio.create_task(run()) with no back-pressure or dedupe — rapid consecutive page saves on an auto-sync tenant will fire multiple parallel LLM calls (each ~45s, each burns credits). Consider debouncing (e.g., only schedule if not already scheduled) or a per-app lock. Currently mitigated by the fingerprint short-circuit BEFORE scheduling, but two saves with different content in flight will still both run.",
+    "site_sync.sync_app_from_site() 'overwrite' mode: still passes 'existing' brief through spec.update({'brief': (existing or {}).get('brief') …}) — arguably correct (preserve user's stated brief), but the summary in the app_chats reads 'Synced from Site Mode — <summary>'. Fine, but overwrite messaging could differentiate merge vs overwrite for the tenant's audit trail.",
+    "web_import._fetch(): swallows all exceptions and returns None, which surfaces as HTTPException 400 'Could not load that website'. Good UX. However it does not distinguish between a real timeout/network fail and a 4xx block — logging the failure reason would help debugging tenant-reported issues.",
+    "web_import.build_import(): _claude prompt is capped at 38000 chars, but the scraped 'text' per page is capped at 6000 with 4 subpages — combined with lists/paragraphs, some tenants may exceed. Not a bug but consider tighter truncation ordering.",
+    "web_import.apply_import(mode='replace'): db.pages.delete_many by app_id is destructive. There's no safety net for accidentally hitting 'replace' on a large tenant. Consider a soft-delete or a 'previous_pages' backup blob on the app doc so tenants can undo an unwanted import.",
+    "web_import.apply_import(): slug collision handler uses re.sub on pg['name'] which can produce an empty string; falls back to `i` (int). Works but produces a '/imported-0' style — could be more descriptive (e.g., '/imported-page-1').",
+    "BlueprintPanel.jsx: app-sync-toggle is a raw <input type='checkbox'> without an aria-label; the visible label text is co-located. Consider adding aria-labelledby or wrapping in a proper <label>. Screen-reader UX only.",
+    "BlueprintPanel.jsx toggleSync(): fires the POST and then updates local state — no optimistic UI. A slow network shows a stale checkbox until the response comes back. Minor UX.",
+    "WebImport.jsx: after apply(), the dialog closes on success but there's no explicit invalidation of parent page list. Confirm the parent Builder refreshes pages after apply — otherwise a manual reload may be needed. (Not tested end-to-end via UI because the LLM+scrape flow is >1min; backend contract is validated by tests.)",
+    "Dashboard.jsx createApp() with url: no visible feedback for the polling status besides the button label 'Importing website…' — could show a progress step (Scanning… → Building… → Applying…) since the job takes ~90s.",
+    "Ingress 60s note (from main agent): app-from-site currently synchronous ~45-50s. If a slower tenant/site pushes over 60s, this will silently 502. Consider promoting app-from-site to a job like web import for defensive future-proofing. Not observed as a failure in this iteration."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter27_site_sync_web_import.py",
+    "/app/backend/tests/test_iter27_slow_ai.py"
+  ],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100%"},
+  "test_credentials": "admin: jaybernabe@luciodigital.com / Lucio2026!; seed tenant: app_bdbf27abe643",
+  "seed_data_creation": "Created 1 module-scoped throwaway tenant per slow-suite run (TEST_iter27_slow) and 1 session throwaway tenant (TEST_iter27_tenant) for fast suite — both auto-deleted in fixture teardown. Also created 1 TEST_iter27_viewer_*@example.com user (invited as viewer of test_tenant) and 1 TEST_iter27_outsider_*@example.com user (never assigned to any tenant) for the 403 branches — these remain in db.users (harmless). Toggle side-effect: app_bdbf27abe643.app_sync.enabled was flipped during Playwright and reverted at end of run. The seeded tenant's app_spec was regenerated by the overwrite+merge tests (Vote Banner Test Co → fiduciary/wealth-management app spec, matches its live Site Mode content).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Two files: test_iter27_site_sync_web_import.py (~10s total, safe to run any time) and test_iter27_slow_ai.py (~2.5 min, hits Claude — run selectively). The slow suite has fixture scope=module so the throwaway tenant is reused across the 3 tests; roto-rooter scrape is realistic and depends on that site staying up. If roto-rooter changes, replace with any live site. The seeded tenant app_bdbf27abe643 currently has a fiduciary-advisory app_spec + auto-sync toggle=OFF (verified at cleanup). Frontend note: the 'app-sync-toggle' checkbox click via Playwright's page.click() sometimes fails to flip DOM state due to force+overlay quirks — use page.evaluate(\"element.click()\") for reliability, and read state via evaluate('...checked'). AppDetail tabs use data-testid='tab-<key>-btn' where <key> is one of: overview, builder (Site Mode), cms, blueprint (App Mode), workflows, inbox, media, files, data, billing, domain, handoff, activity, members. Tab state does NOT persist across reloads — reload lands on overview.",
+  "rca of the issue": "N/A — no bugs found."
+}

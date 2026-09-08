@@ -982,7 +982,8 @@ register_extras(api, db, get_current_user, get_user_app, log_activity)
 WF_HOOKS = register_workflows(api, db, get_current_user, get_user_app, log_activity)
 CMS_HOOKS = register_cms(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS)
 INBOX_HOOKS = register_inbox(api, db, get_current_user, get_user_app, log_activity, build_export_files, WF_HOOKS)
-register_studio(api, db, get_current_user, get_user_app, log_activity, {**INBOX_HOOKS, **WF_HOOKS, **CMS_HOOKS})
+STUDIO_HOOKS = {**INBOX_HOOKS, **WF_HOOKS, **CMS_HOOKS}
+register_studio(api, db, get_current_user, get_user_app, log_activity, STUDIO_HOOKS)
 from growth import register as register_growth
 GROWTH = register_growth(api, db, get_current_user, get_user_app, log_activity, create_access_token, create_refresh_token, set_auth_cookies, WF_HOOKS["send_email"], WF_HOOKS)
 import studio as _studio, extras as _extras
@@ -1002,6 +1003,14 @@ from files_lib import register as register_files, bundle_media
 register_files(api, db, get_current_user, get_user_app, log_activity)
 from data_destinations import register as register_data_destinations
 register_data_destinations(api, db, get_current_user, get_user_app, log_activity)
+from site_sync import register as register_site_sync
+import site_sync as _site_sync
+_site_sync.require_ai_access = GROWTH["require_ai_access"]
+STUDIO_HOOKS["maybe_site_sync"] = register_site_sync(api, db, get_current_user, get_user_app, log_activity)["maybe_site_sync"]
+from web_import import register as register_web_import
+import web_import as _web_import
+_web_import.require_ai_access = GROWTH["require_ai_access"]
+register_web_import(api, db, get_current_user, get_user_app, log_activity)
 
 app.include_router(api)
 

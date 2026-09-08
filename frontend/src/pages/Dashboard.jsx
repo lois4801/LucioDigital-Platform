@@ -9,6 +9,7 @@ import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play } from "lucide-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
+import { pollImport } from "@/components/builder/WebImport";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -30,7 +31,8 @@ export default function Dashboard() {
   const [view, setView] = useState("grid");
   const [notifs, setNotifs] = useState([]);
   const [newOpen, setNewOpen] = useState(false);
-  const [newApp, setNewApp] = useState({ name: "", industry: "SaaS Portals", description: "", kind: "website" });
+  const [newApp, setNewApp] = useState({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); }, []);
 
@@ -54,10 +56,20 @@ export default function Dashboard() {
   async function createApp() {
     if (!newApp.name) return toast.error("Name required");
     try {
-      const { data } = await api.post("/apps", { ...newApp, status: "active" });
+      const { name, industry, description, kind, url } = newApp;
+      const { data } = await api.post("/apps", { name, industry, description, kind, status: "active" });
       setApps([data, ...apps]); setNewOpen(false);
-      setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website" });
-      toast.success("Project created");
+      setNewApp({ name: "", industry: "SaaS Portals", description: "", kind: "website", url: "" });
+      if (url?.trim()) {
+        setImporting(true);
+        toast.info("Reading that website and rebuilding it — this takes a minute or two…");
+        try {
+          const { data: job } = await api.post(`/apps/${data.app_id}/site/import`, { url, mode: "replace", apply_theme: true });
+          const res = await pollImport(data.app_id, job.job_id);
+          toast.success(`Imported ${res.pages.length} page(s) from ${url}`);
+        } catch (e) { toast.error(e.response?.data?.detail || e.message || "Website import failed — the project was still created"); }
+        finally { setImporting(false); }
+      } else toast.success("Project created");
       nav(`/apps/${data.app_id}`);
     } catch (e) { toast.error("Create failed"); }
   }
@@ -208,7 +220,11 @@ export default function Dashboard() {
                 <label className="block"><span className="overline block mb-1">Description</span>
                   <textarea data-testid="new-app-desc-input" rows={3} value={newApp.description} onChange={(e) => setNewApp({ ...newApp, description: e.target.value })}
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" /></label>
-                <button data-testid="new-app-create-btn" onClick={createApp} className="btn-primary w-full">Create {newApp.kind === "app" ? "app" : "website"}</button>
+                <label className="block"><span className="overline block mb-1">Import from a website (optional)</span>
+                  <input data-testid="new-app-url-input" value={newApp.url} onChange={(e) => setNewApp({ ...newApp, url: e.target.value })} placeholder="acmeplumbing.com"
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-[var(--acc)]" />
+                  <span className="text-[11px] text-[var(--mut)] mt-1 block">We'll copy its pages, copy, images, contact details and brand colours into this project.</span></label>
+                <button data-testid="new-app-create-btn" onClick={createApp} disabled={importing} className="btn-primary w-full disabled:opacity-60">{importing ? "Importing website…" : `Create ${newApp.kind === "app" ? "app" : "website"}`}</button>
               </div>
             </DialogContent>
           </Dialog>
