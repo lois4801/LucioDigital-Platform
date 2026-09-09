@@ -65,9 +65,35 @@
 .tmode-light :is(h1, h2, h3, h4), .tmode-dark :is(h1, h2, h3, h4),
 .tmode-light .font-\[var\(--tfh\)\], .tmode-dark .font-\[var\(--tfh\)\] { font-family: var(--tfh); }
 
+/* ---------- Image fidelity: never blurred, tinted, faded or upscaled ---------- */
+.tmode-light img, .tmode-dark img {
+  opacity: 1 !important;
+  filter: none;
+  image-rendering: auto;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+/* Only intentional, non-blur art direction is allowed back in (dark editorial templates) */
+.pr-site-ember img { filter: saturate(1.06) contrast(1.04); }
+.pr-site-noir img { filter: contrast(1.06) saturate(.95); }
+.pr-site-cinematic img { filter: contrast(1.08); }
+.pr-site-harbour .relative.overflow-hidden img { filter: none; }
+.tmode-light img[loading="lazy"], .tmode-dark img[loading="lazy"] { opacity: 1 !important; }
+
+/* ---------- Light mode: clearly separated sections, no bleached bands ---------- */
+.tmode-light section { background-color: #FFFFFF; }
+.tmode-light .tsec-muted, .tmode-light section.tsec-muted { background: #F5F5F0 !important; }
+.tmode-light .tsec-accent { background-color: var(--tp) !important; }
+/* Icon tiles keep the brand accent at full strength instead of fading to near-white */
+.tmode-light .tcard svg, .tmode-light .text-\[var\(--tp\)\] { color: var(--tp) !important; opacity: 1 !important; }
+.tmode-light [class*="bg-\[var\(--tp\)\]\/15"] { background-color: color-mix(in srgb, var(--tp) 14%, #FFFFFF) !important; box-shadow: none !important; }
+/* Body copy and subheads never lighter than the contract */
+.tmode-light p, .tmode-light li, .tmode-light summary { color: #333333; }
+.tmode-light .text-\[var\(--tmut\)\], .tmode-light .t-lead { color: #555555; }
+
 /* ---------- Cover hero scrim: keep the photograph readable in light mode ---------- */
-.tmode-light .hero-scrim { background: linear-gradient(100deg, color-mix(in srgb, var(--tbg) 94%, transparent) 0%, color-mix(in srgb, var(--tbg) 78%, transparent) 42%, color-mix(in srgb, var(--tbg) 18%, transparent) 100%) !important; }
-.tmode-light .hero-scrim-b { background: linear-gradient(180deg, transparent 55%, var(--tbg) 100%) !important; }
+.tmode-light .hero-scrim { background: linear-gradient(100deg, color-mix(in srgb, var(--tbg) 92%, transparent) 0%, color-mix(in srgb, var(--tbg) 62%, transparent) 40%, transparent 78%) !important; }
+.tmode-light .hero-scrim-b { background: linear-gradient(180deg, transparent 65%, var(--tbg) 100%) !important; }
 
 /* Keep the accent bloom behind cover heroes subtle so the photograph stays the subject */
 .tmode-dark [data-testid="hero-cover"] .blur-3xl { opacity: .16 !important; }

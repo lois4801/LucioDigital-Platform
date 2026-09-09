@@ -437,6 +437,12 @@ async def _build_template_pages(app: dict, key: str):
                                    "slug": slug, "order": i, "blocks": blocks,
                                    "updated_at": now_utc().isoformat()})
     await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"site_niche": key, "premium_site_v": 3}})
+    from cta_forms import register as _cf  # noqa: F401  (module import only)
+    from cta_forms import cta_labels, default_form, key_of
+    pages_docs = await db.pages.find({"app_id": app["app_id"]}, {"_id": 0, "slug": 1, "order": 1, "blocks": 1}).to_list(60)
+    for label in cta_labels(pages_docs):
+        if not await db.cta_forms.find_one({"app_id": app["app_id"], "key": key_of(label)}, {"_id": 0, "key": 1}):
+            await db.cta_forms.insert_one(default_form(app["app_id"], label, key))
     return len(pages)
 
 
@@ -1024,6 +1030,8 @@ from landing_cms import register as register_landing, is_admin as _is_admin
 register_landing(api, db, get_current_user, get_user_app, log_activity)
 from templates_gallery import register as register_templates_gallery
 register_templates_gallery(api, db, get_current_user)
+from cta_forms import register as register_cta_forms
+CTA_FORMS = register_cta_forms(api, db, get_current_user, get_user_app, log_activity, INBOX_HOOKS.get("new_message"))
 from ui_cms import register as register_ui_cms
 register_ui_cms(api, db, get_current_user, get_user_app)
 from files_lib import register as register_files, bundle_media

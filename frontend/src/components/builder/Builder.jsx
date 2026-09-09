@@ -19,6 +19,8 @@ import { DiffDialog } from "@/components/builder/VersionDiff";
 import { EditRequestDialog } from "@/components/builder/EditRequest";
 import { DEFAULT_THEME, themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { LockToggle, MasterLockButton, useLocks } from "@/components/locks/LockContext";
+import { CtaCtx, ctaKey } from "@/components/CtaFormModal";
+import CtaFormEditor from "@/components/CtaFormEditor";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
 const BLOCK_TEMPLATES = [
@@ -62,8 +64,7 @@ function CanvasItem({ block, selected, onSelect, onEdit, onImage, onNavigate, co
       <span className="absolute right-2 top-2 z-10 text-[10px] font-mono uppercase bg-black/70 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">{block.type}</span>
       <DesignCtx.Provider value={!!v2}>
         <EffectWrap effects={block.style?.effects} motionOn={motionOn} v2={!!v2}><BlockPreview block={block} onEdit={onEdit} onImage={onImage} onNavigate={onNavigate} collections={collections} /></EffectWrap>
-      </DesignCtx.Provider>
-    </div>
+      </DesignCtx.Provider>    </div>
   );
 }
 
@@ -103,6 +104,8 @@ export default function Builder({ appId, appDoc, user }) {
   const [applyingNiche, setApplyingNiche] = useState(false);
   const [lookVote, setLookVote] = useState(appDoc?.look_vote || null);
   const [swapTarget, setSwapTarget] = useState(null);
+  const [ctaForms, setCtaForms] = useState({});
+  const [formOpen, setFormOpen] = useState(null);
   const [history, setHistory] = useState({ past: [], future: [] });
   const [cursorVote, setCursorVote] = useState(null);
   const [draft, setDraft] = useState(null);
@@ -152,6 +155,7 @@ export default function Builder({ appId, appDoc, user }) {
     try {
       const [{ data: pgs }, { data: th }] = await Promise.all([api.get(`/apps/${appId}/pages`), api.get(`/apps/${appId}/theme`)]);
       setPages(pgs); setTheme(th);
+      api.get(`/apps/${appId}/cta-forms`).then(r => setCtaForms(Object.fromEntries((r.data.forms || []).map(f => [f.key, f])))).catch(() => {});
       const pg = pgs.find(p => p.page_id === keepPage) || pgs[0];
       if (pg) { setPageId(pg.page_id); setBlocks(pg.blocks || []); setSelected(pg.blocks?.[0]?.id || null); checkDraft(pg); }
     } catch { toast.error("Failed to load builder"); }
@@ -325,6 +329,16 @@ export default function Builder({ appId, appDoc, user }) {
         </div>
       )}
       <ImageSwapDialog appId={appId} target={swapTarget} context={swapTarget?.ctx} onClose={() => setSwapTarget(null)} onApply={(url) => { editProps(swapTarget.blockId, swapTarget.path, url); setSwapTarget(null); }} />
+      {formOpen && (
+        <div data-testid="builder-form-editor-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) setFormOpen(null); }}
+          className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm overflow-y-auto p-4 sm:p-8 flex items-start justify-center">
+          <div className="card-surface p-5 w-full max-w-3xl my-auto">
+            <CtaFormEditor appId={appId} form={formOpen}
+              onSaved={(next) => { setCtaForms(m => ({ ...m, [next.key]: next })); setFormOpen(next); }}
+              onClose={() => setFormOpen(null)} />
+          </div>
+        </div>
+      )}
       <NichePreviewBar preview={nichePreview} onApply={applyNiche} onExit={() => setNichePreview(null)} applying={applyingNiche} />
       {nichePreview && (
         <div className="min-h-[600px]" data-testid="niche-preview-canvas">
@@ -361,9 +375,11 @@ export default function Builder({ appId, appDoc, user }) {
             <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${isV2(theme) ? "dsv2" : ""} ${modeCls(theme)} ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
+                <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: (f) => setFormOpen(f), editMode: true }}>
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
                   {blocks.map(b => <CanvasItem key={b.id} block={b} v2={isV2(theme)} selected={selected === b.id} onSelect={() => setSelected(b.id)} onEdit={(path, v) => editProps(b.id, path, v)} onImage={(path, current) => setSwapTarget({ blockId: b.id, path, current, ctx: b.props.title || b.props.heading || appDoc?.name })} onNavigate={navigateTo} collections={collections} motionOn={theme.motion !== false} />)}
                 </SortableContext>
+                </CtaCtx.Provider>
                 {blocks.length === 0 && <div className="p-24 text-center text-[var(--tmut)]">Empty page. Add blocks from the left, or let AI design the whole site.</div>}
               </div>
             </div>

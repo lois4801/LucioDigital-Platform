@@ -105,7 +105,7 @@ export default function Leads() {
                       <div className="text-[10px] font-mono mt-1.5" style={{ color: m.app_color || "var(--dim)" }}>{m.app_name}{m.app_archived ? " · archived" : ""}</div>
                     </td>
                     <td className="px-4 py-3 text-[var(--mut)] text-xs break-all">{m.from_email || "—"}</td>
-                    <td className="px-4 py-3"><span className="inline-flex items-center gap-1.5 text-xs text-[var(--mut)]"><s.Icon size={12} className="shrink-0" /> <span className="break-words">{s.label}</span></span></td>
+                    <td className="px-4 py-3"><span className="inline-flex items-center gap-1.5 text-xs text-[var(--mut)]"><s.Icon size={12} className="shrink-0" /> <span className="break-words">{m.form_label || s.label}</span></span></td>
                     <td className="px-4 py-3 text-xs text-[var(--mut)]">{new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</td>
                     <td className="px-4 py-3"><div className="flex flex-wrap items-center gap-1.5"><span data-testid={`lead-status-${m.message_id}`} className={`chip whitespace-nowrap ${m.status === "unread" ? "chip-active" : ""}`}>{m.status === "unread" ? "New" : m.replies?.length ? "Replied" : m.status === "read" ? "Reviewed" : "Archived"}</span>{m.score != null && <span data-testid={`lead-score-${m.message_id}`} className="text-[10px] font-mono text-[var(--dim)] whitespace-nowrap">{m.score}/100</span>}</div></td>
                     <td className="px-2 py-3 text-right whitespace-nowrap">

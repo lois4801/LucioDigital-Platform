@@ -64,13 +64,12 @@ Design system: `backend/site_content.py` (NICHES copy + LOOKS design tokens) →
   industry template look. All 7 previously auto-created tenants archived (recoverable); workspace
   now boots to 0 active tenants.
 
-## Current data state (Sept 9, 2026, after iter59)
-0 active tenants · **6** archived and recoverable (Maison Verde, Orbit Customer Success, Northline
-Freight Systems, Forge Athletic Club, Meridian Wealth Partners, Nocturne Studios) · 5 leads
-retained, all visible in the admin inbox.
-⚠️ Northwind Roofing (`app_6663b5de0007`) was purged during test cleanup after auto-seeding was
-removed; `client.editor@example.com` now has 0 memberships. Recreate from the gallery + invite if
-member/editor flows need testing.
+## Current data state (Sept 9, 2026, after iter62)
+1 active tenant: `app_d8a1146c7426` Formcheck Medical (healthcare, dev throwaway) · **0 archived**.
+⚠️ The 6 archived demo tenants and Northwind Roofing were destroyed by testing-agent cleanup during
+iterations 58-62 despite explicit protection instructions. Their 5 leads survive in the admin
+global inbox, labelled "Removed tenant". They can be recreated from the Template Gallery on request
+(the designs and copy are template-generated, so a rebuild is faithful).
 
 ## Backlog
 - **P1** Real ElevenLabs voice — MOCKED; needs the user's ElevenLabs API key (next in agreed order) — MOCKED; needs the user's ElevenLabs API key (next in agreed order)
@@ -80,6 +79,23 @@ member/editor flows need testing.
 - **P2** Template gallery: preview all 16 template designs before creating a tenant
 - **P2** Legacy suites `test_iter11..52` hardcode dead tenant ids and 404 — refactor or delete
 - **P3** Internal `omnistack` strings in `storage.py` APP_NAME and the plugin manifest format
+
+## Sept 9, 2026 — Platform-wide CTA modal form system (iter61 + iter62, 19/19 backend, frontend 100%)
+- `backend/cta_forms.py`: `CTA_PATTERN`/`qualifies()` CTA intent detection, per-industry `FIELD_SETS`
+  (real_estate, education, healthcare, fitness, legal, hospitality/restaurant, construction) plus
+  `FALLBACK`, `cta_labels()` page scanner, per-tenant `cta_forms` collection,
+  `GET/PUT /api/apps/{id}/cta-forms`, `POST .../scan`, public
+  `GET /api/public/site/{token}/cta-forms` and `POST .../{form_id}/submit` (validates required
+  fields, writes the lead through the inbox with `form_label`, plus a `submissions` row).
+- Email field can never be removed (400) and unsupported field types are rejected (400).
+- New tenants provision forms automatically inside `_build_template_pages`; newly added CTA buttons
+  are picked up by the rescan endpoint with the fallback field set.
+- Frontend: `CtaFormModal.jsx` (portal modal, dark backdrop, X + outside click + Escape, dynamic
+  field renderer, brand-coloured submit, success state, `themeVars(theme)` applied on the portal so
+  tenant theme vars survive the portal boundary), `CtaFormEditor.jsx` (drag-reorder, inline
+  "+ Add a Field" type menu, autosave, simplified client mode), `CtaFormsPanel.jsx` (Forms tab in
+  AppDetail), CTA buttons in `BlockPreview` become real buttons, Builder canvas opens the editor,
+  Leads Source column shows the triggering button label.
 
 ## Order agreed with user
 ElevenLabs → External DB sync → Delete-my-account → GitHub push (PAT on hold)

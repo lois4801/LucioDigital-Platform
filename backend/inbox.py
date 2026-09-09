@@ -543,4 +543,4 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
                     logger.exception("autosync failed")
             asyncio.create_task(_w())
 
-    return {"upsert_chat_lead": upsert_chat_lead, "maybe_autosync": maybe_autosync}
+    return {"upsert_chat_lead": upsert_chat_lead, "maybe_autosync": maybe_autosync, "new_message": _new_message}

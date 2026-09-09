@@ -18,8 +18,9 @@ def _now():
     return datetime.now(timezone.utc).isoformat()
 
 
-def img(pid, w=1600):
-    return f"{U}{pid}?w={w}&q=80&auto=format&fit=crop"
+def img(pid, w=2400):
+    # Full-resolution sources (retina-ready) so nothing renders soft or upscaled.
+    return f"{U}{pid}?w={w}&q=90&auto=format&fit=crop"
 
 
 FACES = ["photo-1560250097-0b93528c311a", "photo-1573496359142-b8d87734a5a2", "photo-1507003211169-0a1dd7228f2d", "photo-1580489944761-15a19d654956", "photo-1472099645785-5658abf4ff4e", "photo-1438761681033-6461ffad8d80"]
@@ -407,7 +408,7 @@ def _sec(n, key, i, brand):
     if key == "stats":
         return _blk("stats", {"heading": "By the numbers", "items": [{"value": v, "label": l} for v, l in n["stats"]]}, bg, "center")
     if key == "team":
-        return _blk("team", {"heading": n.get("team_heading", "Meet the team"), "members": [{"name": a, "role": b, "photo": img(FACES[k % len(FACES)], 600)} for k, (a, b) in enumerate(n["team"])]}, bg)
+        return _blk("team", {"heading": n.get("team_heading", "Meet the team"), "members": [{"name": a, "role": b, "photo": img(FACES[k % len(FACES)], 900)} for k, (a, b) in enumerate(n["team"])]}, bg)
     if key in ("testimonials", "stories", "cases"):
         h = {"testimonials": "What our clients say", "stories": g("stories")[0] if key == "stories" else "", "cases": g("cases")[0] if key == "cases" else ""}[key] or "What our clients say"
         items = n["quotes"] if key == "testimonials" else g(key)[1]
@@ -417,7 +418,7 @@ def _sec(n, key, i, brand):
         return _blk("chart", {"heading": h, "caption": cap, "series": [{"m": s[1], "v": s[3]} for s in series]}, bg)
     if key in ("portfolio", "featured", "gallery"):
         h = g(key)[0] if isinstance(g(key), tuple) else n.get("gallery_heading", "Our work")
-        return _blk("gallery", {"heading": h, "images": [img(p, 1200) for p in n["gallery"]]}, bg)
+        return _blk("gallery", {"heading": h, "images": [img(p, 1800) for p in n["gallery"]]}, bg)
     if key == "video":
         return _blk("video", {"heading": "See us in action", "url": n["video"], "caption": f"Inside {brand}."}, bg, "center")
     if key == "faq":
@@ -466,7 +467,7 @@ def build_premium_site(app, niche_key=None, brand=None):
     home = [nav, hero] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate(n["sections"])) if b] + [footer]
     at, story = n["about"]
     about = [nav, _blk("hero", {"variant": "cover", "badge": "Our story", "title": at, "subtitle": story, "cta": "Get in touch", "image": img(n["gallery"][1])}, "default", "left", "lg", hover=False),
-             _sec(n, "stats", 1, brand), _sec(n, "team", 0, brand), _blk("gallery", {"heading": "Behind the scenes", "images": [img(p, 1200) for p in n["gallery"][2:5]]}, "muted"), footer]
+             _sec(n, "stats", 1, brand), _sec(n, "team", 0, brand), _blk("gallery", {"heading": "Behind the scenes", "images": [img(p, 1800) for p in n["gallery"][2:5]]}, "muted"), footer]
     svc_key = next(k for k in n["sections"] if k in ("services", "schedule", "solutions", "rooms", "categories"))
     services = [nav, _blk("hero", {"variant": "left", "badge": n["industry"], "title": n[svc_key][0] if isinstance(n[svc_key][0], str) else "Services", "subtitle": n["sub"], "cta": n["cta"]}, "default", "left", "md", hover=False),
                 _sec(n, svc_key, 1, brand)] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate([k for k in n["sections"] if k in ("plans", "offers", "rooms", "testimonials", "stories", "cases", "faq")], start=2)) if b] + [_sec(n, "cta", 0, brand), footer]

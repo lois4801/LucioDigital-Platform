@@ -11,6 +11,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
 import MemberAccount from "@/components/MemberAccount";
 import Paywall from "@/components/Paywall";
+import CtaFormModal, { CtaCtx, ctaKey } from "@/components/CtaFormModal";
 import { LogOut } from "lucide-react";
 import { Layers, Eye } from "lucide-react";
 
@@ -21,12 +22,15 @@ export default function PublicPreview() {
   const [slug, setSlug] = useState("/");
   const [err, setErr] = useState(null);
   const [account, setAccount] = useState(false);
+  const [ctaForms, setCtaForms] = useState({});
+  const [openForm, setOpenForm] = useState(null);
   const [hasPaid, setHasPaid] = useState(false);
   const member = useMember(token);
   useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
   useEffect(() => {
     api.get(`/public/site/${token}`).then(r => { setSite(r.data); loadFonts(r.data.theme); }).catch(e => setErr(e.response?.data?.detail || "Preview unavailable"));
+    api.get(`/public/site/${token}/cta-forms`).then(r => setCtaForms(r.data.forms || {})).catch(() => {});
   }, [token]);
   useEffect(() => {
     if (!site) return;
@@ -60,6 +64,7 @@ export default function PublicPreview() {
   };
   return (
     <DesignCtx.Provider value={v2}>
+    <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: setOpenForm, editMode: false }}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" style={{ ...themeVars(site.theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
       {!embed && <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
@@ -100,7 +105,10 @@ export default function PublicPreview() {
       </AnimatePresence>
       {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
+      {openForm && <CtaFormModal form={openForm} theme={site.theme} onClose={() => setOpenForm(null)}
+        onSubmit={(values) => api.post(`/public/site/${token}/cta-forms/${openForm.form_id}/submit`, { values })} />}
     </div>
+    </CtaCtx.Provider>
     </DesignCtx.Provider>
   );
 }

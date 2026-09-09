@@ -12,7 +12,7 @@ export default function EffectWrap({ effects = {}, motionOn = true, v2 = false, 
   const reveal = motionOn && effects.reveal !== false;
   return (
     <motion.div ref={ref} {...rest} style={{ y }}
-      initial={reveal ? { opacity: 0.3, y: v2 ? 32 : 24 } : false} whileInView={reveal ? { opacity: 1, y: 0 } : undefined} viewport={{ once: true, margin: "-60px" }}
+      initial={reveal ? { opacity: 0.4, y: v2 ? 32 : 24 } : false} whileInView={reveal ? { opacity: 1, y: 0 } : undefined} viewport={{ once: true, margin: "-60px" }}
       onViewportEnter={() => setSeen(true)}
       transition={{ duration: v2 ? 0.75 : 0.6, ease: [0.22, 1, 0.36, 1] }}
       whileHover={motionOn && effects.hover ? { scale: 1.01, transition: { duration: 0.25 } } : undefined}

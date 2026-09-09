@@ -27,6 +27,7 @@ import ConvertToWebApp from "@/components/ConvertToWebApp";
 import SubmissionsPanel from "@/components/SubmissionsPanel";
 import BookingsCalendar from "@/components/BookingsCalendar";
 import ProSettings from "@/components/ProSettings";
+import CtaFormsPanel from "@/components/CtaFormsPanel";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },
@@ -34,6 +35,7 @@ const TABS = [
   { key: "blueprint", label: "App Mode" },
   { key: "workflows", label: "Workflows" },
   { key: "inbox", label: "Inbox" },
+  { key: "forms", label: "Forms" },
   { key: "bookings", label: "Bookings" },
   { key: "media", label: "AI Media" },
   { key: "videos", label: "Videos" },
@@ -155,6 +157,7 @@ export default function AppDetail() {
         {tab === "cms" && <CmsPanel appId={appId} />}
         {tab === "workflows" && <WorkflowsPanel appId={appId} />}
         {tab === "inbox" && <InboxPanel appId={appId} />}
+        {tab === "forms" && <CtaFormsPanel appId={appId} />}
         {tab === "media" && <MediaStudio appId={appId} />}
         {tab === "videos" && <VideoStudio appId={appId} appDoc={appDoc} />}
         {tab === "files" && <FilesPanel appId={appId} />}

@@ -5,6 +5,8 @@ import { EditableText } from "@/components/InlineTextTools";
 
 // design_v2 flag for the current tenant site — set by the canvas / public preview root.
 export const DesignCtx = createContext(false);
+import { useCta } from "@/components/CtaFormModal";
+
 export const useV2 = () => useContext(DesignCtx);
 
 const styleKey = (path) => `_styles.${String(path).replace(/\./g, "__")}`;
@@ -43,11 +45,25 @@ const mut = (style) => (style?.bg === "accent" || style?.bg === "dark") ? "text-
 const cardCls = (v2) => v2
   ? "tcard rounded-[var(--tr)] border border-[var(--tbd)] p-6"
   : "tglass rounded-[var(--tr)] border border-[var(--tbd)] p-6 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1";
+const CtaBandBtn = ({ label, v2, children }) => {
+  const cta = useCta();
+  const form = cta?.formFor?.(label);
+  const cls = `inline-block px-7 py-3.5 rounded-full font-semibold bg-white text-[var(--tp)] ${v2 ? "tbtn" : ""}`;
+  if (form && cta?.onCta) return <button type="button" data-testid={`cta-btn-${form.key}`} onClick={(e) => { e.stopPropagation(); cta.onCta(form); }} className={`${cls} cursor-pointer`}>{children}</button>;
+  return <span className={cls}>{children}</span>;
+};
+
 const Btn = ({ children, ghost }) => {
   const v2 = useV2();
-  // Secondary buttons must always read against their background: outline + label follow --thead,
-  // which flips with the tenant's light/dark mode.
-  return <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "tbtn-ghost" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "tbtn-ghost border-2 border-[var(--thead)] text-[var(--thead)] bg-transparent" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
+  const cta = useCta();
+  const label = typeof children === "object" ? (children?.props?.value || "") : String(children || "");
+  const form = cta?.formFor?.(label);
+  const cls = `inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "tbtn-ghost" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "tbtn-ghost border-2 border-[var(--thead)] text-[var(--thead)] bg-transparent" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`;
+  if (form && cta?.onCta) {
+    return <button type="button" data-testid={`cta-btn-${form.key}`} onClick={(e) => { e.stopPropagation(); e.preventDefault(); cta.onCta(form); }}
+      className={`${cls} cursor-pointer text-left`}>{children}{cta.editMode && <span className="ml-2 text-[10px] uppercase tracking-wider opacity-70">Edit form</span>}</button>;
+  }
+  return <span className={cls}>{children}</span>;
 };
 function BookingPicker({ token, mode = "period", value, onChange, inputCls }) {
   const [slots, setSlots] = useState(mode === "period" ? ["Morning", "Afternoon", "Evening"] : []);
@@ -172,7 +188,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     );
     if (cover) return (
       <section data-testid="hero-cover" className={`relative overflow-hidden px-6 sm:px-8 lg:px-12 ${v2 ? "thero py-24" : "py-28 lg:py-36"} text-[var(--thead)] ${centered ? "text-center" : ""}`}>
-        <img src={p.image} alt="" decoding="async" fetchPriority="high" className={`absolute inset-0 w-full h-full object-cover ${v2 ? "scale-105" : ""}`} />
+        <img src={p.image} alt="" decoding="async" fetchPriority="high" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 hero-scrim" style={{ background: "linear-gradient(105deg, var(--tbg) 0%, color-mix(in srgb, var(--tbg) 82%, transparent) 45%, color-mix(in srgb, var(--tbg) 30%, transparent) 100%)" }} />
         <div className="absolute inset-0 hero-scrim-b" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
         <div className="absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: "var(--tp)" }} />
@@ -279,7 +295,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     <section className={`${sectionCls({ ...s, bg: s.bg || "accent" }, v2)} text-center`}>
       <T as="h2" value={p.title} {...E("title")} className={`block font-[var(--tfh)] ${v2 ? "t-h2" : "text-3xl lg:text-5xl"} font-extrabold tracking-tight`} />
       <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-4 ${v2 ? "t-lead" : "text-lg"} text-white/80`} />
-      <div className="mt-8"><span className={`inline-block px-7 py-3.5 rounded-full font-semibold bg-white text-[var(--tp)] ${v2 ? "tbtn" : ""}`}><T value={p.cta || "Get started"} {...E("cta")} /></span></div>
+      <div className="mt-8"><CtaBandBtn label={p.cta || "Get started"} v2={v2}><T value={p.cta || "Get started"} {...E("cta")} /></CtaBandBtn></div>
     </section>
   );
   if (block.type === "contact") return (

@@ -15,7 +15,7 @@ export const SITE_PRESETS = ["industrial", "clinical", "concrete", "energy", "ed
 // Part 2 — one switch, complete design transformation. Every value stays admin-overridable after.
 export const MODE_PRESETS = {
   light: {
-    bg: "#FFFFFF", surface: "#F7F8FA", fg: "#111111", text_body: "#333333", muted: "#4B5563", border: "#E2E8F0",
+    bg: "#FFFFFF", surface: "#F5F5F0", fg: "#111111", text_body: "#333333", muted: "#555555", border: "#E2E8F0",
     font_heading: "Playfair Display", font_body: "DM Sans", radius: 10, glass: false, grain: false, cursor: false, motion: true, glow: false,
   },
   dark: {
@@ -29,7 +29,7 @@ export function applyMode(theme, mode) {
   return { ...(theme || {}), ...p, mode };
 }
 
-const LIGHT = { bg: "#FFFFFF", surface: "#F7F8FA", fg: "#111111", muted: "#4B5563", border: "#E2E8F0" };
+const LIGHT = { bg: "#FFFFFF", surface: "#F5F5F0", fg: "#111111", muted: "#555555", border: "#E2E8F0" };
 const isDarkHex = (h) => /^#[0-9a-f]{6}$/i.test(h || "") && parseInt(h.slice(1, 3), 16) * 0.299 + parseInt(h.slice(3, 5), 16) * 0.587 + parseInt(h.slice(5, 7), 16) * 0.114 < 128;
 
 export const isV2 = (t) => !!(t && t.design_v2);
