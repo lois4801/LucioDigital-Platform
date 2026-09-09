@@ -190,6 +190,11 @@ button:active { transform: scale(0.97); }
 .btn-primary:active, .btn-ghost:active, .chip:active { filter: brightness(1.2); box-shadow: 0 0 0 3px var(--acc-glow), 0 0 24px var(--acc-glow); }
 .btn-primary:focus-visible, .btn-ghost:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
 .has-cursor-trail, .has-cursor-trail a, .has-cursor-trail button { cursor: none; }
+/* The brand mark always shows a pointer so it reads as clickable. */
+.has-cursor-trail [data-testid="brand-home-link"],
+.has-cursor-trail [data-testid="brand-home-link"] *,
+.has-cursor-trail [data-testid="dashboard-logo-home-btn"],
+.has-cursor-trail [data-testid="dashboard-logo-home-btn"] * { cursor: pointer; }
 /* ===== Tenant premium design system (glass, grain, glow) ===== */
 .tglass{background:var(--tglass, rgba(255,255,255,.04));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 0 0 1px transparent, 0 20px 60px -40px var(--tglow, transparent)}
 .tglass:hover{border-color:color-mix(in srgb, var(--tp) 45%, var(--tbd));box-shadow:0 0 0 1px color-mix(in srgb, var(--tp) 25%, transparent), 0 30px 80px -40px var(--tp)}

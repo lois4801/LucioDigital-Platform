@@ -54,12 +54,13 @@ export default function Login() {
           autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg)]/80 via-transparent to-[var(--bg)]/60" />
         <div className="relative z-10 h-full flex flex-col justify-between p-12">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
+          <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page"
+            className="flex items-center gap-3 cursor-pointer group w-fit">
+            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
-          </div>
+          </Link>
           <div>
             <div className="overline mb-3">Agency workspace · v2.4</div>
             <div className="font-display text-4xl leading-tight tracking-tighter">

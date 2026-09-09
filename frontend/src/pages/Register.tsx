@@ -48,12 +48,13 @@ export default function Register() {
     <div className="min-h-screen grid lg:grid-cols-2 relative">
       <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1 min-w-0 overflow-hidden relative z-10">
         <div className="w-full max-w-md fade-in relative z-10" ref={panel} data-fx-content>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
+          <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page"
+            className="flex items-center gap-3 mb-8 cursor-pointer group w-fit">
+            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
-          </div>
+          </Link>
           <div>
             <div className="overline mb-3">Create account</div>
             <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>

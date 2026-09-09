@@ -166,7 +166,7 @@ export default function Landing() {
       {/* Floating pill nav */}
       <header className={`fixed inset-x-0 z-50 flex justify-center px-4 ${isAdmin ? "top-12" : "top-5"}`}>
         <nav data-testid="landing-nav-pill" className="max-w-[calc(100vw-2rem)] flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
-          <Link to="/" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10">
+          <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10 cursor-pointer">
             <Layers size={16} className="text-[var(--acc)]" />
             <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="Lois-" /><span className="text-[var(--acc)]"><Tx k="brand_suffix" f="Tech" /></span></span>
           </Link>
