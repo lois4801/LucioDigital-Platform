@@ -38,8 +38,8 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const TAU = Math.PI * 2;
 
 // per-effect particles spawned each pointer sample
-const SPAWN = { fairy: 2, bubbles: 1, smoke: 2, fire: 3, wind: 1, frost: 1, plasma: 1, ink: 1, comet: 3, matrix: 1 };
-const MAX = 260;
+const SPAWN = { fairy: 1, bubbles: 1, smoke: 1, fire: 2, wind: 1, frost: 1, plasma: 1, ink: 1, comet: 2, matrix: 1 };
+const MAX = 170;
 
 function makeParticle(effect, x, y, vx, vy) {
   const speed = Math.hypot(vx, vy);
@@ -101,31 +101,29 @@ function draw(ctx, effect, p, accent) {
   switch (effect) {
     case "fairy": {
       ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-      ctx.shadowBlur = 14; ctx.shadowColor = `hsla(${p.hue},95%,70%,${a})`;
+      // No shadowBlur: additive compositing gives the glow at a fraction of the cost.
       ctx.fillStyle = `hsla(${p.hue},95%,${68 + 18 * (1 - a)}%,${a})`;
       star(ctx, p.size); ctx.fill();
       break;
     }
     case "bubbles": {
-      ctx.globalAlpha = a * 0.85;
-      const g = ctx.createRadialGradient(p.x - p.size * 0.3, p.y - p.size * 0.35, p.size * 0.1, p.x, p.y, p.size);
-      g.addColorStop(0, "rgba(255,255,255,0.9)");
-      g.addColorStop(0.45, `hsla(${p.hue},90%,72%,0.35)`);
-      g.addColorStop(1, `hsla(${p.hue + 40},90%,60%,0.12)`);
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
-      ctx.strokeStyle = `hsla(${p.hue},95%,85%,${a * 0.6})`; ctx.lineWidth = 1; ctx.stroke();
+      // Cheap two-pass bubble (no per-frame gradient allocation).
+      ctx.globalAlpha = a * 0.75;
+      ctx.fillStyle = `hsla(${p.hue},90%,72%,0.30)`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
+      ctx.strokeStyle = `hsla(${p.hue},95%,85%,${a * 0.55})`; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = `rgba(255,255,255,${a * 0.5})`;
+      ctx.beginPath(); ctx.arc(p.x - p.size * 0.3, p.y - p.size * 0.35, Math.max(0.6, p.size * 0.18), 0, TAU); ctx.fill();
       break;
     }
     case "smoke": {
-      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-      g.addColorStop(0, `rgba(180,195,215,${a * 0.16})`);
-      g.addColorStop(1, "rgba(120,140,170,0)");
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
+      ctx.globalAlpha = a * 0.10;
+      ctx.fillStyle = "rgb(170,188,210)";
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill();
       break;
     }
     case "fire": {
       const hue = p.ember ? 24 : 18 + 40 * a;
-      ctx.shadowBlur = 16; ctx.shadowColor = `hsla(${hue},100%,60%,${a})`;
       ctx.fillStyle = p.ember ? `hsla(30,100%,${55 + 20 * a}%,${a})` : `hsla(${hue},100%,${45 + 35 * a}%,${a})`;
       ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size * 0.7, p.size * 1.25, 0, 0, TAU); ctx.fill();
       break;
@@ -143,7 +141,6 @@ function draw(ctx, effect, p, accent) {
     }
     case "frost": {
       ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-      ctx.shadowBlur = 10; ctx.shadowColor = `rgba(186,230,253,${a})`;
       ctx.strokeStyle = `rgba(224,242,254,${a})`; ctx.lineWidth = 1.3;
       if (p.shard) { star(ctx, p.size, 3); ctx.fillStyle = `rgba(186,230,253,${a * 0.5})`; ctx.fill(); ctx.stroke(); }
       else {
@@ -159,7 +156,6 @@ function draw(ctx, effect, p, accent) {
     }
     case "plasma": {
       ctx.globalAlpha = a;
-      ctx.shadowBlur = 18; ctx.shadowColor = `hsla(${p.hue},100%,65%,1)`;
       ctx.strokeStyle = `hsla(${p.hue},100%,${70 + 20 * a}%,${a})`; ctx.lineWidth = 1.8;
       ctx.beginPath(); ctx.moveTo(p.x, p.y);
       let x = p.x, y = p.y;
@@ -179,8 +175,6 @@ function draw(ctx, effect, p, accent) {
     }
     case "comet": {
       ctx.globalAlpha = a;
-      ctx.shadowBlur = p.star ? 16 : 8;
-      ctx.shadowColor = p.star ? "rgba(255,255,255,0.95)" : `hsla(${p.hue},100%,75%,1)`;
       ctx.fillStyle = p.star ? "#FFFFFF" : `hsla(${p.hue},100%,${72 + 20 * (1 - a)}%,1)`;
       if (p.star) { ctx.translate(p.x, p.y); star(ctx, p.size * 2.2); ctx.fill(); }
       else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, TAU); ctx.fill(); }
@@ -189,7 +183,6 @@ function draw(ctx, effect, p, accent) {
     case "matrix": {
       ctx.globalAlpha = a;
       ctx.font = `700 ${p.size}px 'JetBrains Mono', ui-monospace, monospace`;
-      ctx.shadowBlur = 10; ctx.shadowColor = "rgba(34,197,94,0.9)";
       ctx.fillStyle = a > 0.85 ? "#DCFCE7" : "#22C55E";
       ctx.fillText(p.glyph, p.x, p.y);
       break;
@@ -220,7 +213,7 @@ export function startScopedCursorFX(canvas, effect, opts = {}) {
   ro.observe(canvas);
 
   const parts = [];
-  const MAX_SCOPED = 130;
+  const MAX_SCOPED = 90;
   const emit = (x, y, n = 1) => {
     for (let i = 0; i < n; i++) {
       if (parts.length >= MAX_SCOPED) break;

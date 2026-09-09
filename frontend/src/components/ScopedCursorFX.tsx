@@ -54,8 +54,9 @@ export default function ScopedCursorFX({ children, className = "", burstRef = nu
   return (
     <Ctx.Provider value={burst}>
       <div ref={wrap} data-testid="scoped-cursor-fx" className={`relative overflow-hidden ${className}`}>
-        <canvas ref={cv} className="absolute inset-0 w-full h-full pointer-events-none z-[5]" />
-        {children}
+        {/* Behind the controls and dimmed so it never competes with the text. */}
+        <canvas ref={cv} className="absolute inset-0 w-full h-full pointer-events-none z-0 opacity-60" />
+        <div className="relative z-10">{children}</div>
       </div>
     </Ctx.Provider>
   );
