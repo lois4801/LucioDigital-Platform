@@ -80,7 +80,7 @@ function CursorFXLayer({ effect, density, speed }) {
   }, [effect, density, speed]);
   if (effect === "none") return null;
   return <canvas ref={ref} data-testid="cursor-fx-canvas" data-effect={effect} data-density={density} data-speed={speed}
-    className="fixed inset-0 z-[9998] pointer-events-none" />;
+    className="fixed inset-0 z-0 pointer-events-none" />;
 }
 
 // Base dot + ring take their colour from the active cursor effect.

@@ -7,15 +7,14 @@ import { Layers, ChevronRight, MailCheck } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
 import { CursorFXBar, useCursorFX } from "@/components/CursorFX";
 import { swatchOf } from "@/lib/cursorEffects";
-import ScopedCursorFX from "@/components/ScopedCursorFX";
+import PageCursorFX from "@/components/PageCursorFX";
 
 export default function Register() {
   const { register } = useAuth();
   const { effect } = useCursorFX();
   const [c1, c2] = swatchOf(effect);
   const panel = useRef(null);
-  const fxBurst = useRef(null);
-  const burstAt = (el, n = 6) => { fxBurst.current?.(el, n); };
+  const burstAt = () => {};
   const nav = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
@@ -46,9 +45,9 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1 min-w-0 overflow-hidden">
-        <div className="w-full max-w-md fade-in" ref={panel}>
+    <div className="min-h-screen grid lg:grid-cols-2 relative">
+      <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1 min-w-0 overflow-hidden relative z-10">
+        <div className="w-full max-w-md fade-in relative z-10" ref={panel} data-fx-content>
           <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
               <Layers size={18} className="text-[var(--acc)]" />
@@ -64,7 +63,7 @@ export default function Register() {
             <CursorFXBar />
           </div>
 
-          <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-6 px-6 sm:-mx-12 sm:px-12 pb-2">
+          <div className="mt-2">
           <SocialSignIn mode="signup" />
       <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
@@ -100,7 +99,7 @@ export default function Register() {
               {busy ? "Creating…" : "Create workspace"} <ChevronRight size={16} />
             </button>
           </form>
-          </ScopedCursorFX>
+          </div>
 
           <p className="mt-6 text-sm text-[var(--mut)]">
             Have an account? <Link to="/login" className="text-[var(--acc)] hover:underline">Sign in</Link>
@@ -108,11 +107,12 @@ export default function Register() {
         </div>
       </div>
 
-      <div className="hidden lg:block relative overflow-hidden border-l border-[var(--line)] order-1 lg:order-2">
+      <div className="hidden lg:block relative z-0 overflow-hidden border-l border-[var(--line)] order-1 lg:order-2">
         <video src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
           autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-tl from-[var(--bg)]/80 via-transparent to-[var(--bg)]/60" />
       </div>
+      <PageCursorFX />
     </div>
   );
 }

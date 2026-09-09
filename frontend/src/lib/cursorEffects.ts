@@ -325,3 +325,108 @@ export function startCursorFX(canvas, effect, accent = "#10B981", opts = {}) {
     ctx.clearRect(0, 0, innerWidth, innerHeight);
   };
 }
+
+
+// Full-page ambient layer: particles fill every corner, edge and empty area.
+// Drawn at 0.6 alpha in empty space and dimmed to 0.35 wherever content sits above (evenodd clip),
+// so text, fields and buttons stay fully readable. Never receives pointer events (caller sets that).
+export function startPageCursorFX(canvas, effect, opts = {}) {
+  const density = Math.max(0.2, Math.min(3, Number(opts.density) || 1));
+  const speed = Math.max(0.2, Math.min(3, Number(opts.speed) || 1));
+  const getContentRects = opts.getContentRects || (() => []);
+  const ctx = canvas.getContext("2d");
+  let w = 0, h = 0, mobile = false, cap = 0, perTick = 0;
+
+  const resize = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = innerWidth; h = innerHeight;
+    mobile = w < 768;                          // 50% fewer particles below 768px
+    cap = Math.round((mobile ? 90 : 180) * density);
+    perTick = mobile ? 3 : 6;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    canvas.style.width = `${w}px`; canvas.style.height = `${h}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  resize();
+  window.addEventListener("resize", resize);
+
+  const parts = [];
+  const spawn = (x, y) => {
+    if (parts.length >= cap) return;
+    const p = makeParticle(effect, x, y, rand(-4, 4), rand(-4, 4));
+    if (!p) return;
+    p.size *= 0.6 + 0.4 * density;
+    p.vx *= speed; p.vy *= speed; p.decay *= speed;
+    parts.push(p);
+  };
+
+  // Seeds edges, corners and open space so the whole page feels alive.
+  const seedPoint = () => {
+    const edge = Math.random();
+    if (edge < 0.55) {
+      const side = Math.floor(Math.random() * 4);
+      const m = Math.random() * Math.min(140, w * 0.22);
+      if (side === 0) return [m, Math.random() * h];
+      if (side === 1) return [w - m, Math.random() * h];
+      if (side === 2) return [Math.random() * w, m];
+      return [Math.random() * w, h - m];
+    }
+    return [Math.random() * w, Math.random() * h];
+  };
+
+  let acc = 0, prev = performance.now();
+  const drawPass = (alpha) => {
+    ctx.globalCompositeOperation = effect === "ink" || effect === "smoke" ? "source-over" : "lighter";
+    for (let i = 0; i < parts.length; i++) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      draw(ctx, effect, parts[i], "#10B981");
+      ctx.restore();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  };
+
+  let raf = 0;
+  const loop = (now) => {
+    const dt = now - prev; prev = now;
+    if (!document.hidden) {
+      acc += dt;
+      if (acc > 170) {
+        acc = 0;
+        for (let i = 0; i < perTick; i++) { const [x, y] = seedPoint(); spawn(x, y); }
+      }
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        step(effect, p);
+        if (p.life <= 0 || p.y < -120 || p.y > h + 140 || p.x < -140 || p.x > w + 140) parts.splice(i, 1);
+      }
+      ctx.clearRect(0, 0, w, h);
+      const rects = getContentRects();
+      // Open space (outside content) — brighter.
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      rects.forEach(r => ctx.rect(r.x, r.y, r.width, r.height));
+      ctx.clip("evenodd");
+      drawPass(0.6);
+      ctx.restore();
+      // Behind text / fields / buttons — dimmed for readability.
+      if (rects.length) {
+        ctx.save();
+        ctx.beginPath();
+        rects.forEach(r => ctx.rect(r.x, r.y, r.width, r.height));
+        ctx.clip();
+        drawPass(0.35);
+        ctx.restore();
+      }
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+
+  return () => {
+    window.removeEventListener("resize", resize);
+    cancelAnimationFrame(raf);
+    ctx.clearRect(0, 0, w, h);
+  };
+}
