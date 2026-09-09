@@ -157,6 +157,10 @@ export default function Landing() {
             className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
             Dashboard
           </button>
+          <button data-testid="landing-testlab-preview-btn" onClick={() => nav("/test-lab/landing")}
+            className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
+            Test Lab redesign
+          </button>
         </div>
       )}
       <div className="absolute inset-0 grid-bg pointer-events-none" />

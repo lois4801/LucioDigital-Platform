@@ -249,3 +249,101 @@ html { scroll-behavior: smooth; }
     body { @apply bg-background text-foreground; }
     [data-debug-wrapper="true"] { display: contents !important; }
 }
+
+/* ── Editorial motion system (Test Lab landing only) ───────────────────── */
+.ed-scope {
+  --ed-bg: #080808;
+  --ed-lime: #B6FF3B;
+  --ed-teal: #2BE8D6;
+  --ed-orange: #FF6A2B;
+  background: var(--ed-bg);
+  color: #fff;
+}
+.ed-scope .ed-pill {
+  display: inline-flex; align-items: center; gap: .375rem;
+  border: 1px solid rgba(255,255,255,.12); border-radius: 999px;
+  padding: .2rem .6rem; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+  color: rgba(255,255,255,.5); font-family: ui-monospace, monospace;
+}
+/* Ghost card + gradient hairline border */
+.ed-bento {
+  background: rgba(255,255,255,.022);
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(#0c0c0c, #0c0c0c),
+    linear-gradient(140deg, var(--ed-tone, #B6FF3B), rgba(255,255,255,0) 55%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 20px 60px -40px rgba(0,0,0,.9);
+  transition: transform .25s ease-out, box-shadow .25s ease-out, filter .25s ease-out;
+  will-change: transform;
+}
+.ed-bento:hover {
+  transform: scale(1.02);
+  box-shadow: 0 40px 90px -40px rgba(0,0,0,1);
+  filter: brightness(1.06);
+}
+/* CTA: pill grows 8px each side on hover, squeezes on click */
+.ed-cta {
+  --ed-pad: 1.75rem;
+  padding-left: var(--ed-pad); padding-right: var(--ed-pad);
+  transition: padding .25s ease-out, transform .12s ease-out, box-shadow .25s ease-out;
+  will-change: transform, padding;
+}
+.ed-cta:hover { --ed-pad: 2.25rem; }
+.ed-cta:active { transform: scale(.96); }
+
+/* Hero card entrance + slow sine float */
+@keyframes ed-in { from { opacity: 0; transform: translate3d(0,40px,0); } to { opacity: 1; transform: none; } }
+.ed-card-in { opacity: 0; animation: ed-in .9s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes ed-float {
+  0%   { transform: translate3d(0,0,0); }
+  25%  { transform: translate3d(6px,-12px,0); }
+  50%  { transform: translate3d(0,-18px,0); }
+  75%  { transform: translate3d(-6px,-8px,0); }
+  100% { transform: translate3d(0,0,0); }
+}
+.ed-float { animation: ed-float 8s ease-in-out infinite; }
+
+/* Headline word overshoot */
+@keyframes ed-word {
+  0%   { opacity: 0; transform: translate3d(0,105%,0) scale(.98); }
+  70%  { opacity: 1; transform: translate3d(0,0,0) scale(1.05); }
+  100% { opacity: 1; transform: none; }
+}
+.ed-word { opacity: 0; animation: ed-word .55s cubic-bezier(0.16,1,0.3,1) both; will-change: transform, opacity; }
+
+/* Trim-path glow racing along hero paths */
+@keyframes ed-trim {
+  0%   { stroke-dashoffset: 1200; opacity: 0; }
+  12%  { opacity: .4; }
+  70%  { opacity: .4; }
+  100% { stroke-dashoffset: -200; opacity: 0; }
+}
+.ed-trim { stroke-dasharray: 180 1200; animation: ed-trim 6.5s linear infinite; }
+
+/* Ribbons */
+@keyframes ed-marquee { from { transform: translate3d(0,0,0); } to { transform: translate3d(-50%,0,0); } }
+.ed-ribbon-track { animation: ed-marquee linear infinite; }
+.ed-ribbon-rev { animation-direction: reverse; }
+.ed-ribbon:hover .ed-ribbon-track { animation-play-state: paused; }
+
+/* Bento micro-animations */
+@keyframes ed-orbit { to { transform: rotate(360deg); } }
+.ed-orbit { animation: ed-orbit 4.5s linear infinite; }
+@keyframes ed-pulse { 0% { transform: scale(.7); opacity: .9; } 100% { transform: scale(1.25); opacity: 0; } }
+.ed-pulse { animation: ed-pulse 2.4s ease-out infinite; }
+@keyframes ed-draw { 0% { stroke-dashoffset: 60; } 60% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 0; } }
+.ed-draw { stroke-dasharray: 60; animation: ed-draw 3s ease-in-out infinite; }
+
+/* Feature card children sequence in on reveal */
+@keyframes ed-child { from { opacity: 0; transform: translate3d(0,10px,0); } to { opacity: 1; transform: none; } }
+.ed-child { animation: ed-child .45s cubic-bezier(0.16,1,0.3,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ed-scope *, .ed-scope *::before, .ed-scope *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ed-scope .ed-card-in, .ed-scope .ed-word, .ed-scope .ed-child { opacity: 1 !important; transform: none !important; }
+}

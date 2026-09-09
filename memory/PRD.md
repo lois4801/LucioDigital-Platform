@@ -400,3 +400,37 @@ FastAPI/Mongo. No feature or UI changes.
 - New `.tenant-scroll` class in `index.css`: 8px-tall always-visible scrollbar, rounded caps,
   `#666666` thumb → `#ffffff` on hover/active, `#2a2a2a` track, Firefox `scrollbar-color` included.
 - Never hardcode brand colours here — they are read live from the page/tenant theme.
+
+## 2026-06 · Session (fork): auth FX, landing mobile fixes, Test Lab editorial redesign
+
+### Implemented
+- Cursor FX: default effect = Water Bubbles; removed per-particle `shadowBlur` and per-frame gradients
+  (Fairy Dust and all effects now 61 FPS); global caps 170 / page-layer 90.
+- Full-page FX layer `components/PageCursorFX.tsx` + `startPageCursorFX()` in `lib/cursorEffects.ts`:
+  covers corners/edges/open space, z-index 0, pointer-events none, 0.6 alpha in empty space and
+  0.35 behind `[data-fx-content]` (even-odd canvas clip), particle count halved < 768px.
+- Cursor picker converted to a horizontal top strip: `CursorFXBar` in `components/CursorFX.tsx`.
+- Sign-in + sign-up redesigned as ONE unified full-page workspace (split layout removed):
+  full-page background video/gradient/particles, centered semi-transparent card, logo top-left,
+  tagline bottom-left. Files: `pages/Login.tsx`, `pages/Register.tsx`.
+- Landing mobile/tablet: admin controls moved to a slim dedicated top bar; hamburger nav < md;
+  hero CTAs stacked full-width on mobile; bottom controls in their own bottom bar; ChatWidget
+  gained a `lift` prop so it never covers the Sign in button; fixed a grid `min-w-0` overflow bug.
+- Brand mark clickable everywhere → always `/` regardless of auth state (login, register, landing,
+  dashboard, portal, public preview) with a forced `cursor: pointer` override; email shell in
+  `backend/auth_extra.py` now links the brand name to FRONTEND_URL.
+- Frontend fully migrated to TypeScript: 132 `.jsx` → `.tsx`, remaining `.js` → `.ts`,
+  `index.html` entry updated, `tsconfig` relaxed (`strict: false`) for migrated JS-style code.
+- NEW (Test Lab ONLY, not pushed): premium editorial motion redesign at route `/test-lab/landing`
+  → `pages/TestLabLanding.tsx` + `components/editorial/{motion,HeroCards,Ribbon,BentoGrid}.tsx`
+  + `.ed-*` animation system appended to `index.css`. Palette #080808 mono with lime/teal/orange
+  accents; 10 floating hero cards (5 on mobile) with sine drift + cursor parallax; trim-path glow
+  lines; overshoot word headline; odometer counters; dual opposite ribbons (pause on hover);
+  bento grid with gradient hairline borders and micro-animations; scroll reveals; reduced-motion
+  kill switch. Entry point: landing admin bar → "Test Lab redesign". lois-tech.ca untouched.
+
+### Pending
+- P0: Admin approval + diff review before any rollout of the editorial redesign to live tenants.
+- P0: Regression run (testing_agent) is PAUSED per the Credit-Safe rule until admin replies NO.
+- P1: Microsoft/Yahoo OAuth are built and env-gated; buttons render dimmed until keys are supplied.
+- P1: ElevenLabs + GitHub push integrations still awaiting PATs.
