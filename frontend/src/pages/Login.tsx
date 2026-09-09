@@ -17,7 +17,6 @@ export default function Login() {
   const [c1, c2] = swatchOf(effect);
   const panel = useRef(null);
   const nav = useNavigate();
-  const burstAt = () => {};
   const [params] = useSearchParams();
   // Nothing is pre-filled for a new visitor. A saved address only ever lives in this browser.
   const [email, setEmail] = useState(() => localStorage.getItem(SAVED_EMAIL_KEY) || "");
@@ -48,94 +47,96 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 relative">
-      <div className="hidden lg:block relative z-0 overflow-hidden border-r border-[var(--line)]">
+    <div className="min-h-screen relative overflow-hidden flex flex-col">
+      {/* Background layer: one unified workspace, no split panels. */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
         <video src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4"
-          autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" />
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg)]/80 via-transparent to-[var(--bg)]/60" />
-        <div className="relative z-10 h-full flex flex-col justify-between p-12">
-          <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page"
-            className="flex items-center gap-3 cursor-pointer group w-fit">
-            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
-              <Layers size={18} className="text-[var(--acc)]" />
-            </div>
-            <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
-          </Link>
-          <div>
-            <div className="overline mb-3">Agency workspace · v2.4</div>
-            <div className="font-display text-4xl leading-tight tracking-tighter">
-              Ship, showcase and hand off every client app from one master workspace.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center p-6 lg:p-12 min-w-0 overflow-hidden relative z-10">
-        <div className="w-full max-w-md fade-in relative z-10" ref={panel} data-fx-content>
-          <div>
-            <div className="overline mb-3">Sign in</div>
-            <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
-            <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
-          </div>
-          <div className="mt-5" data-testid="login-cursor-picker" data-fx-skip>
-            <CursorFXBar />
-          </div>
-
-          <div className="mt-2">
-          <SocialSignIn mode="signin" />
-      <div className="flex items-center gap-3 my-6">
-            <div className="h-px flex-1 bg-[var(--line)]" />
-            <span className="overline">or</span>
-            <div className="h-px flex-1 bg-[var(--line)]" />
-          </div>
-
-          <form onSubmit={onSubmit} data-testid="login-form" className="space-y-4 rounded-2xl border p-5 transition-colors duration-500"
-            style={{ borderColor: `${c1}55`, background: `linear-gradient(160deg, ${c1}0f, ${c2}0a)`, boxShadow: `0 0 40px -18px ${c1}80` }}>
-            <label className="block">
-              <span className="overline block mb-2">Email</span>
-              <div className="relative">
-                <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
-                <input data-testid="login-email-input" type="email" value={email} onChange={(e) => { setEmail(e.target.value); burstAt(e.target, 3); }}
-                  onFocus={(e) => burstAt(e.target, 8)}
-                  required autoComplete="off" placeholder="you@company.com"
-                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
-              </div>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input data-testid="login-remember-email" type="checkbox" checked={remember}
-                onChange={(e) => {
-                  setRemember(e.target.checked);
-                  burstAt(e.target, 5);
-                  if (!e.target.checked) localStorage.removeItem(SAVED_EMAIL_KEY);
-                }}
-                className="accent-[var(--acc)]" />
-              <span className="text-xs text-[var(--mut)]">Save my email on this device only</span>
-            </label>
-            <label className="block">
-              <span className="overline block mb-2">Password</span>
-              <div className="relative">
-                <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
-                <input data-testid="login-password-input" type="password" value={password} onChange={(e) => { setPassword(e.target.value); burstAt(e.target, 3); }}
-                  onFocus={(e) => burstAt(e.target, 8)}
-                  required autoComplete="current-password"
-                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
-              </div>
-            </label>
-            {err && <div className="text-sm text-red-400 font-mono">{err}</div>}
-            <button data-testid="auth-jwt-submit-btn" disabled={busy} type="submit"
-              onMouseEnter={(e) => burstAt(e.currentTarget, 10)}
-              className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
-              {busy ? "Signing in…" : "Sign in"} <ChevronRight size={16} />
-            </button>
-          </form>
-          </div>
-
-          <p className="mt-6 text-sm text-[var(--mut)]">
-            No account yet? <Link to="/register" className="text-[var(--acc)] hover:underline">Create one</Link>
-          </p>
-        </div>
+          autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-25" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--bg)]/92 via-[var(--bg)]/85 to-[var(--bg)]/95" />
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[520px] rounded-full bg-[var(--acc)]/10 blur-[150px]" />
       </div>
       <PageCursorFX />
+
+      {/* Brand, top-left of the whole page */}
+      <header className="relative z-10 px-6 sm:px-10 pt-7">
+        <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page"
+          className="inline-flex items-center gap-3 cursor-pointer group w-fit">
+          <div className="w-9 h-9 rounded-lg bg-[var(--card)]/80 border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
+            <Layers size={18} className="text-[var(--acc)]" />
+          </div>
+          <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
+        </Link>
+      </header>
+
+      {/* Centered form card floating over the full-page background */}
+      <main className="relative z-10 flex-1 flex items-center justify-center px-6 py-10">
+        <div className="w-full max-w-md fade-in relative z-10" ref={panel} data-fx-content>
+          <div className="rounded-3xl border border-white/10 bg-[#080b10]/80 backdrop-blur-xl shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] p-6 sm:p-8">
+            <div className="overline mb-2">Sign in</div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
+            <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
+
+            <div className="mt-5" data-testid="login-cursor-picker" data-fx-skip>
+              <CursorFXBar />
+            </div>
+
+            <SocialSignIn mode="signin" />
+            <div className="flex items-center gap-3 my-6">
+              <div className="h-px flex-1 bg-[var(--line)]" />
+              <span className="overline">or</span>
+              <div className="h-px flex-1 bg-[var(--line)]" />
+            </div>
+
+            <form onSubmit={onSubmit} data-testid="login-form" className="space-y-4 rounded-2xl border p-5 transition-colors duration-500"
+              style={{ borderColor: `${c1}55`, background: `linear-gradient(160deg, ${c1}0f, ${c2}0a)`, boxShadow: `0 0 40px -18px ${c1}80` }}>
+              <label className="block">
+                <span className="overline block mb-2">Email</span>
+                <div className="relative">
+                  <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
+                  <input data-testid="login-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                    required autoComplete="off" placeholder="you@company.com"
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
+                </div>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input data-testid="login-remember-email" type="checkbox" checked={remember}
+                  onChange={(e) => {
+                    setRemember(e.target.checked);
+                    if (!e.target.checked) localStorage.removeItem(SAVED_EMAIL_KEY);
+                  }}
+                  className="accent-[var(--acc)]" />
+                <span className="text-xs text-[var(--mut)]">Save my email on this device only</span>
+              </label>
+              <label className="block">
+                <span className="overline block mb-2">Password</span>
+                <div className="relative">
+                  <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
+                  <input data-testid="login-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                    required autoComplete="current-password"
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
+                </div>
+              </label>
+              {err && <div className="text-sm text-red-400 font-mono">{err}</div>}
+              <button data-testid="auth-jwt-submit-btn" disabled={busy} type="submit"
+                className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
+                {busy ? "Signing in…" : "Sign in"} <ChevronRight size={16} />
+              </button>
+            </form>
+
+            <p className="mt-6 text-sm text-[var(--mut)]">
+              No account yet? <Link to="/register" className="text-[var(--acc)] hover:underline">Create one</Link>
+            </p>
+          </div>
+        </div>
+      </main>
+
+      {/* Subtle brand statement, bottom-left of the page */}
+      <footer className="relative z-10 px-6 sm:px-10 pb-8 max-w-xl">
+        <div className="overline">Agency workspace · v2.4</div>
+        <p className="font-display text-lg md:text-lg text-white/45 mt-1 leading-snug" data-testid="login-tagline">
+          Ship, showcase and hand off every client app from one master workspace.
+        </p>
+      </footer>
     </div>
   );
 }
