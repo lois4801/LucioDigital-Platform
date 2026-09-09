@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink, LogIn } from "lucide-react";
+import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink, LogIn, Menu } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { CursorFXPicker } from "@/components/CursorFX";
 import { Words, Spotlight, fast } from "@/components/motion";
@@ -110,6 +110,7 @@ export default function Landing() {
   const admin = isAdmin && editMode;
   const toggleEditMode = () => setEditMode(v => { localStorage.setItem("os_landing_edit", v ? "0" : "1"); return !v; });
   const [cms, setCms] = useState({ cards: [], marquee: LOGOS, texts: {} });
+  const [menuOpen, setMenuOpen] = useState(false);
   const [tickerOpen, setTickerOpen] = useState(false);
   const chatColorTimer = useRef(null);
   useEffect(() => { api.get("/public/landing").then(r => setCms(r.data)).catch(() => {}); }, []);
@@ -141,17 +142,19 @@ export default function Landing() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-x-hidden">
+    <div className="min-h-screen relative overflow-x-hidden pb-20">
       <AnimatePresence>{leaving && <motion.div data-testid="demo-transition" className="fixed inset-0 z-[90] bg-[var(--bg)] flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="flex items-center gap-3 text-sm text-[var(--mut)]"><span className="w-2 h-2 rounded-full bg-[var(--acc)] pulse-dot" /> Opening live demo…</div></motion.div>}</AnimatePresence>
       <AnimatePresence>{modal && <NicheModal s={modal.s} i={modal.i} onClose={() => setModal(null)} onStart={go} />}</AnimatePresence>
+      {/* Slim admin row — its own bar above the nav, never overlapping it. */}
       {isAdmin && (
-        <div className="fixed top-4 left-4 z-[80] flex items-center gap-2" data-testid="landing-admin-bar">
+        <div className="fixed top-0 inset-x-0 z-[80] h-10 bg-[#05080b]/95 backdrop-blur-xl border-b border-white/10 flex items-center gap-2 px-3 sm:px-4 overflow-x-auto" data-testid="landing-admin-bar">
+          <span className="overline hidden sm:inline shrink-0 text-[10px]">Admin</span>
           <button data-testid="landing-edit-mode-toggle" onClick={toggleEditMode}
-            className={`rounded-full px-3.5 py-2 text-[11px] font-semibold backdrop-blur-xl border shadow-2xl transition-colors ${editMode ? "bg-[var(--acc)] text-black border-transparent" : "bg-black/70 text-white/80 border-white/15 hover:text-white"}`}>
+            className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold border transition-colors ${editMode ? "bg-[var(--acc)] text-black border-transparent" : "bg-white/5 text-white/80 border-white/15 hover:text-white"}`}>
             {editMode ? "Editing on · click to browse" : "Editing off · click to edit"}
           </button>
           <button data-testid="landing-admin-dashboard-btn" onClick={() => nav("/dashboard")}
-            className="rounded-full px-3.5 py-2 text-[11px] font-semibold backdrop-blur-xl bg-black/70 text-white/80 border border-white/15 hover:text-white shadow-2xl transition-colors">
+            className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
             Dashboard
           </button>
         </div>
@@ -161,8 +164,8 @@ export default function Landing() {
       <Spotlight />
 
       {/* Floating pill nav */}
-      <header className="fixed top-5 inset-x-0 z-50 flex justify-center px-4">
-        <nav data-testid="landing-nav-pill" className="flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
+      <header className={`fixed inset-x-0 z-50 flex justify-center px-4 ${isAdmin ? "top-12" : "top-5"}`}>
+        <nav data-testid="landing-nav-pill" className="max-w-[calc(100vw-2rem)] flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
           <Link to="/" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10">
             <Layers size={16} className="text-[var(--acc)]" />
             <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="Lois-" /><span className="text-[var(--acc)]"><Tx k="brand_suffix" f="Tech" /></span></span>
@@ -171,19 +174,36 @@ export default function Landing() {
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
               {activeNav === l && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-white/10" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></a>
           ))}
-          {/* Identical for owners, users and visitors — admin controls live in the top-left bar. */}
-          <Link data-testid="nav-login" to="/login" className="px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
+          {/* Identical for owners, users and visitors — admin controls live in the slim bar above. */}
+          <Link data-testid="nav-login" to="/login" className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
           <Link data-testid="nav-register" to="/register" className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Start free</Link>
+          <button data-testid="nav-mobile-menu-btn" aria-label="Menu" onClick={() => setMenuOpen(o => !o)}
+            className="md:hidden ml-1 w-9 h-9 rounded-full border border-white/10 flex items-center justify-center text-white/80 hover:text-white">
+            {menuOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
         </nav>
+        <AnimatePresence>
+          {menuOpen && (
+            <motion.div data-testid="nav-mobile-menu" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+              className="md:hidden absolute top-full mt-2 w-[calc(100%-2rem)] max-w-sm rounded-2xl border border-white/10 bg-[var(--bg)]/95 backdrop-blur-xl shadow-2xl p-2">
+              {[["Showcase", "#showcase"], ["Platform", "#platform"], ["Pricing", "#pricing"]].map(([l, h]) => (
+                <a key={l} href={h} data-testid={`nav-mobile-${l.toLowerCase()}-link`} onClick={() => { setActiveNav(l); setMenuOpen(false); }}
+                  className="block px-4 py-3 rounded-xl text-sm text-[var(--mut)] hover:text-white hover:bg-white/5">{l}</a>
+              ))}
+              <Link to="/login" data-testid="nav-mobile-signin" onClick={() => setMenuOpen(false)}
+                className="block px-4 py-3 rounded-xl text-sm text-white hover:bg-white/5">Sign in</Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      {/* Every visitor gets the same floating controls */}
-      <div className="fixed bottom-5 left-5 z-[60] flex flex-col items-start gap-2" data-testid="landing-floating-actions">
-        <div className="rounded-full backdrop-blur-xl bg-[var(--bg)]/85 border border-white/10 shadow-2xl p-1">
+      {/* Every visitor gets the same controls — a dedicated bottom bar that never covers content. */}
+      <div className="fixed bottom-0 inset-x-0 z-[60] bg-[#05080b]/95 backdrop-blur-xl border-t border-white/10 px-3 sm:px-5 py-2 flex items-center justify-between gap-3" data-testid="landing-floating-actions">
+        <div className="min-w-0 flex items-center gap-2 overflow-x-auto">
           <CursorFXPicker up />
         </div>
         <Link data-testid="floating-signin-btn" to="/login"
-          className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
+          className="shrink-0 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
           <LogIn size={14} /> Sign in
         </Link>
       </div>
@@ -199,9 +219,9 @@ export default function Landing() {
           <motion.p variants={fade} custom={2} className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
             <Tx k="hero_sub" f="Spin up tenants, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain." />
           </motion.p>
-          <motion.div variants={fade} custom={3} className="mt-9 flex flex-wrap justify-center gap-3">
-            <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide flex items-center gap-2"><Tx k="hero_cta" f="Start building free" /> <ArrowRight size={16} /></button>
-            <button data-testid="hero-cta-demo" onClick={admin ? undefined : () => nav("/login")} className="btn-ghost btn-glow flex items-center gap-2"><Play size={14} /> <Tx k="hero_cta2" f="Watch the demo" /></button>
+          <motion.div variants={fade} custom={3} className="mt-9 flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3">
+            <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide w-full sm:w-auto flex items-center justify-center gap-2"><Tx k="hero_cta" f="Start building free" /> <ArrowRight size={16} /></button>
+            <button data-testid="hero-cta-demo" onClick={admin ? undefined : () => nav("/login")} className="btn-ghost btn-glow w-full sm:w-auto flex items-center justify-center gap-2"><Play size={14} /> <Tx k="hero_cta2" f="Watch the demo" /></button>
           </motion.div>
         </motion.div>
 
@@ -348,7 +368,7 @@ export default function Landing() {
         <span><Tx k="footer_copy" f="© 2026 Lois-Tech · Agency Multi-Tenant Platform" /></span>
         <span>Built for Emergent</span>
       </footer>
-      <ChatWidget token="studio" brand="Lois-Tech" accent="#10B981" textColor={tx("chat_text_color", "#000000")} admin={admin}
+      <ChatWidget token="studio" brand="Lois-Tech" accent="#10B981" lift={56} textColor={tx("chat_text_color", "#000000")} admin={admin}
         onTextColor={(v) => {
           setCms(c => ({ ...c, texts: { ...c.texts, chat_text_color: v } }));
           clearTimeout(chatColorTimer.current);

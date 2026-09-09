@@ -4,7 +4,7 @@ import { MessageCircle, X, Send, Mic, MicOff, Volume2, VolumeX, Loader2, Papercl
 
 const BACKEND = process.env.REACT_APP_BACKEND_URL;
 
-export default function ChatWidget({ token = "studio", brand = "Assistant", accent = "#F97316", light = false, textColor = "#000000", admin = false, onTextColor }) {
+export default function ChatWidget({ token = "studio", brand = "Assistant", accent = "#F97316", light = false, textColor = "#000000", admin = false, onTextColor, lift = 0 }) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState([]);
   const [input, setInput] = useState("");
@@ -90,7 +90,7 @@ export default function ChatWidget({ token = "studio", brand = "Assistant", acce
   return (
     <>
       {open && (
-        <div data-testid="chat-widget-panel" className={`fixed bottom-24 right-5 z-[70] w-[360px] max-w-[calc(100vw-40px)] h-[520px] max-h-[75vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${panelBg}`}>
+        <div data-testid="chat-widget-panel" style={{ bottom: 96 + lift }} className={`fixed right-5 z-[70] w-[360px] max-w-[calc(100vw-40px)] h-[520px] max-h-[75vh] rounded-3xl border shadow-2xl flex flex-col overflow-hidden ${panelBg}`}>
           <div className="px-5 py-4 flex items-center justify-between text-white" style={{ background: accent }}>
             <div><div className="font-semibold text-sm">{brand} assistant</div><div className="text-[11px] opacity-80 flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" /> Live · voice enabled</div></div>
             <div className="flex items-center gap-1">
@@ -136,8 +136,8 @@ export default function ChatWidget({ token = "studio", brand = "Assistant", acce
         </div>
       )}
       <button data-testid="chat-widget-fab" onClick={() => setOpen(!open)}
-        className="fixed bottom-6 right-5 z-[70] h-14 px-5 rounded-full text-white font-semibold text-sm flex items-center gap-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-0.5 transition-transform"
-        style={{ background: accent }}>
+        className="fixed right-5 z-[70] h-14 px-5 rounded-full text-white font-semibold text-sm flex items-center gap-2 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.5)] hover:-translate-y-0.5 transition-transform"
+        style={{ background: accent, bottom: 24 + lift }}>
         {open ? <X size={18} /> : <MessageCircle size={18} />} {open ? "Close" : "Chat with us"}
       </button>
     </>
