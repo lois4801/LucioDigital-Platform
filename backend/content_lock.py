@@ -37,6 +37,9 @@ async def sync_overview(db, app_id: str):
     Captures the live hero headline/subheadline/description, the real page and section counts,
     a fresh thumbnail, and mirrors the Navbar brand name onto the tenant name.
     """
+    from test_lab import TEST_LAB_ID
+    if app_id == TEST_LAB_ID:
+        return None  # the Test Lab holds every template layout; its name and card never follow one of them
     pages = await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1, "blocks": 1, "updated_at": 1}).to_list(80)
     if not pages:
         return None

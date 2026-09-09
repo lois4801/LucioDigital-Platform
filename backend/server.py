@@ -412,6 +412,8 @@ async def archive_app(app_id: str, body: ArchiveIn, user: dict = Depends(get_cur
     """Archiving hides a tenant from the workspace and takes its site offline. Pages, leads,
     bookings, members and files are all kept, so restoring brings the tenant back intact."""
     app = await get_user_app(app_id, user)
+    if app.get("is_test_lab") or app.get("protected"):
+        raise HTTPException(400, "The Test Lab tenant is permanent and cannot be archived")
     upd = {"archived": body.archived, "updated_at": now_utc().isoformat()}
     if body.archived:
         upd["archived_at"] = now_utc().isoformat()
@@ -553,6 +555,8 @@ async def archived_summary(user: dict = Depends(get_current_user)):
 async def purge_app(app_id: str, user: dict = Depends(get_current_user)):
     """Permanent delete — only allowed once a tenant has been archived."""
     doc = await get_user_app(app_id, user)
+    if doc.get("is_test_lab") or doc.get("protected"):
+        raise HTTPException(status_code=400, detail="The Test Lab tenant is permanent and cannot be deleted")
     if doc["owner_id"] != user["user_id"]:
         raise HTTPException(status_code=403, detail="Only the owner can permanently delete a tenant")
     if not doc.get("archived"):
@@ -570,6 +574,8 @@ async def purge_app(app_id: str, user: dict = Depends(get_current_user)):
 @api.delete("/apps/{app_id}")
 async def delete_app(app_id: str, user: dict = Depends(get_current_user)):
     doc = await get_user_app(app_id, user)
+    if doc.get("is_test_lab") or doc.get("protected"):
+        raise HTTPException(status_code=400, detail="The Test Lab tenant is permanent and cannot be deleted")
     if doc["owner_id"] != user["user_id"]:
         raise HTTPException(status_code=403, detail="Only owner can delete")
     await db.apps.delete_one({"app_id": app_id})
@@ -971,8 +977,11 @@ async def startup():
         from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
         logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
         logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
-        from site_content import retheme_all
-        logger.info(f"Template look applied to {await retheme_all(db)} tenant(s)")
+        from site_content import retheme_all  # noqa: F401  (kept for manual/admin use only)
+        from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states
+        await ensure_test_lab(db, admin_id)
+        logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
+        logger.info(f"Templates pending rollout: {await mark_template_states(db)}")
         await clear_synced_label_overrides(db)
     except Exception as e:
         logger.error(f"startup maintenance skipped: {e}")
@@ -1050,6 +1059,8 @@ from data_destinations import register as register_data_destinations
 register_data_destinations(api, db, get_current_user, get_user_app, log_activity)
 from supabase_export import register as register_supabase_export
 register_supabase_export(api, db, get_current_user, get_user_app, log_activity)
+from test_lab import register as register_test_lab
+register_test_lab(api, db, get_current_user, get_user_app, log_activity)
 from site_sync import register as register_site_sync
 import site_sync as _site_sync
 _site_sync.require_ai_access = GROWTH["require_ai_access"]

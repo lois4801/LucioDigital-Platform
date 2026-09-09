@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Eye, Layers, Link2, Loader2, Share2, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, Layers, Link2, Loader2, Rocket, Share2, Sparkles, X } from "lucide-react";
 import api from "@/lib/api";
+import TemplateRolloutModal from "@/components/TemplateRolloutModal";
 import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,7 +61,7 @@ function FullPreview({ detail, onClose, onUse, useLabel }) {
   );
 }
 
-function Card({ t, detail, onOpen, onUse, useLabel, selected }) {
+function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush }) {
   const ref = useRef(null);
   return (
     <motion.div ref={ref} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }}
@@ -72,6 +73,9 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent pointer-events-none" />
         <div className="absolute top-3 left-3 flex gap-1.5">
+          {state?.status === "pending" && (
+            <span data-testid={`template-pending-badge-${t.key}`} className="chip chip-maint inline-flex items-center gap-1"><Clock size={10} /> Pending Rollout</span>
+          )}
           {t.studio && <span data-testid={`template-studio-badge-${t.key}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
           <span className="chip">{t.category}</span>
           <span className="chip">{t.mode === "light" ? "Light" : "Dark"}</span>
@@ -95,6 +99,13 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected }) {
           <button data-testid={`template-use-${t.key}`} onClick={(e) => { e.stopPropagation(); onUse(t); }}
             className="btn-primary text-xs !py-1.5 !px-3 whitespace-nowrap">{useLabel}</button>
         </div>
+        {onPush && (
+          <button data-testid={`template-push-${t.key}`} onClick={(e) => { e.stopPropagation(); onPush(t, state); }}
+            className={`mt-2 w-full text-[11px] !py-2 flex items-center justify-center gap-1.5 ${state?.status === "pending" ? "btn-primary" : "btn-ghost"}`}>
+            <Rocket size={11} /> Push to All Tenants Using This Template
+            <span className="font-mono text-[10px] opacity-70">({state?.tenants_using ?? 0})</span>
+          </button>
+        )}
       </div>
     </motion.div>
   );
@@ -117,6 +128,16 @@ export default function TemplateGallery({ clientMode = false }) {
   const [chosen, setChosen] = useState(null);
   const [clientNote, setClientNote] = useState("");
   const [shareInfo, setShareInfo] = useState(null);
+  const [states, setStates] = useState({});
+  const [pushing, setPushing] = useState(null);
+
+  const loadStates = () => {
+    if (clientMode) return;
+    api.get("/templates/rollout-status")
+      .then(({ data }) => setStates(Object.fromEntries(data.templates.map((t) => [t.key, t]))))
+      .catch(() => { /* non-blocking */ });
+  };
+  useEffect(loadStates, [clientMode]);
 
   useEffect(() => {
     api.get("/public/templates").then(r => { setList(r.data.templates); setCats(r.data.categories); })
@@ -212,7 +233,13 @@ export default function TemplateGallery({ clientMode = false }) {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
         <div>
           {!clientMode && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
-          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}</div>
+          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}
+            {!clientMode && Object.values(states).some((s) => s.status === "pending") && (
+              <span data-testid="gallery-pending-count" className="chip chip-maint inline-flex items-center gap-1">
+                <Clock size={10} /> {Object.values(states).filter((s) => s.status === "pending").length} pending rollout
+              </span>
+            )}
+          </div>
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
           <p className="text-[var(--mut)] mt-2 max-w-2xl text-sm">{clientMode
             ? "Browse every design side by side, open any one full screen to scroll the whole site, then send your pick to the team."
@@ -239,6 +266,7 @@ export default function TemplateGallery({ clientMode = false }) {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
           {shown.map(t => (
             <Card key={t.key} t={t} detail={details[t.key]} onOpen={openFull} onUse={useTemplate}
+              state={states[t.key]} onPush={clientMode ? null : (tpl, st) => setPushing({ ...tpl, ...(st || {}) })}
               selected={chosen === t.key} useLabel={clientMode ? (chosen === t.key ? "Your pick" : "Choose this") : "Use this template"} />
           ))}
         </div>
@@ -256,6 +284,8 @@ export default function TemplateGallery({ clientMode = false }) {
 
       {full && <FullPreview detail={full} onClose={() => setFull(null)} onUse={useTemplate}
         useLabel={clientMode ? "Choose this design" : "Use this template"} />}
+
+      {pushing && <TemplateRolloutModal template={pushing} onClose={() => setPushing(null)} onDone={loadStates} />}
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">

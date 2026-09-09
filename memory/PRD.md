@@ -16,6 +16,12 @@ Core requirements:
 9. Booking calendar, paid members area, client panel
 
 ## Hard platform rules (user-mandated)
+- **DEFAULT TARGET IS THE TEST LAB (June 2026, permanent).** Every design change, animation, template
+  redesign or new platform behaviour lands on the `LucioDigital Test Lab` tenant (`app_testlab`) only.
+  It reaches live tenants **exclusively** when a rollout admin clicks "Push to All Tenants" (or a
+  template's "Push to All Tenants Using This Template") and types CONFIRM. No prompt, agent action,
+  migration or startup task may mutate live tenants without that confirmation. If a request does not
+  literally say "apply to all tenants", it goes to the Test Lab.
 - **Tenants are NEVER created automatically.** Only explicit admin actions insert a tenant:
   `POST /api/apps` (from the Template Gallery, or blank/import), plugin-ZIP import, website/ZIP
   import. Template redesigns, theme changes, defaults and migrations may only modify template
@@ -222,3 +228,48 @@ FastAPI/Mongo. No feature or UI changes.
 - P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today
 - P1: Real ElevenLabs voice + real GitHub push (waiting on user PATs)
 - P2: Full `.tsx` conversion of the remaining ~117 components · PayPal · member "delete own account"
+
+
+## June 2026 — Test Lab tenant + controlled global rollout (iter67, 16/16 backend, frontend clean)
+
+**This is now the platform's permanent default behaviour — see "Hard platform rules" at the top.**
+
+### PART 1 — the Test Lab (`backend/test_lab.py`)
+- `ensure_test_lab()` runs on every startup (idempotent): tenant `app_testlab`,
+  name `LucioDigital Test Lab`, `is_test_lab: true`, `protected: true`, `archived: false`, and one page
+  per template — **all 32** (`template_key` on each page, first at slug `/`, the rest `/t-<key>`).
+  Name + description are re-asserted on every boot so nothing can drift them.
+- Protection: `/apps/{id}/archive`, `/apps/{id}/purge` and `DELETE /apps/{id}` all return 400 for
+  `is_test_lab`/`protected`; the dashboard hides the archive button on that card.
+- `content_lock.sync_overview()` returns early for the Test Lab — otherwise it renamed the tenant to
+  the navbar brand of whichever template sat on `/` (this actually happened; fixed).
+
+### PART 2 — global rollout
+- `GET /api/test-lab` · `GET /api/test-lab/rollout/preview` (target list + current value per scope) ·
+  `POST /api/test-lab/rollout {scopes, confirm}` · `GET /api/test-lab/rollout/jobs[/{job_id}]`.
+- Six opt-in scopes (`SCOPES`): `theme`, `mode`, `skin`, `motion`, `labels`, `forms`. Only design and
+  behaviour ever move — never a tenant's text, images, pages, leads or CMS.
+- Gates: rollout admin only, and `confirm` must literally be `CONFIRM`. Runs as a background task with
+  live `pct/done/changed` progress; the dashboard stays usable; ends with the exact success toast.
+- Every tenant's previous values are written to `rollout_snapshots` before the patch (groundwork for
+  a future "Undo last rollout" — the modal still says it cannot be undone).
+- Rollout admins: `ADMIN_EMAIL` plus any emails in `platform_settings._id="rollout_admins"`, managed
+  with `GET/POST /api/rollout-admins` and `DELETE /api/rollout-admins/{email}` (UI inside the modal).
+
+### PART 3 — template rollout control
+- `template_states` collection tracks a hash of each template's `LOOKS` entry. On startup
+  `mark_template_states()` flips any template whose design changed to `status: "pending"` — it does
+  **not** touch live tenants.
+- `GET /api/templates/rollout-status` · `POST /api/templates/{key}/rollout {confirm}` (applies that
+  look only to tenants whose `site_niche == key`, snapshots first) · `POST /api/templates/{key}/discard`
+  (accepts the new baseline without touching tenants).
+- Gallery UI: yellow `Pending Rollout` badge per card, a header pending count, a
+  "Push to All Tenants Using This Template" button on all 32 cards, and the same CONFIRM modal.
+
+### PART 4 — startup no longer mutates live tenants
+- `site_content.retheme_all()` is **no longer called on boot** (kept for manual/admin use).
+  Startup now logs `Test Lab re-themed: 1 tenant(s)` + `Templates pending rollout: N`.
+- Frontend: `components/RolloutModal.jsx`, `components/TemplateRolloutModal.jsx`; TEST badge +
+  push button on the Test Lab dashboard card (`tenant-test-badge-app_testlab`,
+  `push-to-all-tenants-card-btn`) and in the tenant editor header (`header-test-badge`,
+  `push-to-all-tenants-btn`).

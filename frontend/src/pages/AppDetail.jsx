@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { API } from "@/lib/api";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Trash2, Rocket, FlaskConical } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Builder from "@/components/builder/Builder";
 import HandoffPanel from "@/components/HandoffPanel";
@@ -28,6 +28,7 @@ import SubmissionsPanel from "@/components/SubmissionsPanel";
 import BookingsCalendar from "@/components/BookingsCalendar";
 import ProSettings from "@/components/ProSettings";
 import CtaFormsPanel from "@/components/CtaFormsPanel";
+import RolloutModal from "@/components/RolloutModal";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },
@@ -55,6 +56,7 @@ export default function AppDetail() {
   const [appDoc, setAppDoc] = useState(null);
   const [tab, setTab] = useState("overview");
   const [loading, setLoading] = useState(true);
+  const [rolloutOpen, setRolloutOpen] = useState(false);
 
   useEffect(() => { load(); }, [appId]);
 
@@ -115,6 +117,7 @@ export default function AppDetail() {
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
                 <span data-testid="label-tenant-name">{appDoc.name}</span>
+                {appDoc.is_test_lab && <span data-testid="header-test-badge" className="chip chip-maint inline-flex items-center gap-1" style={{ padding: "2px 8px" }}><FlaskConical size={10} /> TEST</span>}
                 <span data-testid="header-kind-chip" className={`chip ${appDoc.kind === "app" ? "chip-handover" : ""}`} style={{ padding: "2px 8px" }}>{appDoc.kind === "app" ? "App" : "Website"}</span>
                 {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
                 {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}
@@ -123,6 +126,12 @@ export default function AppDetail() {
           </div>
           <div className="flex items-center gap-2">
             <ConvertToWebApp appId={appId} appName={appDoc?.name} inline />
+            {appDoc.is_test_lab && (
+              <button data-testid="push-to-all-tenants-btn" onClick={() => setRolloutOpen(true)}
+                className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2">
+                <Rocket size={14} /> Push to All Tenants
+              </button>
+            )}
             <LockStateBadge />
             <MasterLockButton />
             <CursorFXPicker />
@@ -136,6 +145,7 @@ export default function AppDetail() {
               className="w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-red-500/10 hover:border-red-500/40 hover:text-red-400">
               <Trash2 size={15} />
             </button>
+            <RolloutModal open={rolloutOpen} onClose={() => setRolloutOpen(false)} />
           </div>
         </div>
 

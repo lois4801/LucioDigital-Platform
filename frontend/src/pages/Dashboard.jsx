@@ -5,8 +5,9 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
+import RolloutModal from "@/components/RolloutModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
@@ -42,6 +43,7 @@ export default function Dashboard() {
   const [zipFile, setZipFile] = useState(null);
   const [lockStates, setLockStates] = useState({});
   const [showArchived, setShowArchived] = useState(false);
+  const [rolloutOpen, setRolloutOpen] = useState(false);
   const [archived, setArchived] = useState([]);
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
@@ -408,6 +410,7 @@ export default function Dashboard() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
+                      {a.is_test_lab && <span data-testid={`tenant-test-badge-${a.app_id}`} className="chip chip-maint inline-flex items-center gap-1"><FlaskConical size={10} /> TEST</span>}
                       <span className="chip">{a.industry}</span>
                       {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
@@ -416,11 +419,13 @@ export default function Dashboard() {
                       {!a.theme?.design_v2 && <span data-testid={`card-legacy-badge-${a.app_id}`} className="chip chip-maint">Legacy look</span>}
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                      {!a.is_test_lab && (
                       <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
                         onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
                         className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
                         {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                       </button>
+                      )}
                       <button data-testid={`feature-toggle-${a.app_id}`} title={a.featured ? "Remove from the landing showcase" : "Feature on the landing page"}
                         onClick={(e) => { e.stopPropagation(); toggleFeatured(a); }}
                         className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
@@ -436,6 +441,13 @@ export default function Dashboard() {
                   <div className="p-5">
                     <div className="font-display text-xl font-semibold">{a.name}</div>
                     <p className="text-sm text-[var(--mut)] mt-1 line-clamp-2">{a.description}</p>
+                    {a.is_test_lab && (
+                      <button data-testid="push-to-all-tenants-card-btn"
+                        onClick={(e) => { e.stopPropagation(); setRolloutOpen(true); }}
+                        className="mt-4 w-full btn-primary text-xs !py-2.5 flex items-center justify-center gap-2">
+                        <Rocket size={13} /> Push to All Tenants
+                      </button>
+                    )}
                     <div className="mt-4 grid grid-cols-4 gap-2 font-mono text-[11px]">
                       <div><div className="text-[var(--dim)] uppercase">Uptime</div><div className="text-[var(--fg)]">{a.metrics?.uptime}%</div></div>
                       <div><div className="text-[var(--dim)] uppercase">CPU</div><div className="text-[var(--fg)]">{a.metrics?.cpu}%</div></div>
@@ -513,6 +525,7 @@ export default function Dashboard() {
           </section>
         )}
       </main>
+      <RolloutModal open={rolloutOpen} onClose={() => setRolloutOpen(false)} />
     </div>
   );
 }
