@@ -119,6 +119,7 @@ class SessionExchangeIn(BaseModel):
 class AppCreateIn(BaseModel):
     name: str
     industry: str
+    template_key: Optional[str] = None
     kind: str = "website"  # website | app
     description: str = ""
     status: str = "active"  # active | maintenance | handover
@@ -401,6 +402,8 @@ async def archive_app(app_id: str, body: ArchiveIn, user: dict = Depends(get_cur
     app = await get_user_app(app_id, user)
     upd = {"archived": body.archived, "updated_at": now_utc().isoformat()}
     if body.archived:
+        upd["archived_at"] = now_utc().isoformat()
+        upd["last_active_at"] = app.get("updated_at")
         upd["preview_enabled"] = False
         upd["featured"] = False
     await db.apps.update_one({"app_id": app_id}, {"$set": upd})
@@ -410,11 +413,31 @@ async def archive_app(app_id: str, body: ArchiveIn, user: dict = Depends(get_cur
     return {"app_id": app_id, "archived": body.archived, "leads_kept": leads}
 
 
-def _new_tenant_theme(industry: Optional[str], name: str) -> dict:
-    """New tenants inherit the industry template's unique look (platform default)."""
-    from site_content import LOOKS, NICHES, theme_for, niche_for
+def _template_key(industry: Optional[str], name: str, explicit: Optional[str] = None) -> Optional[str]:
+    from site_content import LOOKS, niche_for
+    if explicit and explicit in LOOKS:
+        return explicit
     key = niche_for({"industry": industry or "", "name": name or ""})
+    return key if key in LOOKS else None
+
+
+def _new_tenant_theme(industry: Optional[str], name: str, explicit: Optional[str] = None) -> dict:
+    """New tenants inherit the chosen industry template's unique look (platform default)."""
+    from site_content import LOOKS, NICHES, theme_for
+    key = _template_key(industry, name, explicit)
     return theme_for(NICHES[key], key) if key in LOOKS else {**V2_THEME}
+
+
+async def _build_template_pages(app: dict, key: str):
+    """Materialise a template's full multi-page site for a freshly created tenant."""
+    from site_content import build_premium_site
+    pages, _theme, _n = build_premium_site(app, key, {"name": app["name"]})
+    for i, (pname, slug, blocks) in enumerate(pages):
+        await db.pages.insert_one({"page_id": new_id("pg"), "app_id": app["app_id"], "name": pname,
+                                   "slug": slug, "order": i, "blocks": blocks,
+                                   "updated_at": now_utc().isoformat()})
+    await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"site_niche": key, "premium_site_v": 3}})
+    return len(pages)
 
 
 @api.post("/apps")
@@ -434,7 +457,7 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
         "video_url": body.video_url,
         "live_url": body.live_url,
         "transfer_mode": False,
-        "theme": _new_tenant_theme(body.industry, body.name),
+        "theme": _new_tenant_theme(body.industry, body.name, body.template_key),
         "metrics": {
             "uptime": 99.9,
             "cpu": 24,
@@ -447,15 +470,20 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
     }
     await db.apps.insert_one(doc)
     await CMS_HOOKS["install_defaults"](app_id)
-    # seed a starter page
-    await db.pages.insert_one({
-        "page_id": new_id("pg"),
-        "app_id": app_id,
-        "name": "Home",
-        "slug": "/",
-        "blocks": _default_blocks(body.name),
-        "updated_at": now_utc().isoformat(),
-    })
+    tpl = _template_key(body.industry, body.name, body.template_key)
+    if tpl:
+        # Chosen industry template: build its full multi-page design instead of a blank starter page.
+        await _build_template_pages(doc, tpl)
+        doc = await db.apps.find_one({"app_id": app_id}, {"_id": 0})
+    else:
+        await db.pages.insert_one({
+            "page_id": new_id("pg"),
+            "app_id": app_id,
+            "name": "Home",
+            "slug": "/",
+            "blocks": _default_blocks(body.name),
+            "updated_at": now_utc().isoformat(),
+        })
     await log_activity(app_id, user["user_id"], "app.created", f"App '{body.name}' created")
     return _serialize_app(doc)
 
@@ -482,6 +510,43 @@ async def update_app(app_id: str, body: AppUpdateIn, user: dict = Depends(get_cu
                            f"Client Transfer Mode {'enabled' if updates['transfer_mode'] else 'disabled'}",
                            "warning")
     return await db.apps.find_one({"app_id": app_id}, {"_id": 0})
+
+
+@api.get("/apps/archived/summary")
+async def archived_summary(user: dict = Depends(get_current_user)):
+    """Archived tenants plus a snapshot of what will come back on restore."""
+    docs = await db.apps.find({"owner_id": user["user_id"], "archived": True}, {"_id": 0}).sort("updated_at", -1).to_list(200)
+    out = []
+    for a in docs:
+        aid = a["app_id"]
+        out.append({**a, "snapshot": {
+            "pages": await db.pages.count_documents({"app_id": aid}),
+            "leads": await db.messages.count_documents({"app_id": aid}),
+            "bookings": await db.bookings.count_documents({"app_id": aid}),
+            "members": await db.memberships.count_documents({"app_id": aid}),
+            "files": await db.files.count_documents({"app_id": aid}),
+            "last_active": a.get("last_active_at") or a.get("archived_at") or a.get("updated_at"),
+            "archived_at": a.get("archived_at"),
+        }})
+    return {"tenants": out, "count": len(out)}
+
+
+@api.delete("/apps/{app_id}/purge")
+async def purge_app(app_id: str, user: dict = Depends(get_current_user)):
+    """Permanent delete — only allowed once a tenant has been archived."""
+    doc = await get_user_app(app_id, user)
+    if doc["owner_id"] != user["user_id"]:
+        raise HTTPException(status_code=403, detail="Only the owner can permanently delete a tenant")
+    if not doc.get("archived"):
+        raise HTTPException(status_code=400, detail="Archive this tenant first, then permanently delete it")
+    removed = {}
+    for coll in ("apps", "pages", "memberships", "messages", "activity_logs", "submissions",
+                 "item_locks", "workflows", "cms_collections", "cms_items", "site_users",
+                 "media_assets", "files", "bookings", "page_versions"):
+        r = await db[coll].delete_many({"app_id": app_id})
+        if r.deleted_count:
+            removed[coll] = r.deleted_count
+    return {"ok": True, "app_id": app_id, "removed": removed}
 
 
 @api.delete("/apps/{app_id}")
@@ -957,6 +1022,8 @@ from storage import register as register_storage, init_storage
 register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: now_utc().isoformat())
 from landing_cms import register as register_landing, is_admin as _is_admin
 register_landing(api, db, get_current_user, get_user_app, log_activity)
+from templates_gallery import register as register_templates_gallery
+register_templates_gallery(api, db, get_current_user)
 from ui_cms import register as register_ui_cms
 register_ui_cms(api, db, get_current_user, get_user_app)
 from files_lib import register as register_files, bundle_media

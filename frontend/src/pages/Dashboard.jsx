@@ -5,7 +5,7 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -41,6 +41,8 @@ export default function Dashboard() {
   const [zipFile, setZipFile] = useState(null);
   const [lockStates, setLockStates] = useState({});
   const [showArchived, setShowArchived] = useState(false);
+  const [archived, setArchived] = useState([]);
+  const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
   const [pluginBusy, setPluginBusy] = useState(false);
   const legacyCount = apps.filter(a => !a.theme?.design_v2).length;
@@ -54,8 +56,37 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
+
+  async function loadArchived() {
+    try { const { data } = await api.get("/apps/archived/summary"); setArchived(data.tenants); } catch { /* non-blocking */ }
+  }
+  async function loadPicks() {
+    try { const { data } = await api.get("/template-shares"); setPicks(data.pending || []); } catch { /* non-blocking */ }
+  }
+  async function restoreTenant(a) {
+    try {
+      await api.post(`/apps/${a.app_id}/archive`, { archived: false });
+      setArchived(list => list.filter(x => x.app_id !== a.app_id));
+      toast.success(`${a.name} restored with all its pages, leads and settings`);
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that tenant"); }
+  }
+  async function purgeTenant(a) {
+    const s = a.snapshot || {};
+    if (!window.confirm(`Permanently delete ${a.name}? This erases ${s.pages || 0} page(s), ${s.leads || 0} lead(s), ${s.bookings || 0} booking(s) and ${s.files || 0} file(s). This cannot be undone.`)) return;
+    if (!window.confirm(`Last check — type-free confirmation. Delete ${a.name} forever?`)) return;
+    try {
+      await api.delete(`/apps/${a.app_id}/purge`);
+      setArchived(list => list.filter(x => x.app_id !== a.app_id));
+      toast.success(`${a.name} permanently deleted`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not delete that tenant"); }
+  }
+  async function ackPick(p) {
+    try { await api.post(`/template-shares/${p.token}/ack`); setPicks(list => list.filter(x => x.token !== p.token)); }
+    catch { /* non-blocking */ }
+  }
 
   async function load() {
     setLoading(true);
@@ -70,6 +101,7 @@ export default function Dashboard() {
     try {
       const { data } = await api.post(`/apps/${a.app_id}/archive`, { archived: archiving });
       setApps(list => list.filter(x => x.app_id !== a.app_id));
+      loadArchived();
       toast.success(archiving ? `${a.name} archived — ${data.leads_kept} lead(s) kept in your inbox` : `${a.name} restored`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not archive that tenant"); }
   }
@@ -237,6 +269,25 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Client template picks */}
+        {picks.length > 0 && (
+          <div className="space-y-2 mb-6" data-testid="client-picks">
+            {picks.map(p => (
+              <div key={p.token} data-testid={`client-pick-${p.token}`} className="card-surface p-4 flex flex-wrap items-center gap-3 !border-[var(--acc)]/40">
+                <Check size={16} className="text-[var(--acc)]" />
+                <div className="min-w-0">
+                  <div className="font-display text-base"><span className="text-[var(--acc)]">{p.client_name}</span> chose the {p.selected_brand} design</div>
+                  {p.client_note && <div className="text-xs text-[var(--mut)] mt-0.5">“{p.client_note}”</div>}
+                </div>
+                <div className="ml-auto flex items-center gap-2">
+                  <button data-testid={`client-pick-create-${p.token}`} onClick={() => nav("/templates")} className="btn-primary text-xs !py-1.5 !px-3">Create the tenant</button>
+                  <button data-testid={`client-pick-dismiss-${p.token}`} onClick={() => ackPick(p)} className="btn-ghost text-xs !py-1.5 !px-3">Dismiss</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Filter bar */}
         <ShowcaseManager apps={apps} onChange={(next) => setApps(list => list.map(x => next.find(n => n.app_id === x.app_id) || x))} />
         <div className="flex flex-col md:flex-row md:items-center gap-3 mb-6">
@@ -275,14 +326,21 @@ export default function Dashboard() {
             </button>
           </div>
           <Dialog open={newOpen} onOpenChange={setNewOpen}>
+            <button data-testid="new-app-btn" onClick={() => nav("/templates")} className="btn-primary flex items-center gap-2">
+              <Plus size={16} /> New project
+            </button>
             <DialogTrigger asChild>
-              <button data-testid="new-app-btn" className="btn-primary flex items-center gap-2">
-                <Plus size={16} /> New project
-              </button>
+              <button data-testid="new-app-advanced-btn" className="btn-ghost text-sm !py-2 !px-4">Blank / import</button>
             </DialogTrigger>
             <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">
-              <DialogHeader><DialogTitle className="font-display">Create a new project</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle className="font-display">Create a blank project or import one</DialogTitle></DialogHeader>
               <div className="space-y-3">
+                <button data-testid="new-app-gallery-link" onClick={() => { setNewOpen(false); nav("/templates"); }}
+                  className="w-full text-left p-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/8 hover:bg-[var(--acc)]/12 flex items-center gap-3">
+                  <Sparkles size={16} className="text-[var(--acc)]" />
+                  <span><span className="font-display font-semibold block">Browse the 16 template designs</span>
+                    <span className="text-xs text-[var(--mut)]">The recommended way to start a tenant</span></span>
+                </button>
                 <div className="grid grid-cols-2 gap-2">
                   {[["website", "Website"], ["app", "App"]].map(([k, l]) => (
                     <button key={k} data-testid={`new-project-kind-${k}`} onClick={() => setNewApp({ ...newApp, kind: k })} className={`text-left p-3 rounded-xl border ${newApp.kind === k ? "border-[var(--acc)] bg-[var(--acc)]/10" : "border-[var(--line)] hover:bg-white/5"}`}>
@@ -411,6 +469,45 @@ export default function Dashboard() {
               );
             })}
           </div>
+        )}
+
+        {/* Archived tenants — recoverable, and not counted as active */}
+        {archived.length > 0 && (
+          <section className="mt-12" data-testid="archived-tenants-section">
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-4 border-b border-[var(--line)] pb-3">
+              <div>
+                <div className="overline mb-1 flex items-center gap-2"><Archive size={12} className="text-[var(--mut)]" /> Archived tenants</div>
+                <h2 className="font-display text-2xl font-semibold tracking-tight">{archived.length} tenant{archived.length === 1 ? "" : "s"} kept safe</h2>
+              </div>
+              <p className="text-xs text-[var(--mut)] max-w-sm">Restore brings a tenant back exactly as it was — pages, content, design, forms, leads, bookings and settings. Archived tenants never count toward your active total.</p>
+            </div>
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {archived.map(a => {
+                const s = a.snapshot || {};
+                return (
+                  <div key={a.app_id} data-testid={`archived-card-${a.app_id}`} className="card-surface p-4 opacity-90 hover:opacity-100 transition-opacity">
+                    <div className="flex items-start gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full mt-2 shrink-0" style={{ background: a.color || "var(--dim)" }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-display text-lg font-semibold truncate">{a.name}</div>
+                        <div className="text-xs text-[var(--mut)] mt-0.5">{a.industry} · last active {s.last_active ? new Date(s.last_active).toLocaleDateString(undefined, { dateStyle: "medium" }) : "unknown"}</div>
+                      </div>
+                      <span className="chip shrink-0">Archived</span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-5 gap-2 font-mono text-[11px]" data-testid={`archived-snapshot-${a.app_id}`}>
+                      {[["Pages", s.pages], ["Leads", s.leads], ["Books", s.bookings], ["Members", s.members], ["Files", s.files]].map(([k, v]) => (
+                        <div key={k}><div className="text-[var(--dim)] uppercase">{k}</div><div className="text-[var(--fg)]">{v ?? 0}</div></div>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex items-center gap-2">
+                      <button data-testid={`restore-tenant-${a.app_id}`} onClick={() => restoreTenant(a)} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1.5"><RotateCcw size={12} /> Restore</button>
+                      <button data-testid={`purge-tenant-${a.app_id}`} onClick={() => purgeTenant(a)} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!text-red-300 hover:!border-red-400/40"><Trash2 size={12} /> Permanently delete</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         )}
       </main>
     </div>

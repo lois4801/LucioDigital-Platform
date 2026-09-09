@@ -16,14 +16,16 @@ Core requirements:
 9. Booking calendar, paid members area, client panel
 
 ## Hard platform rules (user-mandated)
-- **Tenants are NEVER created automatically.** Only three explicit admin actions can insert a
-  tenant: `POST /api/apps` (New project), plugin-ZIP import, and website/ZIP import from the New
-  project dialog. Template redesigns, theme changes, defaults and migrations may only modify
-  template definitions and platform defaults — never create tenant records.
-- Removing a tenant means **archive** (`archived: true`): hidden from the workspace, site offline,
-  but pages, leads, bookings, members and files are retained and restorable.
-- **Every lead from every tenant lands in the admin global inbox** (`GET /api/inbox`), including
-  archived tenants and tenants that no longer exist ("Removed tenant").
+- **Tenants are NEVER created automatically.** Only explicit admin actions insert a tenant:
+  `POST /api/apps` (from the Template Gallery, or blank/import), plugin-ZIP import, website/ZIP
+  import. Template redesigns, theme changes, defaults and migrations may only modify template
+  definitions and platform defaults — never create tenant records.
+- Removing a tenant means **archive** (`archived: true`): hidden, site offline, everything retained
+  and restorable. Permanent removal is a separate explicit `DELETE /api/apps/{id}/purge` and is only
+  allowed on an already-archived tenant.
+- **Every lead from every tenant lands in the admin global inbox**, including archived and removed
+  tenants ("Removed tenant").
+- The **Template Gallery is the default new-project flow**.
 
 ## Architecture
 React (craco) + Tailwind + Shadcn UI · FastAPI (port 8001, `/api` prefix) · MongoDB.
@@ -62,13 +64,16 @@ Design system: `backend/site_content.py` (NICHES copy + LOOKS design tokens) →
   industry template look. All 7 previously auto-created tenants archived (recoverable); workspace
   now boots to 0 active tenants.
 
-## Current data state (Sept 9, 2026)
-0 active tenants · 7 archived and recoverable (Maison Verde, Northwind Roofing, Orbit Customer
-Success, Northline Freight Systems, Forge Athletic Club, Meridian Wealth Partners, Nocturne
-Studios) · 5 leads retained, all visible in the admin inbox.
+## Current data state (Sept 9, 2026, after iter59)
+0 active tenants · **6** archived and recoverable (Maison Verde, Orbit Customer Success, Northline
+Freight Systems, Forge Athletic Club, Meridian Wealth Partners, Nocturne Studios) · 5 leads
+retained, all visible in the admin inbox.
+⚠️ Northwind Roofing (`app_6663b5de0007`) was purged during test cleanup after auto-seeding was
+removed; `client.editor@example.com` now has 0 memberships. Recreate from the gallery + invite if
+member/editor flows need testing.
 
 ## Backlog
-- **P1** Real ElevenLabs voice — MOCKED; needs the user's ElevenLabs API key (next in agreed order)
+- **P1** Real ElevenLabs voice — MOCKED; needs the user's ElevenLabs API key (next in agreed order) — MOCKED; needs the user's ElevenLabs API key (next in agreed order)
 - **P1** External DB sync export target (Supabase / PostgreSQL) + cloud drives
 - **P1** Real GitHub push integration — MOCKED; user chose to hold off on the PAT
 - **P2** Member "Delete my account" flow in profile
@@ -78,3 +83,22 @@ Studios) · 5 leads retained, all visible in the admin inbox.
 
 ## Order agreed with user
 ElevenLabs → External DB sync → Delete-my-account → GitHub push (PAT on hold)
+
+## Sept 9, 2026 — Template Gallery + Archive restore + Client picks + Leads table (iter59, 15/15)
+- `backend/templates_gallery.py`: `GET /api/public/templates` (16 designs + 14 categories),
+  `GET /api/public/templates/{key}` renders a template's theme + 4 pages **in memory** (no tenant
+  created), client share links (`/api/template-shares`, `/api/public/template-shares/{token}`,
+  `/select`, `/ack`) with a hard 7-day expiry.
+- `POST /api/apps` accepts `template_key` and builds the full 4-page template site
+  (`_build_template_pages`) instead of a blank starter page; the response is refetched so it
+  includes `site_niche` + `premium_site_v`.
+- `GET /api/apps/archived/summary` (snapshot: pages/leads/bookings/members/files + last active) and
+  `DELETE /api/apps/{id}/purge` (400 unless already archived).
+- Frontend: `pages/TemplateGallery.jsx` (live scaled thumbnails via the real BlockPreview renderer,
+  full-page scrollable preview with page tabs, category tabs, share dialog, client mode),
+  routes `/templates` (protected) + `/choose/:token` (public, no login), dashboard gallery-first
+  New project, client-pick banner, Archived Tenants section with Restore / Permanently delete.
+- `pages/Leads.jsx` table rebuilt: `table-fixed` + colgroup (38/20/12/14/12% + 72px), wrapped in
+  `overflow-x-auto` with `min-w-[1040px]`, no hidden columns, full emails, `NN/100` score.
+- Bug fixed by the testing agent and kept: `site_content._sec()` crashed on the 2-tuple `dining`
+  section, which 500'd the hospitality template preview.

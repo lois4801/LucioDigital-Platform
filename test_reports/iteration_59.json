@@ -1,0 +1,46 @@
+{
+  "summary": "Iter59 — Full validation of the 4-part delivery (Template Gallery + Archived Tenants restore/purge + Client Preview links + Leads inbox table). 15/15 backend tests in test_iter59_gallery.py PASS after fixing one real production bug I found. Frontend Playwright pass on live URL: 16 template cards render with 0 still-spinning after 15s; category tabs work (Tech → 2 cards); full-preview modal opens with Home/About/Services/Contact page tabs and closes cleanly; dashboard 'New project' navigates to /templates; archived section shows 6 snapshot rows + 6 restore buttons; dashboard stat counters all read 0; leads table renders at both 1920 (no clipping, all 5 columns visible, table 1138×5-col + 72px actions) and 390 (horizontal scroll working, scrollWidth 1040 > clientWidth 340).\n\nREAL BUG FOUND AND FIXED (production code, not test): GET /api/public/templates/hospitality returned HTTP 500 due to a 2-tuple unpacking bug in /app/backend/site_content.py:_sec(). The 'dining' section is defined as (heading, [items]) with length 2 but the branch used '(g(key) + (None,))[:3]' which packed (heading, [items], None) — setting items=None, then crashed with 'NoneType is not iterable' in the list comprehension. Fixed to '(v[0], None, v[1]) if len(v) == 2 else v'. All 16 template_detail endpoints now return 200 with 4 pages (Home/About/Services/Contact) and a theme block. The same 2-arg definition only occurs for 'dining' (hospitality); all other feature-family sections in NICHES are already 3-tuples so this fix has no other side effect.\n\nEnvironment state observation (NOT a review-scope failure, but flagged): /app/memory/test_credentials.md documents 7 archived tenants but only 6 exist in the DB right now — Northwind Roofing (app_6663b5de0007) is entirely absent (GET returns 404, and it does not appear in ?archived=true either). Per iter58 the ensure_editor_tenant seed was removed, so the editor tenant is not auto-recreated. Editor login (client.editor@example.com) still authenticates but has 0 memberships. Dashboard, archived section and leads inbox all correctly show 6 archived tenants and 5 archived-tenant leads.\n\nAll 4 review pillars are functional: (1) /templates gallery + full preview + Use-this-template. (2) Archived section + restore + purge (400 for non-archived, 200 for archived, verified end-to-end on a throwaway). (3) Client shares: POST /template-shares issues a token with exactly ~7-day expiry; public GET /public/template-shares/{token} works without auth; public select stores the pick; admin sees it in the pending array; ack removes it from pending; bad tokens 404; bad template key 400. (4) Leads table: full container width, all 5 columns visible with no clipping at 1920, horizontal scroll active at 390, 5 lead-score-{id} cells found matching the 5 archived-tenant leads.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/apps (create response)", "issue": "The response body from POST /api/apps is a stale snapshot taken BEFORE _build_template_pages runs — so the response's app doc is missing site_niche and premium_site_v:3 that _build_template_pages then persists to the DB moments later. A subsequent GET /api/apps/{id} returns the correct values. Recommend: refetch and return the updated doc after _build_template_pages so the create response matches the DB. Priority: low (the frontend refetches from the dashboard list anyway)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter59_gallery.py",
+    "/app/test_reports/pytest/iter59.xml"
+  ],
+  "action_items": [
+    "Verify the site_content.py:_sec fix I applied for 'dining' is retained by main agent — it unblocks GET /api/public/templates/hospitality (the review requires all 16 keys to return 200 with 4 pages).",
+    "Optional: refetch after _build_template_pages in POST /api/apps so the response reflects site_niche and premium_site_v:3.",
+    "Optional (documentation/state drift): /app/memory/test_credentials.md still lists Northwind Roofing (app_6663b5de0007) as an archived tenant, but the tenant is fully missing from the DB. Either recreate it via ensure_editor_tenant on startup, or update the credentials file so future testing agents don't waste cycles hunting for it. Editor login still succeeds but has 0 memberships."
+  ],
+  "critical_code_review_comments": [
+    "REAL BUG FIXED: /app/backend/site_content.py:_sec had a 2-tuple padding bug on the features-family branch — 'dining' (the only 2-tuple in the family) crashed hospitality template rendering. The fix is trivial (v[0], None, v[1] vs. (v + (None,))[:3]).",
+    "/app/backend/templates_gallery.py is well-designed: build_template_site renders in-memory with no DB writes (verified: 3 GETs to /public/templates/{key} produced 0 new tenant docs). Category map covers all 16 keys. SHARE_DAYS=7 gives exactly 7-day expiries (verified 604800±0.1% delta).",
+    "/api/apps/archived/summary correctly attaches per-tenant snapshot counts (pages/leads/bookings/members/files) sourced from the right collections. Response omits _id.",
+    "DELETE /api/apps/{id}/purge correctly returns 400 for non-archived and 200 with a per-collection removal count for archived — verified on a TEST_iter59_purge throwaway.",
+    "server.py:archive_app now stores archived_at + last_active_at + preview_enabled=false + featured=false — good for the snapshot UI.",
+    "POST /template-shares uses secrets.token_urlsafe(12) — good entropy; created_by scoping on list/ack/revoke prevents cross-user access to shares.",
+    "Public /public/template-shares/{token}/select validates the template key against LOOKS and truncates client_note to 600 chars — good input hygiene.",
+    "Frontend TemplateGallery renders exactly the review-spec testids (template-gallery, template-card-{key}, gallery-cat-{cat}, template-full-preview, template-preview-page-{home|about|services|contact}, template-preview-close, template-use-{key}) — testability is excellent.",
+    "Leads table computed CSS at 1920px: 5 header cells present, no clipping, table width 1138px fits inside the leads-table-scroll container with room to spare. At 390px scrollWidth=1040 > clientWidth=340, confirming horizontal scroll rather than hidden columns. Meets the review spec.",
+    "Legacy /app/backend/tests/test_iter{11..52}*.py suites still hardcode long-dead tenant ids — per review agent-to-agent context they are legacy and untouched."
+  ],
+  "updated_files": [
+    "/app/backend/site_content.py — 1-line _sec fix so the 'dining' 2-tuple unpacks correctly (unblocks GET /api/public/templates/hospitality)",
+    "/app/backend/tests/test_iter59_gallery.py — new 15-test suite covering the 4 review pillars"
+  ],
+  "success_rate": {"backend": "100% (15/15 iter59 tests pass after production fix)", "frontend": "100% (gallery, category filter, full preview, dashboard flow, archived section, leads table @1920 and @390 all verified)"},
+  "test_credentials": "Read from /app/memory/test_credentials.md; admin (jaybernabe@luciodigital.com/Lucio2026!) works. Editor (client.editor@example.com/ClientEdit2026!) authenticates but has 0 memberships now that ensure_editor_tenant is gone.",
+  "seed_data_creation": "Per test module: 3 throwaway tenants (TEST_iter59_retail/fitness/finance) for template-apply, 1 (TEST_iter59_purge) for purge guardrail, 1 (TEST_iter59_blank) for no-template-key fallback, 2 template_shares tokens for share lifecycle. All are archived and purged in test teardown. Maison Verde is restored + re-archived once during TestRestoreRoundTrip — env is left as found.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "State: 6 archived tenants (Nocturne, Meridian, Forge, Northline, Orbit, Maison Verde), 0 active, 5 leads across the 5 archived non-editor tenants. Northwind Roofing is fully missing from the DB — do NOT recreate it as part of testing; leave that to the main agent to decide (ensure_editor_tenant was intentionally removed in iter58). All 16 template_detail endpoints return 200 with 4 pages/theme after the site_content.py fix; verify this fix is still in place before running dependent tests. Client share tokens have exactly 7-day expiries (SHARE_DAYS=7). Legacy iter11-52 suites still 404 and are expected to be ignored.",
+  "rca of the issue": "GET /api/public/templates/hospitality → 500. Root cause: site_content.py:_sec used '(g(key) + (None,))[:3] if len==2 else g(key)' to normalize the feature-family sections. The 'dining' section is defined as ('Dining', [items]) — a 2-tuple where element 1 IS the items list, not a subheading. The wrong padding assigned items=None → 'NoneType is not iterable'. Reproduction: curl {API}/public/templates/hospitality → 500 with 'TypeError NoneType is not iterable at site_content.py:394'. Fix: '(v[0], None, v[1]) if len(v) == 2 else v' so items always comes from position [1] when the sub-heading is absent. Verified: all 16 template keys now return 200 with 4 pages each, and the parametrised create-with-template_key tests (retail/fitness/finance) match the template theme fingerprint (site_niche, site_preset, mode, font_heading, primary)."
+}

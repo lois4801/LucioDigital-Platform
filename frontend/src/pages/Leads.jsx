@@ -58,7 +58,7 @@ export default function Leads() {
   function view(m) { setOpen(m); if (m.status === "unread") patch(m, { status: "read" }); }
 
   return (
-    <div data-testid="leads-page" className="min-h-screen px-6 lg:px-14 py-8 max-w-7xl mx-auto">
+    <div data-testid="leads-page" className="min-h-screen px-6 lg:px-10 py-8 max-w-[1600px] mx-auto">
       <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div>
           <button data-testid="leads-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>
@@ -83,26 +83,31 @@ export default function Leads() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-5">
-        <div className="card-surface overflow-hidden">
+      <div className="grid xl:grid-cols-[minmax(0,1fr)_360px] gap-5">
+        <div className="card-surface overflow-hidden min-w-0">
           {loading ? <div className="p-10 text-center text-sm text-[var(--mut)]">Loading leads…</div> : rows.length === 0 ? (
             <div data-testid="leads-empty" className="p-14 text-center text-sm text-[var(--mut)]">No leads in {TABS.find(t => t[0] === tab)[1]}. Leads arrive from contact forms, AI chat and client change requests on your live sites — anything that looks like a test or demo submission is filed under Test Leads automatically.</div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="w-full overflow-x-auto scrollbar-thin" data-testid="leads-table-scroll">
+            <table className="w-full text-sm table-fixed min-w-[1040px]" data-testid="leads-table">
+              <colgroup>
+                <col style={{ width: "38%" }} /><col style={{ width: "20%" }} /><col style={{ width: "12%" }} />
+                <col style={{ width: "14%" }} /><col style={{ width: "12%" }} /><col style={{ width: "72px" }} />
+              </colgroup>
               <thead><tr className="text-left text-[11px] uppercase tracking-wider text-[var(--dim)] border-b border-[var(--line)]">
-                <th className="px-4 py-3 font-medium">Lead</th><th className="px-4 py-3 font-medium hidden md:table-cell">Contact</th><th className="px-4 py-3 font-medium hidden lg:table-cell">Source</th><th className="px-4 py-3 font-medium hidden md:table-cell">Received</th><th className="px-4 py-3 font-medium">Status</th><th className="px-2 py-3" /></tr></thead>
+                <th className="px-4 py-3 font-medium">Lead</th><th className="px-4 py-3 font-medium">Contact</th><th className="px-4 py-3 font-medium">Source</th><th className="px-4 py-3 font-medium">Received</th><th className="px-4 py-3 font-medium">Status</th><th className="px-2 py-3" /></tr></thead>
               <tbody>
                 {rows.map(m => { const s = SRC[m.source] || SRC.contact; return (
-                  <tr key={m.message_id} data-testid={`lead-row-${m.message_id}`} onClick={() => view(m)} className={`border-b border-[var(--line)]/60 cursor-pointer hover:bg-white/[0.03] ${open?.message_id === m.message_id ? "bg-[var(--acc)]/10" : ""}`}>
+                  <tr key={m.message_id} data-testid={`lead-row-${m.message_id}`} onClick={() => view(m)} className={`border-b border-[var(--line)]/60 cursor-pointer hover:bg-white/[0.03] align-top ${open?.message_id === m.message_id ? "bg-[var(--acc)]/10" : ""}`}>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">{m.status === "unread" && <span className="w-1.5 h-1.5 rounded-full bg-[var(--acc)] pulse-dot shrink-0" />}<span className={`truncate max-w-[220px] ${m.status === "unread" ? "font-semibold" : ""}`}>{m.from_name || "Website visitor"}</span>{m.hot && <Flame size={13} className="text-orange-400 shrink-0" />}</div>
-                      <div className="text-xs text-[var(--mut)] truncate max-w-[260px] mt-0.5 flex items-center gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="truncate">{m.subject || m.body?.slice(0, 70)}</span></div>
-                      <div className="text-[10px] font-mono mt-1" style={{ color: m.app_color || "var(--dim)" }}>{m.app_name}</div>
+                      <div className="flex items-center gap-2">{m.status === "unread" && <span className="w-1.5 h-1.5 rounded-full bg-[var(--acc)] pulse-dot shrink-0" />}<span className={m.status === "unread" ? "font-semibold" : ""}>{m.from_name || "Website visitor"}</span>{m.hot && <Flame size={13} className="text-orange-400 shrink-0" />}</div>
+                      <div className="text-xs text-[var(--mut)] mt-1 flex items-start gap-1.5"><AttachmentPill count={attachmentCount(m.body)} /><span className="break-words">{m.subject || m.body?.slice(0, 140)}</span></div>
+                      <div className="text-[10px] font-mono mt-1.5" style={{ color: m.app_color || "var(--dim)" }}>{m.app_name}{m.app_archived ? " · archived" : ""}</div>
                     </td>
-                    <td className="px-4 py-3 hidden md:table-cell text-[var(--mut)] text-xs">{m.from_email || "—"}</td>
-                    <td className="px-4 py-3 hidden lg:table-cell"><span className="inline-flex items-center gap-1.5 text-xs text-[var(--mut)]"><s.Icon size={12} /> {s.label}</span></td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs text-[var(--mut)] whitespace-nowrap">{new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</td>
-                    <td className="px-4 py-3"><span data-testid={`lead-status-${m.message_id}`} className={`chip ${m.status === "unread" ? "chip-active" : ""}`}>{m.status === "unread" ? "New" : m.replies?.length ? "Replied" : m.status === "read" ? "Reviewed" : "Archived"}</span>{m.score != null && <span className="ml-2 text-[10px] font-mono text-[var(--dim)]">{m.score}</span>}</td>
+                    <td className="px-4 py-3 text-[var(--mut)] text-xs break-all">{m.from_email || "—"}</td>
+                    <td className="px-4 py-3"><span className="inline-flex items-center gap-1.5 text-xs text-[var(--mut)]"><s.Icon size={12} className="shrink-0" /> <span className="break-words">{s.label}</span></span></td>
+                    <td className="px-4 py-3 text-xs text-[var(--mut)]">{new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</td>
+                    <td className="px-4 py-3"><div className="flex flex-wrap items-center gap-1.5"><span data-testid={`lead-status-${m.message_id}`} className={`chip whitespace-nowrap ${m.status === "unread" ? "chip-active" : ""}`}>{m.status === "unread" ? "New" : m.replies?.length ? "Replied" : m.status === "read" ? "Reviewed" : "Archived"}</span>{m.score != null && <span data-testid={`lead-score-${m.message_id}`} className="text-[10px] font-mono text-[var(--dim)] whitespace-nowrap">{m.score}/100</span>}</div></td>
                     <td className="px-2 py-3 text-right whitespace-nowrap">
                       <button data-testid={`lead-lane-${m.message_id}`} title={m.lane === "test" ? "Move to Real Leads" : "Move to Test Leads"}
                         onClick={e => { e.stopPropagation(); setLane(m, m.lane === "test" ? "real" : "test"); }}
@@ -112,10 +117,11 @@ export default function Leads() {
                   </tr>); })}
               </tbody>
             </table>
+            </div>
           )}
         </div>
 
-        <aside className="card-surface p-5 h-fit sticky top-6" data-testid="lead-detail">
+        <aside className="card-surface p-5 h-fit sticky top-6 min-w-0" data-testid="lead-detail">
           {!open ? <div className="text-sm text-[var(--mut)] text-center py-10">Select a lead to see details</div> : (
             <div className="space-y-4">
               <div>

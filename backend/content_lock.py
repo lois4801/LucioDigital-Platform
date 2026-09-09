@@ -96,7 +96,7 @@ async def clear_synced_label_overrides(db) -> int:
 async def sync_all_overviews(db) -> int:
     """Bring every tenant's Overview snapshot in step with its current Site Mode content."""
     import asyncio
-    ids = [a["app_id"] async for a in db.apps.find({"is_deleted": {"$ne": True}}, {"_id": 0, "app_id": 1})]
+    ids = [a["app_id"] async for a in db.apps.find({"is_deleted": {"$ne": True}, "archived": {"$ne": True}}, {"_id": 0, "app_id": 1})]
 
     async def one(app_id):
         try:

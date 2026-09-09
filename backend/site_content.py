@@ -390,7 +390,8 @@ def _sec(n, key, i, brand):
     bg = "muted" if i % 2 else "default"
     g = lambda k: n.get(k)
     if key in ("services", "categories", "amenities", "schedule", "solutions", "whyus", "dining"):
-        h, sub, items = (g(key) + (None,))[:3] if len(g(key)) == 2 else g(key)
+        v = g(key)
+        h, sub, items = (v[0], None, v[1]) if len(v) == 2 else v
         return _blk("features", {"heading": h, "subheading": sub, "items": [{"title": a, "desc": b, "icon": c} for a, b, c in items]}, bg)
     if key in ("plans", "offers", "rooms"):
         h, plans = g(key)
