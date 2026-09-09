@@ -61,10 +61,14 @@ export default function SocialSignIn({ mode = "signin" }) {
         <GoogleMark /> Continue with Google
       </button>
       <div className="grid grid-cols-2 gap-2">
-        <button data-testid="auth-microsoft-btn" onClick={() => oauth("microsoft")} className={btn}>
+        <button data-testid="auth-microsoft-btn" onClick={() => oauth("microsoft")}
+          title={providers.microsoft ? "Continue with Microsoft" : "Awaiting Azure credentials"}
+          className={`${btn} ${providers.microsoft ? "" : "opacity-45"}`}>
           <MicrosoftMark /> Microsoft
         </button>
-        <button data-testid="auth-yahoo-btn" onClick={() => oauth("yahoo")} className={btn}>
+        <button data-testid="auth-yahoo-btn" onClick={() => oauth("yahoo")}
+          title={providers.yahoo ? "Continue with Yahoo" : "Awaiting Yahoo credentials"}
+          className={`${btn} ${providers.yahoo ? "" : "opacity-45"}`}>
           <YahooMark /> Yahoo
         </button>
       </div>

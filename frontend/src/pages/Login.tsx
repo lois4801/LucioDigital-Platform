@@ -5,12 +5,22 @@ import { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, Mail, Lock, ChevronRight } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
+import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
+import { burstCursorFX, swatchOf } from "@/lib/cursorEffects";
 
 const SAVED_EMAIL_KEY = "lt_saved_email";
 
 export default function Login() {
   const { login } = useAuth();
+  const { effect } = useCursorFX();
+  const [c1, c2] = swatchOf(effect);
   const nav = useNavigate();
+  // The form reacts with the chosen cursor effect: a small themed burst at the focused field.
+  const burstAt = (el, n = 6) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    burstCursorFX(r.left + r.width / 2, r.top + r.height / 2, n);
+  };
   const [params] = useSearchParams();
   // Nothing is pre-filled for a new visitor. A saved address only ever lives in this browser.
   const [email, setEmail] = useState(() => localStorage.getItem(SAVED_EMAIL_KEY) || "");
@@ -64,24 +74,32 @@ export default function Login() {
 
       <div className="flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md fade-in">
-          <div className="overline mb-3">Sign in</div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
-          <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="overline mb-3">Sign in</div>
+              <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
+              <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
+            </div>
+            <div className="shrink-0" data-testid="login-cursor-picker">
+              <CursorFXPicker />
+            </div>
+          </div>
 
           <SocialSignIn mode="signin" />
-
-          <div className="flex items-center gap-3 my-6">
+      <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
             <span className="overline">or</span>
             <div className="h-px flex-1 bg-[var(--line)]" />
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} data-testid="login-form" className="space-y-4 rounded-2xl border p-5 transition-colors duration-500"
+            style={{ borderColor: `${c1}55`, background: `linear-gradient(160deg, ${c1}0f, ${c2}0a)`, boxShadow: `0 0 40px -18px ${c1}80` }}>
             <label className="block">
               <span className="overline block mb-2">Email</span>
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
-                <input data-testid="login-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                <input data-testid="login-email-input" type="email" value={email} onChange={(e) => { setEmail(e.target.value); burstAt(e.target, 3); }}
+                  onFocus={(e) => burstAt(e.target, 8)}
                   required autoComplete="off" placeholder="you@company.com"
                   className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
               </div>
@@ -90,6 +108,7 @@ export default function Login() {
               <input data-testid="login-remember-email" type="checkbox" checked={remember}
                 onChange={(e) => {
                   setRemember(e.target.checked);
+                  burstAt(e.target, 5);
                   if (!e.target.checked) localStorage.removeItem(SAVED_EMAIL_KEY);
                 }}
                 className="accent-[var(--acc)]" />
@@ -99,13 +118,15 @@ export default function Login() {
               <span className="overline block mb-2">Password</span>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
-                <input data-testid="login-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                <input data-testid="login-password-input" type="password" value={password} onChange={(e) => { setPassword(e.target.value); burstAt(e.target, 3); }}
+                  onFocus={(e) => burstAt(e.target, 8)}
                   required autoComplete="current-password"
                   className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
               </div>
             </label>
             {err && <div className="text-sm text-red-400 font-mono">{err}</div>}
             <button data-testid="auth-jwt-submit-btn" disabled={busy} type="submit"
+              onMouseEnter={(e) => burstAt(e.currentTarget, 10)}
               className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
               {busy ? "Signing in…" : "Sign in"} <ChevronRight size={16} />
             </button>

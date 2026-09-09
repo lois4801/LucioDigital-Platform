@@ -3,7 +3,7 @@ import { Sparkles, Check, RotateCcw } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import CursorTrail from "@/components/CursorTrail";
-import { CURSOR_EFFECTS, isEffect, startCursorFX } from "@/lib/cursorEffects";
+import { CURSOR_EFFECTS, DEFAULT_EFFECT, isEffect, startCursorFX } from "@/lib/cursorEffects";
 
 const KEY = "os_cursor_effect";
 const KEY_D = "os_cursor_density";
@@ -15,7 +15,7 @@ export function CursorFXProvider({ children }) {
   const { user } = useAuth();
   const [saved, setSaved] = useState(() => {
     const v = typeof localStorage !== "undefined" ? localStorage.getItem(KEY) : null;
-    return isEffect(v) ? v : "none";
+    return isEffect(v) ? v : DEFAULT_EFFECT;
   });
   const [density, setDensity] = useState(() => clamp(localStorage.getItem(KEY_D)));
   const [speed, setSpeed] = useState(() => clamp(localStorage.getItem(KEY_S)));

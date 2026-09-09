@@ -15,6 +15,18 @@ export const CURSOR_EFFECTS = [
 
 export const EFFECT_IDS = CURSOR_EFFECTS.map(e => e.id);
 export const isEffect = (v) => EFFECT_IDS.includes(v);
+export const DEFAULT_EFFECT = "bubbles";
+export const swatchOf = (id) => (CURSOR_EFFECTS.find(e => e.id === id) || CURSOR_EFFECTS[0]).swatch;
+
+// Lets UI (e.g. auth forms) emit the active effect at a point. Set by startCursorFX.
+let emitter = null;
+let lastBurst = 0;
+export function burstCursorFX(x, y, n = 8) {
+  const now = performance.now();
+  if (!emitter || now - lastBurst < 70) return;   // throttled so bursts never flood the loop
+  lastBurst = now;
+  emitter(x, y, Math.max(1, Math.min(14, n)));
+}
 
 const rand = (a, b) => a + Math.random() * (b - a);
 const TAU = Math.PI * 2;
@@ -225,10 +237,23 @@ export function startCursorFX(canvas, effect, accent = "#10B981", opts = {}) {
     raf = requestAnimationFrame(loop);
   };
 
+  const spawnAt = (x, y, n) => {
+    for (let i = 0; i < n; i++) {
+      if (parts.length >= MAX) break;
+      const p = makeParticle(effect, x, y, rand(-6, 6), rand(-6, 6));
+      if (!p) continue;
+      p.size *= 0.6 + 0.4 * density;
+      p.vx *= speed; p.vy *= speed; p.decay *= speed;
+      parts.push(p);
+    }
+  };
+  emitter = spawnAt;
+
   window.addEventListener("mousemove", onMove, { passive: true });
   window.addEventListener("resize", resize);
   raf = requestAnimationFrame(loop);
   return () => {
+    if (emitter === spawnAt) emitter = null;
     window.removeEventListener("mousemove", onMove);
     window.removeEventListener("resize", resize);
     cancelAnimationFrame(raf);

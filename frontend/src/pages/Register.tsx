@@ -5,6 +5,7 @@ import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, ChevronRight, MailCheck } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
+import { CursorFXPicker } from "@/components/CursorFX";
 
 export default function Register() {
   const { register } = useAuth();
@@ -52,8 +53,7 @@ export default function Register() {
           <p className="text-[var(--mut)] mt-2 text-sm">14-day free trial. No credit card.</p>
 
           <SocialSignIn mode="signup" />
-
-          <div className="flex items-center gap-3 my-6">
+      <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
             <span className="overline">or</span>
             <div className="h-px flex-1 bg-[var(--line)]" />
@@ -95,6 +95,11 @@ export default function Register() {
         <video src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
           autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-tl from-[var(--bg)]/80 via-transparent to-[var(--bg)]/60" />
+      </div>
+      <div className="fixed bottom-5 left-5 z-[60]" data-testid="register-cursor-picker">
+        <div className="rounded-full backdrop-blur-xl bg-[var(--bg)]/85 border border-white/10 shadow-2xl p-1">
+          <CursorFXPicker up />
+        </div>
       </div>
     </div>
   );
