@@ -1,0 +1,22 @@
+{
+  "summary": "Iteration 66 — Vite migration regression, Supabase export, and Handoff bundle. All 10 backend tests passed (Supabase status/sql/push validation + all 4 export kinds including handoff run end-to-end with correct zip layout). Frontend UI verified: dashboard, /templates renders 32 template cards, opening a throwaway tenant shows all 16 tabs, Handoff & Export tab renders all 4 export cards (export-card-{website,fullstack,plugin,handoff}) and the Supabase export card with uri input + push/sql buttons. Empty push produces the expected 400 error toast ('Add your Supabase connection URI...'), invalid URI produces the correct 400 toast ('Use a postgresql:// connection URI...'). Login page and /portal render fine. No 'process is not defined', no BACKEND_URL undefined, no module-resolution errors — Vite env-var define shim works. Only console errors observed are expected 401 (pre-login) and 400 (validation) HTTP responses; zero JS runtime/pageerror events.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter66_vite_supabase_handoff.py",
+    "/app/test_reports/pytest/iter66_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "export_pkg.py is 1671 lines — approaching the 700-line split threshold; consider splitting builders (website/fullstack/plugin/handoff) into separate modules for maintainability.",
+    "supabase_export.py _run() executes the full multi-statement SQL in one execute() inside a single implicit transaction; if the target Postgres closes on any statement it surfaces as one opaque error. Consider wrapping with an explicit BEGIN/COMMIT and logging the failing statement index for easier client-side debugging (functional, not a blocker).",
+    "vite.config.ts injects only REACT_APP_* into process.env at build time; any lazy code referencing process.env.OTHER_VAR would still crash. Not observed in this run but worth a lint rule."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter66_vite_supabase_handoff.py"],
+  "success_rate": {"backend": "100% (10/10)", "frontend": "100% of tested flows"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (cookie auth) — from /app/memory/test_credentials.md",
+  "seed_data_creation": "Created and purged two throwaway tenants (TEST_iter66_handoff, TEST_iter66_ui2) — cleaned up. No active existing tenants touched.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Vite migration is stable — no process.env crashes, all routes (/, /login, /dashboard, /templates, /apps/:id, /portal, /p/:token) load. Supabase push cannot be end-to-end tested without a real Supabase project; only status/sql/error paths are covered. Handoff zip layout is enforced by test (site/, app/, data/, files/, supabase/, README.md, .env.example, no stray root assets). pytest.ini requires -n 2 --dist loadscope; run via `REACT_APP_BACKEND_URL=<preview_url> pytest backend/tests/test_iter66_vite_supabase_handoff.py`."
+}

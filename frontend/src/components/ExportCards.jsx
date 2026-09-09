@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Download, Globe, Layers, Package2, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Download, Globe, Layers, Package2, PackageCheck, Loader2, CheckCircle2, AlertTriangle } from "lucide-react";
 
 const KINDS = [
   {
@@ -25,9 +25,16 @@ const KINDS = [
     title: "Plug-and-play platform bundle",
     blurb: "plugin.json with every page, block, design token, CMS record, form, workflow, setting and member, plus an assets folder. Re-import it here to clone or restore the whole project instantly.",
   },
+  {
+    kind: "handoff",
+    label: "Build Handoff Bundle",
+    icon: PackageCheck,
+    title: "One-click client handoff bundle",
+    blurb: "Everything in one archive: the static site, the full-stack app code, every record as JSON, every uploaded file, a ready Supabase migration, .env.example and a written self-host guide. Hand it over and they own it.",
+  },
 ];
 
-const STAGES = ["collecting", "pages", "data", "assets", "fonts", "code", "cms", "zipping", "done"];
+const STAGES = ["collecting", "pages", "data", "assets", "fonts", "code", "cms", "supabase", "zipping", "done"];
 
 export default function ExportCards({ appDoc }) {
   const [jobs, setJobs] = useState({});         // kind -> job
@@ -81,13 +88,13 @@ export default function ExportCards({ appDoc }) {
   return (
     <div className="lg:col-span-2 card-surface p-6" data-testid="export-system">
       <div className="overline">Handoff &amp; Export</div>
-      <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Three ways to hand this project over</h3>
+      <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Four ways to hand this project over</h3>
       <p className="text-sm text-[var(--mut)] mt-2 max-w-3xl">
         Every package bundles all images, media and fonts locally, so nothing is missing on the receiving end.
         Exports run in the background — the progress bar updates live and we email you when the download is ready.
       </p>
 
-      <div className="grid md:grid-cols-3 gap-4 mt-6">
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mt-6">
         {KINDS.map(({ kind, label, icon: Icon, title, blurb }) => {
           const job = jobs[kind];
           const running = job?.status === "running";

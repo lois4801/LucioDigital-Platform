@@ -1048,6 +1048,8 @@ from files_lib import register as register_files, bundle_media
 register_files(api, db, get_current_user, get_user_app, log_activity)
 from data_destinations import register as register_data_destinations
 register_data_destinations(api, db, get_current_user, get_user_app, log_activity)
+from supabase_export import register as register_supabase_export
+register_supabase_export(api, db, get_current_user, get_user_app, log_activity)
 from site_sync import register as register_site_sync
 import site_sync as _site_sync
 _site_sync.require_ai_access = GROWTH["require_ai_access"]

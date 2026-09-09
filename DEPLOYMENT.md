@@ -31,8 +31,8 @@ uvicorn server:app --host 0.0.0.0 --port 8001
 # frontend (new shell)
 cd frontend
 yarn install
-yarn build          # static output in frontend/build — serve with nginx/Caddy/S3+CDN
-# or: yarn start    # dev server on :3000
+yarn build          # Vite static output in frontend/build — serve with nginx/Caddy/S3+CDN
+# or: yarn start    # Vite dev server on :3000  ·  yarn typecheck for TypeScript checks
 ```
 
 `emergentintegrations` is only needed in Emergent mode. In BYO mode you can drop that line from

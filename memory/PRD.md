@@ -172,3 +172,53 @@ FastAPI/Mongo. No feature or UI changes.
 - P1: Supabase migration (Auth + Postgres + Storage + RLS) **or** Supabase as an optional export target
 - P1: Real ElevenLabs voice + real GitHub push (both waiting on user PATs)
 - P2: PayPal integration · P2: expose member "delete own account" in profile
+
+
+## June 2026 — Vite + TS toolchain, Supabase export, Handoff bundle (iter66, 10/10 backend, frontend clean)
+
+### 1. CRA → Vite 6 migration (TS toolchain, JSX kept)
+- `vite.config.ts`: react plugin, `@` → `src`, `envPrefix: ["REACT_APP_","VITE_"]` **plus** a `define`
+  shim that injects every `process.env.REACT_APP_*` so all 14 existing call sites keep working.
+  Dev server pinned to `0.0.0.0:3000`, `allowedHosts: true`, HMR over `wss` clientPort 443,
+  `build.outDir: "build"` (keeps the deployment path unchanged).
+- Root `index.html` (was `public/index.html`) with `<script type="module" src="/src/index.jsx">`;
+  the Emergent main script and the PostHog snippet were carried over verbatim.
+- `src/index.js`/`src/App.js` → `.jsx` (the only two .js files containing JSX). `tsconfig.json` with
+  `allowJs`, `strict`, `jsx: react-jsx`, path alias; `yarn typecheck` = `tsc --noEmit` (clean).
+- Converted to TS: `src/lib/api.ts`, `src/lib/utils.ts`. Everything else stays `.jsx`.
+- Removed: `craco.config.js`, `jsconfig.json`, `frontend/plugins/`, and the `@craco/craco`,
+  `react-scripts`, `cra-template` deps. **Also removed the `rollup: 2.80.0` resolution** — that CRA-era
+  pin is what made Vite fail to boot (`./parseAst is not exported`). Do not re-add it.
+- Trade-off: the Emergent visual-edits overlay was CRA/craco-only and is gone. Build time ~5 s.
+- Scripts: `start` = `vite`, `build` = `vite build`, `preview`, `typecheck`.
+- Also fixed: `src/index.css` had the Google Fonts `@import` after `@tailwind` — Vite/postcss rejects that.
+
+### 2. Supabase export — `backend/supabase_export.py` (NEW)
+- `TABLES` maps 11 Mongo collections → `lt_*` Postgres tables (scalar columns + full row in `data jsonb`),
+  plus `lt_tenants` as the FK parent.
+- `build_sql(db, app_doc, prefix)` → one idempotent script: `begin;` → DDL (`create table if not exists`,
+  per-table tenant index) → `delete` + `insert` of the tenant's real rows (single quotes escaped via `_lit`)
+  → RLS (`enable row level security`, `read_own_tenant` select policy for `authenticated` scoped by the
+  `tenant_ids` JWT claim; service_role bypasses) → `commit;`.
+- Endpoints: `GET /api/apps/{id}/supabase/status`, `GET /api/apps/{id}/supabase/sql` (file download),
+  `POST /api/apps/{id}/supabase/push` (uses the posted `connection_uri`, else the saved
+  supabase/postgres `data_destination` secret, decrypted via `data_destinations._decrypt`; psycopg2 in a
+  thread; result stored on `apps.supabase_push`).
+- UI: `components/SupabaseExportCard.jsx` in the Handoff & Export tab
+  (`supabase-export-card`, `supabase-uri-input`, `supabase-push-btn`, `supabase-sql-btn`).
+- NOT verified end-to-end: a real push needs a live Supabase project. Only the error paths were tested.
+
+### 3. One-click Client Handoff Bundle — new `handoff` export kind
+- `export_pkg.build_handoff()` composes `build_website` + `build_fullstack` and adds the data, files,
+  Supabase migration, `.env.example` and a generated README. Zip layout:
+  `site/` · `app/` · `data/*.json` (12 collections + tenant.json) · `files/` + `manifest.json` ·
+  `supabase/migration.sql` + `README.md` · `.env.example` · `README.md`.
+  Bundled assets are written into **both** `site/` and `app/frontend/public/` (and never at the zip root).
+- `KINDS` + `/export/start?kind=handoff` accept it; UI is a 4th card in `ExportCards.jsx`
+  (`export-card-handoff`, `export-handoff-btn`, `export-download-handoff`), grid now 4-up.
+- Verified: 104 files / ~23 MB for a 4-page tenant; the other three kinds still build and download.
+
+## Remaining roadmap (updated)
+- P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today
+- P1: Real ElevenLabs voice + real GitHub push (waiting on user PATs)
+- P2: Full `.tsx` conversion of the remaining ~117 components · PayPal · member "delete own account"

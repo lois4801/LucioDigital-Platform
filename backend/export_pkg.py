@@ -30,7 +30,8 @@ from storage import APP_NAME, get_object, put_object
 
 logger = logging.getLogger("agency.export")
 
-KINDS = {"website": "Website", "fullstack": "Full-Stack App", "plugin": "Plugin Package"}
+KINDS = {"website": "Website", "fullstack": "Full-Stack App", "plugin": "Plugin Package",
+         "handoff": "Client Handoff Bundle"}
 FILE_RE = re.compile(r"/api/public/files/([A-Za-z0-9._/\-]+)")
 EXT_RE = re.compile(r"https?://[^\s'\"<>()]+?\.(?:png|jpe?g|webp|gif|svg|avif|mp4|webm|mov|woff2?|ttf)(?:\?[^\s'\"<>()]*)?", re.I)
 ATTR_RE = re.compile(r"(?:src|poster|data-src)=['\"](https?://[^'\"]+)['\"]", re.I)
@@ -284,6 +285,89 @@ def _x(s) -> str:
     return str(s or "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+HANDOFF_ENV_EXAMPLE = """# Copy to .env and fill in. Nothing else in the bundle reads secrets.
+# --- required ---
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=your_database
+JWT_SECRET=change-me-to-a-long-random-string
+FRONTEND_URL=http://localhost:3000
+ADMIN_EMAIL=you@yourdomain.com
+
+# --- AI (optional, bring your own) ---
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+LLM_MODEL_OVERRIDE=
+
+# --- Supabase (optional, if you migrate the data with supabase/migration.sql) ---
+SUPABASE_DB_URL=
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+
+# --- Payments / email (optional) ---
+STRIPE_SECRET_KEY=
+RESEND_API_KEY=
+"""
+
+
+def _handoff_readme(app_doc, pages, cols, counts, manifest, sql_counts) -> str:
+    name = app_doc.get("name") or "This tenant"
+    total_rows = sum(counts.values())
+    return f"""# {name} — Client Handoff Bundle
+
+Generated {_iso()} · everything for this website/app is in this one archive. No account on the
+original platform is needed to run, host or migrate it.
+
+## What's inside
+
+| Folder | What it is |
+|---|---|
+| `site/` | The complete static website — {len(pages)} page(s) of plain HTML/CSS/JS with every image, video and font embedded locally. Drop it on any host. |
+| `app/` | Full-stack starter: React frontend + FastAPI backend + seeded database + auth + admin dashboard. |
+| `data/` | Every record for this tenant as JSON ({total_rows} rows across {len(counts)} collections). |
+| `files/` | Every uploaded file ({len(manifest)}), with `files/manifest.json` mapping them to original names. |
+| `supabase/` | One idempotent `migration.sql` that creates the schema, loads the data and enables Row Level Security in your own Supabase project. |
+| `.env.example` | Every environment variable the app reads, with nothing filled in. |
+
+## 1. Publish the website in 2 minutes
+
+```bash
+cd site
+python3 -m http.server 8080     # then open http://localhost:8080
+```
+
+To go live, upload `site/` to Netlify, Vercel, Cloudflare Pages, S3+CloudFront or any nginx box.
+`_redirects` and `vercel.json` are already included for clean URLs. Form posts point at
+`site/config.js` — set `window.OMNI_FORM_ENDPOINT` to the included `server/` app or your own endpoint.
+
+## 2. Run the full-stack app
+
+See `app/README.md`. In short: copy `.env.example` to `.env`, install the backend requirements,
+start the API, then build the frontend.
+
+## 3. Move the data into your own Supabase
+
+```bash
+psql "$SUPABASE_DB_URL" -f supabase/migration.sql
+```
+
+Creates `lt_tenants` plus {len(sql_counts)} data tables, loads {sum(sql_counts.values())} rows and turns on RLS
+(service role writes, signed-in users read only their own tenant). Details in `supabase/README.md`.
+
+## 4. Content inventory
+
+- Pages: {len(pages)}
+- CMS collections: {len(cols)}
+- Leads: {counts.get('messages', 0)} · Form submissions: {counts.get('submissions', 0)} · Bookings: {counts.get('bookings', 0)}
+- Members: {counts.get('site_users', 0)} · Workflows: {counts.get('workflows', 0)} · Forms: {counts.get('cta_forms', 0)}
+
+## Ownership
+
+This bundle is yours to keep, host, modify and migrate. Nothing in `site/` or `data/` calls back to
+the platform that generated it.
+"""
+
+
 def _csv(rows: list, header: list) -> str:
     buf = io.StringIO()
     w = csv.writer(buf)
@@ -455,7 +539,64 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
             f"- `assets/` — {counts['assets']} embedded file(s)\n")
         return files
 
-    BUILDERS = {"website": build_website, "fullstack": build_fullstack, "plugin": build_plugin}
+    async def build_handoff(app_doc, pages, cols, bundler, client, say):
+        """Everything a client needs to own this tenant: static site, full-stack app, their data,
+        their files, the Supabase migration and a self-host guide."""
+        app_id = app_doc["app_id"]
+        await say("site", "Rendering the static website", 18)
+        site = await build_website(app_doc, pages, cols, bundler, client, say)
+        await say("app", "Writing the full-stack starter app", 40)
+        full = await build_fullstack(app_doc, pages, cols, bundler, client, say)
+
+        files: dict = {f"site/{k[5:]}" if k.startswith("site/") else f"site/{k}": v
+                       for k, v in site.items() if k != "README.md"}
+        files.update({f"app/{k}": v for k, v in full.items() if k != "README.md"})
+
+        await say("data", "Exporting records and uploaded files", 62)
+        counts = {}
+        for coll in ("pages", "cms_collections", "cms_items", "messages", "submissions", "bookings",
+                     "cta_forms", "site_users", "member_access", "workflows", "activity_logs", "memberships"):
+            rows = await db[coll].find({"app_id": app_id}, {"_id": 0}).to_list(5000)
+            counts[coll] = len(rows)
+            files[f"data/{coll}.json"] = json.dumps(rows, indent=2, default=str)
+        files["data/tenant.json"] = json.dumps(
+            {k: v for k, v in app_doc.items() if k not in ("_id", "owner_id", "preview_token")},
+            indent=2, default=str)
+
+        docs = await db.files.find({"app_id": app_id, "is_deleted": False}, {"_id": 0}).to_list(500)
+        manifest = []
+        for d in docs:
+            try:
+                data, _ct = await asyncio.to_thread(get_object, d["storage_path"])
+            except Exception:
+                continue
+            safe = re.sub(r"[^A-Za-z0-9._-]+", "_", d.get("original_filename") or "file")
+            files[f"files/{d['file_id']}-{safe}"] = data
+            manifest.append({"file": f"files/{d['file_id']}-{safe}", "name": d.get("original_filename"),
+                             "size": d.get("size"), "uploaded_at": d.get("created_at")})
+        files["files/manifest.json"] = json.dumps(manifest, indent=2)
+
+        await say("supabase", "Generating the Supabase migration", 78)
+        from supabase_export import build_sql
+        sql, sql_counts = await build_sql(db, app_doc)
+        files["supabase/migration.sql"] = sql
+        files["supabase/README.md"] = (
+            f"# {app_doc.get('name')} — Supabase migration\n\n"
+            "Run this once against your own Supabase project and every record from this tenant lands in\n"
+            "your Postgres database, with Row Level Security enabled on every table.\n\n"
+            "## How to run it\n"
+            "1. Supabase dashboard → **SQL Editor** → paste `migration.sql` → **Run**.\n"
+            "2. Or from a terminal: `psql \"$SUPABASE_DB_URL\" -f migration.sql`\n\n"
+            "The script is idempotent — re-run it any time to refresh the data.\n\n"
+            "## Tables created\n"
+            + "\n".join(f"- `lt_{t}` — {n} row(s)" for t, n in sql_counts.items()) + "\n")
+
+        files[".env.example"] = HANDOFF_ENV_EXAMPLE
+        files["README.md"] = _handoff_readme(app_doc, pages, cols, counts, manifest, sql_counts)
+        return files
+
+    BUILDERS = {"website": build_website, "fullstack": build_fullstack, "plugin": build_plugin,
+                "handoff": build_handoff}
 
     # ---------------- job runner ----------------
 
@@ -480,8 +621,13 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
                 for path, content in files.items():
                     z.writestr(f"{root}/{path}", content)
                 asset_root = "frontend/public/" if kind == "fullstack" else ("site/" if kind == "website" else "")
-                for rel, data in bundler.files.items():
-                    z.writestr(f"{root}/{asset_root}{rel}", data)
+                if kind == "handoff":
+                    for rel, data in bundler.files.items():
+                        z.writestr(f"{root}/site/{rel}", data)
+                        z.writestr(f"{root}/app/frontend/public/{rel}", data)
+                else:
+                    for rel, data in bundler.files.items():
+                        z.writestr(f"{root}/{asset_root}{rel}", data)
             raw = buf.getvalue()
             path = f"{APP_NAME}/exports/{app_id}/{job_id}.zip"
             await asyncio.to_thread(put_object, path, raw, "application/zip")
@@ -507,7 +653,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
     async def start_export(app_id: str, kind: str = "website", user: dict = Depends(get_current_user)):
         app_doc = await get_user_app(app_id, user)
         if kind not in BUILDERS:
-            raise HTTPException(400, "kind must be website, fullstack or plugin")
+            raise HTTPException(400, "kind must be website, fullstack, plugin or handoff")
         job_id = _uid("exp")
         job = {"job_id": job_id, "app_id": app_id, "kind": kind, "status": "running", "stage": "queued",
                "detail": "Starting the export", "pct": 3, "by": user["user_id"], "created_at": _iso()}

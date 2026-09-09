@@ -6,6 +6,7 @@ import { Switch } from "@/components/ui/switch";
 import PreviewLinkCard from "@/components/PreviewLinkCard";
 import { EmbedCard, GithubCard } from "@/components/HandoffExtras";
 import ExportCards from "@/components/ExportCards";
+import SupabaseExportCard from "@/components/SupabaseExportCard";
 
 export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
   const [job, setJob] = useState(null);
@@ -48,6 +49,7 @@ export default function HandoffPanel({ appDoc, patch, apiRoot, setAppDoc }) {
   return (
     <div className="grid lg:grid-cols-2 gap-6">
       <ExportCards appDoc={appDoc} />
+      <SupabaseExportCard appDoc={appDoc} />
 
       {/* Source */}
       <div className="card-surface p-6">

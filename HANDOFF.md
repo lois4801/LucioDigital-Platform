@@ -6,7 +6,7 @@ Everything a new owner needs to run this platform on their own infrastructure. N
 
 | Layer | Tech | Notes |
 |---|---|---|
-| Frontend | React 19 (CRA/craco) + Tailwind + shadcn/ui | Static build, any CDN or nginx |
+| Frontend | React 19 + **Vite 6** + TypeScript-ready + Tailwind + shadcn/ui | `yarn build` → static `build/`, any CDN or nginx |
 | Backend | FastAPI (Python 3.11) | Single ASGI app, all routes under `/api` |
 | Database | MongoDB 7 | One database, `DB_NAME` |
 | Files | Object storage OR MongoDB GridFS | `STORAGE_DRIVER` |
@@ -57,7 +57,14 @@ Admin rights are granted to the address in `ADMIN_EMAIL`.
 
 ## 7. Data ownership
 
-- Every tenant has **Data export** → ZIP with all JSON records plus original files (`/api/apps/{id}/data-export`).
-- Site/app exports produce plain HTML/CSS/JS and full-stack starter packages — no runtime dependency on this platform.
+- **Client Handoff Bundle** (Handoff & Export tab → *Build Handoff Bundle*) → one zip with the static
+  site, the full-stack app code, all records as JSON, every uploaded file, a ready Supabase
+  `migration.sql`, `.env.example` and a written self-host guide.
+- **Supabase export** (same tab) → push a tenant straight into the client's own Supabase Postgres
+  (tables + rows + RLS), or download the `.sql` migration and run it themselves.
+- Every tenant also has **Data export** → ZIP with all JSON records plus original files
+  (`/api/apps/{id}/data-export`).
+- Site/app exports produce plain HTML/CSS/JS and full-stack starter packages — no runtime dependency
+  on this platform.
 
 See `DEPLOYMENT.md` for the step-by-step self-host run.
