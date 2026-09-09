@@ -145,10 +145,16 @@ export default function Landing() {
       <AnimatePresence>{leaving && <motion.div data-testid="demo-transition" className="fixed inset-0 z-[90] bg-[var(--bg)] flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><div className="flex items-center gap-3 text-sm text-[var(--mut)]"><span className="w-2 h-2 rounded-full bg-[var(--acc)] pulse-dot" /> Opening live demo…</div></motion.div>}</AnimatePresence>
       <AnimatePresence>{modal && <NicheModal s={modal.s} i={modal.i} onClose={() => setModal(null)} onStart={go} />}</AnimatePresence>
       {isAdmin && (
-        <button data-testid="landing-edit-mode-toggle" onClick={toggleEditMode}
-          className={`fixed bottom-6 left-6 z-[80] rounded-full px-4 py-2.5 text-xs font-semibold backdrop-blur-xl border shadow-2xl transition-colors ${editMode ? "bg-[var(--acc)] text-black border-transparent" : "bg-black/70 text-white/80 border-white/15 hover:text-white"}`}>
-          {editMode ? "Editing on · click to browse" : "Editing off · click to edit"}
-        </button>
+        <div className="fixed top-4 left-4 z-[80] flex items-center gap-2" data-testid="landing-admin-bar">
+          <button data-testid="landing-edit-mode-toggle" onClick={toggleEditMode}
+            className={`rounded-full px-3.5 py-2 text-[11px] font-semibold backdrop-blur-xl border shadow-2xl transition-colors ${editMode ? "bg-[var(--acc)] text-black border-transparent" : "bg-black/70 text-white/80 border-white/15 hover:text-white"}`}>
+            {editMode ? "Editing on · click to browse" : "Editing off · click to edit"}
+          </button>
+          <button data-testid="landing-admin-dashboard-btn" onClick={() => nav("/dashboard")}
+            className="rounded-full px-3.5 py-2 text-[11px] font-semibold backdrop-blur-xl bg-black/70 text-white/80 border border-white/15 hover:text-white shadow-2xl transition-colors">
+            Dashboard
+          </button>
+        </div>
       )}
       <div className="absolute inset-0 grid-bg pointer-events-none" />
       <div className="hero-glow pointer-events-none absolute -top-40 left-1/2 w-[900px] h-[500px] rounded-full bg-[var(--acc)]/12 blur-[140px]" />
@@ -165,33 +171,21 @@ export default function Landing() {
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
               {activeNav === l && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-white/10" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></a>
           ))}
-          {user ? (
-            <button data-testid="nav-open-dashboard" onClick={() => nav("/dashboard")} className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Dashboard</button>
-          ) : (
-            <>
-              <Link data-testid="nav-login" to="/login" className="px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
-              <Link data-testid="nav-register" to="/register" className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Start free</Link>
-            </>
-          )}
+          {/* Identical for owners, users and visitors — admin controls live in the top-left bar. */}
+          <Link data-testid="nav-login" to="/login" className="px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
+          <Link data-testid="nav-register" to="/register" className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Start free</Link>
         </nav>
       </header>
 
-      {/* Always-visible sign-in / dashboard button + cursor-effect picker for every visitor */}
+      {/* Every visitor gets the same floating controls */}
       <div className="fixed bottom-5 left-5 z-[60] flex flex-col items-start gap-2" data-testid="landing-floating-actions">
         <div className="rounded-full backdrop-blur-xl bg-[var(--bg)]/85 border border-white/10 shadow-2xl p-1">
           <CursorFXPicker up />
         </div>
-        {user ? (
-          <button data-testid="floating-dashboard-btn" onClick={() => nav("/dashboard")}
-            className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
-            <LogIn size={14} /> Open dashboard
-          </button>
-        ) : (
-          <Link data-testid="floating-signin-btn" to="/login"
-            className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
-            <LogIn size={14} /> Sign in
-          </Link>
-        )}
+        <Link data-testid="floating-signin-btn" to="/login"
+          className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
+          <LogIn size={14} /> Sign in
+        </Link>
       </div>
 
       {/* Hero */}
@@ -206,7 +200,7 @@ export default function Landing() {
             <Tx k="hero_sub" f="Spin up tenants, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain." />
           </motion.p>
           <motion.div variants={fade} custom={3} className="mt-9 flex flex-wrap justify-center gap-3">
-            <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide flex items-center gap-2">{user ? <Tx k="hero_cta_user" f="Open dashboard" /> : <Tx k="hero_cta" f="Start building free" />} <ArrowRight size={16} /></button>
+            <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide flex items-center gap-2"><Tx k="hero_cta" f="Start building free" /> <ArrowRight size={16} /></button>
             <button data-testid="hero-cta-demo" onClick={admin ? undefined : () => nav("/login")} className="btn-ghost btn-glow flex items-center gap-2"><Play size={14} /> <Tx k="hero_cta2" f="Watch the demo" /></button>
           </motion.div>
         </motion.div>

@@ -290,6 +290,18 @@ FastAPI/Mongo. No feature or UI changes.
   `floating-signin-btn` / `preview-signin-btn`) plus a floating **cursor-effects picker** for every
   visitor (11 effects, opens upward, remembered per browser; signed-in users also sync server-side).
 
+## June 2026 — Owner/visitor landing parity + dashboard text editing
+- The landing page now renders **identically for owners, users and visitors**: the nav always shows
+  "Sign in" + "Start free" (the signed-in "Dashboard" pill was removed), the hero CTA always reads
+  `hero_cta`, and the floating bottom-left stack is always the cursor picker + "Sign in".
+- Admin-only controls moved out of the way into a compact top-left bar (`landing-admin-bar`,
+  `fixed top-4 left-4`): the `landing-edit-mode-toggle` ("Editing off · click to edit") plus a
+  `landing-admin-dashboard-btn` shortcut. Nothing else on the page betrays that an admin is viewing it.
+- **`components/LandingTextEditor.jsx`** — every landing text is now editable from inside the dashboard
+  (`nav-landing-text-btn` → modal with search, 15 fields, batched save via `PUT /admin/landing`,
+  testids `landing-text-input-<key>` / `landing-text-save-btn`), so the owner never has to leave the
+  dashboard to fix copy. Inline click-to-edit on the landing page still works as before.
+
 ## Remaining roadmap (updated)
 - P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today
 - P1: Real ElevenLabs voice + real GitHub push (waiting on user PATs)

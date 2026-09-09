@@ -9,6 +9,7 @@ import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive,
 import ShowcaseManager from "@/components/ShowcaseManager";
 import RolloutModal from "@/components/RolloutModal";
 import PushToOnePicker from "@/components/PushToOnePicker";
+import LandingTextEditor from "@/components/LandingTextEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
@@ -48,6 +49,7 @@ export default function Dashboard() {
   const [rolloutTarget, setRolloutTarget] = useState(null);
   const [pendingMap, setPendingMap] = useState({});
   const [staging, setStaging] = useState(null);
+  const [landingEditor, setLandingEditor] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
 
@@ -206,6 +208,7 @@ export default function Dashboard() {
             {legacyCount > 0 && <button data-testid="bulk-upgrade-design-btn" onClick={bulkUpgrade} disabled={upBusy}
               className="chip chip-maint cursor-pointer hover:!text-white disabled:opacity-50">{upBusy ? "Upgrading…" : `Upgrade ${legacyCount} legacy site${legacyCount === 1 ? "" : "s"}`}</button>}
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
+            <button data-testid="nav-landing-text-btn" onClick={() => setLandingEditor(true)} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Edit landing text</button>
             <button data-testid="nav-rollout-history-btn" onClick={() => nav("/rollout-history")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Rollout History</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
             <label data-testid="import-plugin-btn" className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex cursor-pointer">
@@ -572,6 +575,7 @@ export default function Dashboard() {
           </section>
         )}
       </main>
+      <LandingTextEditor open={landingEditor} onClose={() => setLandingEditor(false)} />
       <RolloutModal open={rolloutOpen} onClose={() => { setRolloutOpen(false); setRolloutTarget(null); }}
         targetAppId={rolloutTarget?.app_id || null} targetName={rolloutTarget?.name || ""} />
     </div>
