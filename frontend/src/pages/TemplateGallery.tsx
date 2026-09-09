@@ -330,7 +330,7 @@ export default function TemplateGallery({ clientMode = false }) {
       {tplPush && (
         <TemplatePushModal open initialScope={tplPush.scope || "all"} targetKey={tplPush.targetKey || null}
           staging={!!tplPush.staging}
-          onClose={() => setTplPush(null)} onDone={() => { loadStates(); load(); }} />
+          onClose={() => setTplPush(null)} onDone={() => loadStates()} />
       )}
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>

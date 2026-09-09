@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiError } from "@/lib/api";
@@ -7,6 +7,7 @@ import { Layers, Mail, Lock, ChevronRight } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
 import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
 import { burstCursorFX, swatchOf } from "@/lib/cursorEffects";
+import { useAmbientCursorFX } from "@/hooks/useAmbientCursorFX";
 
 const SAVED_EMAIL_KEY = "lt_saved_email";
 
@@ -14,6 +15,9 @@ export default function Login() {
   const { login } = useAuth();
   const { effect } = useCursorFX();
   const [c1, c2] = swatchOf(effect);
+  const panel = useRef(null);
+  // Every auth control (Google/Microsoft/Yahoo, magic link, inputs, Sign in) keeps emitting the chosen effect.
+  useAmbientCursorFX(panel, "button:not([data-fx-skip] *), input:not([data-fx-skip] *)", effect, { every: 200, per: 1 });
   const nav = useNavigate();
   // The form reacts with the chosen cursor effect: a small themed burst at the focused field.
   const burstAt = (el, n = 6) => {
@@ -73,14 +77,14 @@ export default function Login() {
       </div>
 
       <div className="flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md fade-in">
+        <div className="w-full max-w-md fade-in" ref={panel}>
           <div className="flex items-start justify-between gap-4">
             <div>
               <div className="overline mb-3">Sign in</div>
               <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
               <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
             </div>
-            <div className="shrink-0" data-testid="login-cursor-picker">
+            <div className="shrink-0" data-testid="login-cursor-picker" data-fx-skip>
               <CursorFXPicker />
             </div>
           </div>

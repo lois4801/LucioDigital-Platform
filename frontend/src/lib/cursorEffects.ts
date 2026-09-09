@@ -28,6 +28,12 @@ export function burstCursorFX(x, y, n = 8) {
   emitter(x, y, Math.max(1, Math.min(14, n)));
 }
 
+// Unthrottled single-point emission — used by the ambient auth-form emitters.
+export function emitCursorFX(x, y, n = 1) {
+  if (emitter) emitter(x, y, Math.max(1, Math.min(6, n)));
+}
+export function cursorFXActive() { return !!emitter; }
+
 const rand = (a, b) => a + Math.random() * (b - a);
 const TAU = Math.PI * 2;
 
