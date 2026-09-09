@@ -301,6 +301,8 @@ FastAPI/Mongo. No feature or UI changes.
   (`nav-landing-text-btn` → modal with search, 15 fields, batched save via `PUT /admin/landing`,
   testids `landing-text-input-<key>` / `landing-text-save-btn`), so the owner never has to leave the
   dashboard to fix copy. Inline click-to-edit on the landing page still works as before.
+- Dashboard header also has a **View landing page** button (`nav-view-landing-btn`) and the
+  Lois-Tech / Agency Workspace logo is now clickable (`dashboard-logo-home-btn`) — both `nav("/")`.
 
 ## Remaining roadmap (updated)
 - P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today

@@ -5,7 +5,7 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical, Loader2 } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical, Loader2, ExternalLink } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import RolloutModal from "@/components/RolloutModal";
 import PushToOnePicker from "@/components/PushToOnePicker";
@@ -195,19 +195,24 @@ export default function Dashboard() {
       {/* Top bar */}
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)]">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
+          <button data-testid="dashboard-logo-home-btn" onClick={() => nav("/")} title="View your landing page"
+            className="flex items-center gap-3 group cursor-pointer text-left">
+            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div>
               <div className="font-display font-semibold tracking-tight text-lg leading-none">Lois-<span className="text-[var(--acc)]">Tech</span></div>
               <div className="overline mt-1">Agency Workspace</div>
             </div>
-          </div>
+          </button>
           <div className="flex items-center gap-2">
             {legacyCount > 0 && <button data-testid="bulk-upgrade-design-btn" onClick={bulkUpgrade} disabled={upBusy}
               className="chip chip-maint cursor-pointer hover:!text-white disabled:opacity-50">{upBusy ? "Upgrading…" : `Upgrade ${legacyCount} legacy site${legacyCount === 1 ? "" : "s"}`}</button>}
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
+            <button data-testid="nav-view-landing-btn" onClick={() => nav("/")} title="Open your landing page"
+              className="btn-ghost text-sm !py-2 !px-4 inline-flex items-center gap-2">
+              <ExternalLink size={13} /> <span className="hidden sm:inline">View landing page</span>
+            </button>
             <button data-testid="nav-landing-text-btn" onClick={() => setLandingEditor(true)} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Edit landing text</button>
             <button data-testid="nav-rollout-history-btn" onClick={() => nav("/rollout-history")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Rollout History</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
