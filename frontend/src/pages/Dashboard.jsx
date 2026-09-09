@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { CursorFXPicker } from "@/components/CursorFX";
 import { pollImport, ImportProgress, ImportReport } from "@/components/builder/WebImport";
 import { LockStateBadge } from "@/components/locks/LockContext";
+import SkinToggle from "@/components/SkinToggle";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -206,6 +207,7 @@ export default function Dashboard() {
             </label>
             <button data-testid="nav-portal-btn" onClick={() => nav("/portal")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Client Portal</button>
             <CursorFXPicker />
+            <SkinToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button data-testid="nav-notifications-btn" className="relative w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">
@@ -407,6 +409,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
                       <span className="chip">{a.industry}</span>
+                      {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}

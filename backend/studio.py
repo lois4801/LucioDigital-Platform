@@ -10,8 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException, Depends, Response
 from pydantic import BaseModel
-from emergentintegrations.llm.chat import LlmChat, UserMessage
-from emergentintegrations.llm.openai import OpenAITextToSpeech
+from llm_provider import get_chat, UserMessage, llm_available, generate_speech
 
 logger = logging.getLogger("agency.studio")
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
@@ -129,7 +128,7 @@ def _parse_json(text: str) -> Any:
 async def _claude(system: str, prompt: str, session: str, app_id: str = None, feature: str = "site_generation") -> str:
     from ai_models import resolve_for
     provider, model = await resolve_for(app_id, feature)
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session, system_message=system).with_model(provider, model)
+    chat = get_chat(provider, model, system, session)
     reply = await chat.send_message(UserMessage(text=prompt))
     return reply if isinstance(reply, str) else str(reply)
 
@@ -504,7 +503,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
                         return b"".join(ElevenLabs(api_key=eleven_key).text_to_speech.convert(text=text, voice_id="21m00Tcm4TlvDq8ikWAM", model_id="eleven_multilingual_v2"))
                     audio = await asyncio.to_thread(_el)
                 else:
-                    audio = await OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY).generate_speech(text=text, model="tts-1", voice=voice)
+                    audio = await generate_speech(text, voice=voice)
             except Exception as e:
                 raise HTTPException(500, f"TTS failed: {str(e)[:120]}")
             await db.tts_cache.insert_one({"key": key, "audio_b64": base64.b64encode(audio).decode(), "created_at": now_iso()})

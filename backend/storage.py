@@ -8,9 +8,22 @@ logger = logging.getLogger("storage")
 STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
 STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
 EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+# "proxy" = managed object store (default), "gridfs" = store bytes in MongoDB (self-hosted handoff).
+STORAGE_DRIVER = (os.environ.get("STORAGE_DRIVER") or "proxy").strip().lower()
 APP_NAME = "omnistack"
 MIME = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "svg": "image/svg+xml", "webp": "image/webp", "gif": "image/gif"}
 storage_key = None
+_gridfs = None
+
+
+def _fs():
+    """GridFS bucket on the same MongoDB the app already uses — no external object store needed."""
+    global _gridfs
+    if _gridfs is None:
+        import gridfs
+        from pymongo import MongoClient
+        _gridfs = gridfs.GridFS(MongoClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]], collection="assets")
+    return _gridfs
 
 
 def init_storage(force=False):
@@ -24,6 +37,12 @@ def init_storage(force=False):
 
 
 def put_object(path, data, content_type):
+    if STORAGE_DRIVER == "gridfs":
+        fs = _fs()
+        for old in fs.find({"filename": path}):
+            fs.delete(old._id)
+        fs.put(data, filename=path, contentType=content_type)
+        return {"path": path, "size": len(data)}
     r = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage(), "Content-Type": content_type}, data=data, timeout=120)
     if r.status_code == 404:
         r = requests.put(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage(force=True), "Content-Type": content_type}, data=data, timeout=120)
@@ -32,6 +51,11 @@ def put_object(path, data, content_type):
 
 
 def get_object(path):
+    if STORAGE_DRIVER == "gridfs":
+        doc = _fs().find_one({"filename": path})
+        if not doc:
+            raise HTTPException(404, "File not found")
+        return doc.read(), getattr(doc, "contentType", None) or "application/octet-stream"
     r = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage()}, timeout=60)
     if r.status_code == 404:
         r = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": init_storage(force=True)}, timeout=60)

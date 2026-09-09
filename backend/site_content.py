@@ -81,6 +81,7 @@ def theme_for(n, key=None):
         return {"mode": look["mode"], "primary": look["primary"], "secondary": look["secondary"], "bg": look["bg"], "surface": look["surface"],
                 "fg": look["fg"], "muted": look["muted"], "border": look["border"], "font_heading": look["font_heading"], "font_body": look["font_body"],
                 "radius": look["radius"], "site_preset": look["preset"], "hero_variant": look["hero"], "motion": True,
+                "site_skin": "studio" if look.get("studio") else "classic",
                 "cursor": look["mode"] == "dark", "glass": look["glass"], "grain": look["grain"], "design_v2": True, "premium_v": 3, "look_v": LOOK_V}
     m = MOODS[n["mood"]]
     return {"mode": "dark", "primary": n["primary"], "secondary": n["secondary"], "bg": m["bg"], "surface": m["surface"], "fg": "#F8FAFC", "muted": "#A1A7B8", "border": m["border"],

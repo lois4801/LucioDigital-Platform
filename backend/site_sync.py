@@ -10,7 +10,7 @@ from typing import Optional
 from fastapi import HTTPException, Depends
 from pydantic import BaseModel
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from llm_provider import get_chat, UserMessage, llm_available
 from studio import _parse_json, _blocks_text
 
 logger = logging.getLogger(__name__)
@@ -45,7 +45,7 @@ SYSTEM = (
 async def _claude(system: str, prompt: str, session: str, app_id: str = None, feature: str = "site_generation") -> str:
     from ai_models import resolve_for
     provider, model = await resolve_for(app_id, feature)
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session, system_message=system).with_model(provider, model)
+    chat = get_chat(provider, model, system, session)
     reply = await chat.send_message(UserMessage(text=prompt))
     return reply if isinstance(reply, str) else str(reply)
 

@@ -1,0 +1,37 @@
+{
+  "summary": "Iter64 — Studio 2026 platform skin + 16-template Studio pack + per-tenant Site Studio toggle. Backend: 27/28 pytest cases pass in /app/backend/tests/test_iter64_studio_pack.py (GET /public/templates returns exactly 32 templates, 16 flagged studio:true, 17 categories; GET /public/templates/{key} returns 4 pages and theme.site_skin=='studio' for every one of the 16 new keys — veterinary/dental/accounting/landscaping/photography/automotive/beauty/insurance/pet_grooming/hvac_plumbing/coworking/wellness/cleaning/music_school/nonprofit/architecture; distinct palette+font combos on the new pack (>=12 unique of 16); PUT /me/ui-skin echoes {skin}, normalises invalid to classic, persists on user doc verified via GET /auth/me; POST /apps with template_key=veterinary builds site with theme.site_skin=='studio' and >=4 pages; POST /apps with template_key=hospitality stays site_skin=='classic'). Frontend (live preview URL, admin login): SkinToggle flips <html data-skin> classic⇄studio instantly; getComputedStyle confirms .card-surface bg==rgb(255,255,255), border==rgb(228,228,231), .btn-primary bg==rgb(79,70,229); persists across reload and across /dashboard, /leads, /templates; Template Gallery renders 32 cards, shows exactly 16 template-studio-badge-{key} chips, header reads '32 designs' (16 after New design filter), gallery-cat-new-design filter narrows to exactly 16 studio cards; ZERO pageerrors, ZERO console errors across the flow. ONE CRITICAL BACKEND BUG FOUND: PUT /api/apps/{id}/theme silently drops site_skin — _clean_theme in /app/backend/studio.py filters any key not in DEFAULT_THEME, and site_skin isn't in DEFAULT_THEME. Round-trip proof: PUT theme with site_skin='studio' returns 200, subsequent GET /apps/{id}/theme has no site_skin key. This breaks the acceptance criterion 'per-tenant Studio toggle on OLD templates persists after save + reload'. Fix is one line.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "PUT /api/apps/{app_id}/theme", "issue": "site_skin field is silently dropped by _clean_theme() (studio.py L67-82) because it is not a key in DEFAULT_THEME (studio.py L29). Frontend Panels.jsx sends theme.site_skin='studio' via this endpoint; the PUT returns 200 with the sanitised theme but site_skin is missing, so the per-tenant Studio toggle on ORIGINAL templates never persists. Fix: add 'site_skin': 'classic' to DEFAULT_THEME in /app/backend/studio.py, or whitelist it explicitly in _clean_theme.", "priority": "CRITICAL"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Per-tenant Site skin toggle on OLD templates (Site Mode → theme panel → site-skin-studio)", "issue": "Click flips the UI state and the network request returns 200, but on reload the site reverts to Classic because the backend PUT /apps/{id}/theme silently strips site_skin. Same root cause as backend critical bug — nothing wrong with the frontend code (Panels.jsx correctly emits theme.site_skin).", "affected_selectors": ["site-skin-studio", "site-skin-classic"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter64_studio_pack.py",
+    "/app/test_reports/pytest/iter64.xml"
+  ],
+  "action_items": [
+    "Add 'site_skin': 'classic' to DEFAULT_THEME in /app/backend/studio.py line 29 so _clean_theme keeps the field on PUT /apps/{id}/theme. This unblocks the acceptance criterion 'per-tenant site design toggle persists on OLD templates after save + reload and on the public /p/{token} site'."
+  ],
+  "critical_code_review_comments": [
+    "studio_pack.install() is idempotent (NICHES.setdefault + `if key in LOOKS: continue`) — safe against double import.",
+    "PUT /api/me/ui-skin correctly normalises anything other than 'studio' to 'classic'; body allows arbitrary strings which is fine because of the normalisation.",
+    "templates_gallery.CATEGORY dict adds all 16 new keys → 17 total gallery categories, matches spec exactly.",
+    "The one-line _clean_theme whitelist is the sole reason the per-tenant Studio toggle regresses. Everything else is wired correctly end-to-end (frontend applies .sk-studio via modeCls; tenant-studio.css is loaded; new tenants from studio templates get theme.site_skin='studio' via site_content.theme_for)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter64_studio_pack.py (new)"],
+  "success_rate": {"backend": "96% (27/28 pytest — the 1 failure documents the critical bug)", "frontend": "100% (skin toggle, persistence, gallery count/badges/filter all pass; 0 pageerrors, 0 console errors)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! — admin login worked.",
+  "seed_data_creation": "Test suite creates two throwaway tenants (TEST_iter64_vet from studio 'veterinary' template, TEST_iter64_hosp from classic 'hospitality') and purges them in module teardown via archive + DELETE. Did NOT touch app_d8a1146c7426 or any pre-existing tenant.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend suite /app/backend/tests/test_iter64_studio_pack.py takes ~5s and asserts 32 templates / 16 studio / 17 categories / 4 pages per new key / new-tenant theme.site_skin. It also asserts the per-tenant toggle round-trips through PUT /apps/{id}/theme — this is the failing test that pins the bug. Once the main agent adds site_skin to DEFAULT_THEME in studio.py:29, all 28 should pass. Frontend evidence for Studio skin computed styles is documented in the playwright run: rgb(255,255,255)/rgb(228,228,231) card, rgb(79,70,229) button — no need to re-verify unless CSS tokens change.",
+  "rca of the issue": "The per-tenant 'Studio 2026' site skin toggle on ORIGINAL templates was intended to persist theme.site_skin on the tenant document via PUT /api/apps/{id}/theme. The frontend (Panels.jsx L33) correctly emits `{...theme, site_skin: 'studio'}` and studio.py:181 PUT /apps/{id}/theme accepts a free-form Dict[str, Any]. However, before writing it whitelists the payload through `_clean_theme` (studio.py:67-82) which keeps only keys present in DEFAULT_THEME (studio.py:29). DEFAULT_THEME lists mode, primary, secondary, bg, surface, fg, muted, border, font_heading, font_body, radius, motion, cursor, cursor_effect, cursor_density, cursor_speed, glass, grain, design_v2 — NO site_skin. So the field is silently dropped, the endpoint returns 200 with the sanitised theme, the DB row never gains site_skin, and on reload the tenant reverts to Classic. Reproduction: create a tenant from an original template (e.g. template_key=hospitality) → GET /apps/{id}/theme → set theme.site_skin='studio' → PUT /apps/{id}/theme → GET /apps/{id}/theme → site_skin key absent. Fix: change /app/backend/studio.py:29 to include `'site_skin': 'classic'` in DEFAULT_THEME. Alternative: extend _clean_theme to also allow 'site_skin' when value in {'classic','studio'}. Note this does not affect NEW-template tenants because site_content.theme_for() writes site_skin directly (bypassing _clean_theme) at tenant creation."
+}

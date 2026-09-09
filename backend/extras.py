@@ -19,7 +19,9 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger("agency.extras")
 
-EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+from llm_provider import image_available, video_available
+
+EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "") or os.environ.get("FAL_KEY", "")
 # Fal Universal Key supports queue inference through Emergent proxy, not Platform APIs.
 INTEGRATION_PROXY_BASE = os.environ.get("INTEGRATION_PROXY_URL", "https://integrations.emergentagent.com").rstrip("/")
 FAL_CONTROL = f"{INTEGRATION_PROXY_BASE}/api/v1/fal"
@@ -30,7 +32,7 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 TAX_MODE = "full"
 
-DNS_CNAME_TARGET = "tenants.luciostudio.app"
+DNS_CNAME_TARGET = os.environ.get("DNS_CNAME_TARGET", "tenants.luciostudio.app")
 
 
 def now_iso():
@@ -247,7 +249,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/media/config")
     async def media_config(user: dict = Depends(get_current_user)):
         key = await _eleven_key()
-        return {"elevenlabs": bool(key), "images": bool(EMERGENT_LLM_KEY), "video": bool(EMERGENT_LLM_KEY),
+        return {"elevenlabs": bool(key), "images": image_available(), "video": video_available(),
                 "video_model": FAL_VIDEO_ENDPOINT, "image_model": "gpt-image-1"}
 
     @api.post("/media/config/elevenlabs")
@@ -293,13 +295,12 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.post("/apps/{app_id}/media/image")
     async def gen_image(app_id: str, body: ImageIn, user: dict = Depends(get_current_user)):
         await require_ai_access(app_id, user)
-        if not EMERGENT_LLM_KEY:
-            raise HTTPException(500, "LLM key missing")
-        from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-        gen = OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY)
+        if not image_available():
+            raise HTTPException(500, "Image generation key missing")
+        from llm_provider import generate_image
         prompt = f"{body.prompt}. High-converting {body.style} visual, premium, clean composition, no text overlays."
         try:
-            images = await gen.generate_images(prompt=prompt, model="gpt-image-1", number_of_images=1)
+            images = await generate_image(prompt)
         except Exception as e:
             logger.exception("image gen failed")
             raise HTTPException(500, f"Image generation failed: {str(e)[:160]}")
@@ -333,8 +334,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.post("/apps/{app_id}/media/video")
     async def gen_video(app_id: str, body: VideoIn, user: dict = Depends(get_current_user)):
         await require_ai_access(app_id, user)
-        if not EMERGENT_LLM_KEY:
-            raise HTTPException(500, "LLM key missing")
+        if not video_available():
+            raise HTTPException(500, "Video generation key missing")
         task = {"task_id": uid("task"), "app_id": app_id, "user_id": user["user_id"], "kind": "video",
                 "status": "running", "prompt": body.prompt, "created_at": now_iso()}
         await db.media_tasks.insert_one(dict(task))

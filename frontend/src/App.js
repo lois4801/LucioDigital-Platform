@@ -21,8 +21,8 @@ import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
 import Portal from "@/pages/Portal";
 import Leads from "@/pages/Leads";
+import { applySkin, getSkin } from "@/components/SkinToggle";
 import TemplateGallery from "@/pages/TemplateGallery";
-
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -36,8 +36,8 @@ function ProtectedRoute({ children }) {
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
   return children;
 }
-
 function AppRouter() {
+  useEffect(() => { applySkin(getSkin()); }, []);
   const location = useLocation();
   // Detect session_id synchronously (reactive) to prevent race
   if (location.hash?.includes("session_id=")) {

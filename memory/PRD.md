@@ -140,3 +140,35 @@ ElevenLabs → External DB sync → Delete-my-account → GitHub push (PAT on ho
   `overflow-x-auto` with `min-w-[1040px]`, no hidden columns, full emails, `NN/100` score.
 - Bug fixed by the testing agent and kept: `site_content._sec()` crashed on the 2-tuple `dining`
   section, which 500'd the hospitality template preview.
+
+
+## June 2026 — P0 Handoff-readiness pass (iter65, backend 14/14, frontend smoke clean)
+Goal: the platform can be handed to a client and self-hosted with **their** keys, without moving off
+FastAPI/Mongo. No feature or UI changes.
+- **Single LLM seam — `backend/llm_provider.py` (NEW).** Everything AI now goes through it:
+  `get_chat(provider, model, system, session_id)` (async `send_message` / `stream_message` with local
+  `UserMessage`/`TextDelta`/`StreamDone` dataclasses), `generate_image()`, `generate_speech()`,
+  `llm_available()`, `image_available()`, `video_available()`, `llm_mode()`, `status()`.
+  - `emergent` mode when `EMERGENT_LLM_KEY` is set (unchanged behaviour, this preview).
+  - `byo` mode when only `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` exist → litellm for
+    text, OpenAI SDK for images + TTS, `FAL_KEY` for video. `LLM_MODEL_OVERRIDE` pins a model when the
+    client's account doesn't have the catalogue ids; provider substitutions log a warning.
+  - `none` mode: app runs, AI endpoints return a clear "no LLM key configured" error.
+  - Refactored call sites: `server.py` (/ai/edit), `ai_models.py` (run_text + /ai/seo),
+    `studio.py` (_claude + TTS), `site_sync.py`, `web_import.py`, `extras.py` (media config/image/video),
+    `growth.py` (blog covers), `inbox.py`. No direct `emergentintegrations` imports remain outside the seam.
+- **Storage driver seam:** `storage.py` `STORAGE_DRIVER` = `proxy` (default, Emergent object storage) or
+  `gridfs` (uploads stored in the client's own MongoDB; covered by `mongodump`). Round trip verified.
+- **De-hardcoding:** `DNS_CNAME_TARGET` now env-driven (docs flag it as must-override on handoff).
+  Google OAuth broker URL intentionally left untouched (breaking it breaks auth); docs explain the
+  JWT-only fallback.
+- **New files:** `backend/.env.example`, `frontend/.env.example`, `backend/Dockerfile`,
+  `frontend/Dockerfile` + `frontend/nginx.conf` (SPA fallback + `/api` proxy), `docker-compose.yml`
+  (mongo + backend + frontend), `.dockerignore`s, `HANDOFF.md` (stack, config, BYO keys, auth, data
+  ownership), `DEPLOYMENT.md` (compose + manual self-host, health checks, first run, backups).
+
+## Remaining roadmap
+- P1: Vite + TypeScript conversion of the frontend (~119 files)
+- P1: Supabase migration (Auth + Postgres + Storage + RLS) **or** Supabase as an optional export target
+- P1: Real ElevenLabs voice + real GitHub push (both waiting on user PATs)
+- P2: PayPal integration · P2: expose member "delete own account" in profile

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 logger = logging.getLogger("agency.growth")
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "")
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY", "")
+from llm_provider import image_available  # noqa: E402
 
 
 def now():
@@ -98,10 +99,10 @@ def register(api, db, get_current_user, get_user_app, log_activity, create_acces
         except Exception as e:
             raise HTTPException(500, f"Writing failed: {str(e)[:140]}")
         cover = ""
-        if body.with_cover and EMERGENT_LLM_KEY:
+        if body.with_cover and image_available():
             try:
-                from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration
-                imgs = await OpenAIImageGeneration(api_key=EMERGENT_LLM_KEY).generate_images(prompt=f"{post.get('cover_prompt') or body.topic}. Editorial blog cover, premium, natural light, no text.", model="gpt-image-1", number_of_images=1)
+                from llm_provider import generate_image
+                imgs = await generate_image(f"{post.get('cover_prompt') or body.topic}. Editorial blog cover, premium, natural light, no text.")
                 if imgs:
                     cover = "data:image/png;base64," + base64.b64encode(imgs[0]).decode()
             except Exception:

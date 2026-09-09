@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from fastapi import HTTPException, Depends
 from pydantic import BaseModel
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from llm_provider import get_chat, UserMessage
 from storage import MIME, put_object
 from files_lib import usage_for, APP_NAME
 from studio import _parse_json, _ensure_ids, _clean_theme, BLOCK_SCHEMA, DEFAULT_THEME
@@ -412,7 +412,7 @@ async def save_images(db, app_id: str, urls: List[str], quota_mb: int, on: Optio
 
 
 async def _claude(system: str, prompt: str, session: str) -> str:
-    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=session, system_message=system).with_model("anthropic", "claude-sonnet-5")
+    chat = get_chat("anthropic", "claude-sonnet-5", system, session)
     reply = await chat.send_message(UserMessage(text=prompt))
     return reply if isinstance(reply, str) else str(reply)
 

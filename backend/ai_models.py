@@ -71,10 +71,9 @@ def resolve_sync(app_id: Optional[str] = None, feature: str = "") -> Tuple[str, 
 
 async def run_text(app_id: Optional[str], feature: str, system: str, prompt: str, session_id: str) -> Tuple[str, str]:
     """One-shot text generation on whichever model this tenant/feature resolves to."""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage, TextDelta, StreamDone
+    from llm_provider import get_chat, UserMessage, TextDelta, StreamDone
     provider, model = await resolve_for(app_id, feature)
-    chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=session_id,
-                   system_message=system).with_model(provider, model)
+    chat = get_chat(provider, model, system, session_id)
     reply = ""
     async for ev in chat.stream_message(UserMessage(text=prompt)):
         if isinstance(ev, TextDelta):
@@ -206,22 +205,21 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def write_seo(app_id: str, user: dict = Depends(get_current_user)):
         """Gemini writes SEO title + meta description for every page, from its real content."""
         doc = await get_user_app(app_id, user)
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        from llm_provider import get_chat, UserMessage, TextDelta, StreamDone
         provider, model = await resolve_model(db, app_id, "seo")
         pages = await db.pages.find({"app_id": app_id}, {"_id": 0, "page_id": 1, "name": 1, "slug": 1, "blocks": 1}).to_list(60)
         out = []
         for pg in pages:
             text = " ".join(str(v)[:160] for b in (pg.get("blocks") or [])[:6]
                             for v in (b.get("props") or {}).values() if isinstance(v, str))[:1500]
-            chat = LlmChat(api_key=os.environ["EMERGENT_LLM_KEY"], session_id=f"seo-{app_id}-{pg['page_id']}",
-                           system_message=("You write SEO metadata. Reply with exactly two lines: "
-                                           "TITLE: <max 60 chars>\nDESCRIPTION: <max 155 chars>. No other text.")
-                           ).with_model(provider, model)
+            chat = get_chat(provider, model,
+                            ("You write SEO metadata. Reply with exactly two lines: "
+                             "TITLE: <max 60 chars>\nDESCRIPTION: <max 155 chars>. No other text."),
+                            f"seo-{app_id}-{pg['page_id']}")
             try:
                 reply = ""
                 async for ev in chat.stream_message(UserMessage(
                         text=f"Business: {doc.get('name')} ({doc.get('industry')}). Page: {pg.get('name')} {pg.get('slug')}.\n\n{text}")):
-                    from emergentintegrations.llm.chat import TextDelta, StreamDone
                     if isinstance(ev, TextDelta):
                         reply += ev.content
                     elif isinstance(ev, StreamDone):

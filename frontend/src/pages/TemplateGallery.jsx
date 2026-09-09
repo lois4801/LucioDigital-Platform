@@ -72,6 +72,7 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent pointer-events-none" />
         <div className="absolute top-3 left-3 flex gap-1.5">
+          {t.studio && <span data-testid={`template-studio-badge-${t.key}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
           <span className="chip">{t.category}</span>
           <span className="chip">{t.mode === "light" ? "Light" : "Dark"}</span>
         </div>
@@ -149,7 +150,7 @@ export default function TemplateGallery({ clientMode = false }) {
     return () => { stop = true; };
   }, [list]);
 
-  const shown = useMemo(() => cat === "All" ? list : list.filter(t => t.category === cat), [list, cat]);
+  const shown = useMemo(() => cat === "All" ? list : cat === "New design" ? list.filter(t => t.studio) : list.filter(t => t.category === cat), [list, cat]);
 
   function openFull(t) {
     const d = details[t.key];
@@ -211,7 +212,7 @@ export default function TemplateGallery({ clientMode = false }) {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
         <div>
           {!clientMode && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
-          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : "Template gallery · 16 designs"}</div>
+          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}</div>
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
           <p className="text-[var(--mut)] mt-2 max-w-2xl text-sm">{clientMode
             ? "Browse every design side by side, open any one full screen to scroll the whole site, then send your pick to the team."
@@ -223,7 +224,7 @@ export default function TemplateGallery({ clientMode = false }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-[var(--line)] pb-4">
-        {["All", ...cats].map(c => (
+        {["All", "New design", ...cats].map(c => (
           <button key={c} data-testid={`gallery-cat-${c.toLowerCase().replace(/\s+/g, "-")}`} onClick={() => setCat(c)}
             className={`chip cursor-pointer ${cat === c ? "chip-active" : ""}`}>{c}</button>
         ))}

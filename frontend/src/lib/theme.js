@@ -33,7 +33,7 @@ const LIGHT = { bg: "#FFFFFF", surface: "#F5F5F0", fg: "#111111", muted: "#55555
 const isDarkHex = (h) => /^#[0-9a-f]{6}$/i.test(h || "") && parseInt(h.slice(1, 3), 16) * 0.299 + parseInt(h.slice(3, 5), 16) * 0.587 + parseInt(h.slice(5, 7), 16) * 0.114 < 128;
 
 export const isV2 = (t) => !!(t && t.design_v2);
-export const modeCls = (t) => `tmode-${(t?.mode === "light" ? "light" : "dark")}${t?.site_preset ? ` pr-site-${t.site_preset}` : ""}`;
+export const modeCls = (t) => `tmode-${(t?.mode === "light" ? "light" : "dark")}${t?.site_preset ? ` pr-site-${t.site_preset}` : ""}${t?.site_skin === "studio" ? " sk-studio" : ""}`;
 
 export function themeVars(t) {
   const th = { ...DEFAULT_THEME, ...(t || {}) };

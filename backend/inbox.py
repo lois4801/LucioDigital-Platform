@@ -97,7 +97,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     async def score_message(message_id: str) -> Optional[dict]:
         """AI lead scoring 0-100 (intent, budget signals, urgency, fit)."""
         msg = await db.messages.find_one({"message_id": message_id}, {"_id": 0})
-        if not msg or not os.environ.get("EMERGENT_LLM_KEY"):
+        from llm_provider import llm_available
+        if not msg or not llm_available():
             return None
         try:
             from studio import _claude, _parse_json

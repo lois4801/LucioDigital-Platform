@@ -24,7 +24,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
 
 # LLM
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+from llm_provider import get_chat, UserMessage, llm_available
 from studio import DEFAULT_THEME, V2_THEME
 from export_gen import render_page, render_item_page, css, starter_app_files
 
@@ -373,6 +373,18 @@ async def session_exchange(body: SessionExchangeIn, response: Response):
 # ---------- Apps CRUD ----------
 def _serialize_app(doc: dict) -> dict:
     return {k: v for k, v in doc.items() if k != "_id"}
+
+
+class UiSkinIn(BaseModel):
+    skin: str = "classic"
+
+
+@api.put("/me/ui-skin")
+async def set_ui_skin(body: UiSkinIn, user: dict = Depends(get_current_user)):
+    """Studio 2026 vs Classic platform skin — per user, flips instantly, nothing is lost."""
+    skin = "studio" if body.skin == "studio" else "classic"
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"ui_skin": skin}})
+    return {"skin": skin}
 
 
 @api.get("/apps")
@@ -849,7 +861,7 @@ async def export_mobile(app_id: str, platform: str = "ios", user: dict = Depends
 @api.post("/apps/{app_id}/ai/edit")
 async def ai_edit_block(app_id: str, body: AIPromptIn, user: dict = Depends(get_current_user)):
     await GROWTH["require_ai_access"](app_id, user)
-    if not EMERGENT_LLM_KEY:
+    if not llm_available():
         raise HTTPException(500, "LLM key missing")
 
     system_message = (
@@ -865,11 +877,7 @@ async def ai_edit_block(app_id: str, body: AIPromptIn, user: dict = Depends(get_
     )
     from ai_models import resolve_for as _rm
     _prov, _mdl = await _rm(app_id, "chat_widget")
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"editor-{app_id}-{user['user_id']}",
-        system_message=system_message,
-    ).with_model(_prov, _mdl)
+    chat = get_chat(_prov, _mdl, system_message, f"editor-{app_id}-{user['user_id']}")
 
     try:
         reply = await chat.send_message(UserMessage(text=prompt_text))
@@ -1029,6 +1037,8 @@ register_storage(api, db, get_current_user, get_user_app, log_activity, lambda: 
 from landing_cms import register as register_landing, is_admin as _is_admin
 register_landing(api, db, get_current_user, get_user_app, log_activity)
 from templates_gallery import register as register_templates_gallery
+from studio_pack import install as install_studio_pack, STUDIO_KEYS  # noqa: F401
+logger.info(f"Studio template pack installed: {install_studio_pack()} designs")
 register_templates_gallery(api, db, get_current_user)
 from cta_forms import register as register_cta_forms
 CTA_FORMS = register_cta_forms(api, db, get_current_user, get_user_app, log_activity, INBOX_HOOKS.get("new_message"))

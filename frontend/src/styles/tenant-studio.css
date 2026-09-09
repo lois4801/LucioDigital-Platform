@@ -1,0 +1,24 @@
+/* Studio 2026 tenant-site skin — opt-in per tenant via theme.site_skin = "studio".
+   Modernises ANY template (including the original 16) without touching its content:
+   softer geometry, 1px borders, calm elevation, tighter type. Toggle off = untouched. */
+.sk-studio .tcard {
+  border-radius: 16px !important;
+  border-width: 1px !important;
+  box-shadow: 0 1px 2px rgb(16 24 40 / .05), 0 8px 24px -18px rgb(16 24 40 / .25) !important;
+  backdrop-filter: none !important;
+}
+.sk-studio .tcard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 2px 4px rgb(16 24 40 / .06), 0 16px 40px -22px rgb(16 24 40 / .3) !important;
+}
+.sk-studio .tbtn { border-radius: 10px !important; letter-spacing: 0 !important; text-transform: none !important; font-weight: 560; }
+.sk-studio .tbtn-solid { box-shadow: 0 1px 2px rgb(16 24 40 / .12) !important; }
+.sk-studio h1, .sk-studio h2, .sk-studio h3 { letter-spacing: -0.022em !important; font-weight: 640 !important; text-transform: none !important; font-style: normal !important; }
+.sk-studio .overline, .sk-studio .t-small { letter-spacing: .06em !important; text-transform: uppercase; }
+.sk-studio section { border-top: 0 !important; }
+.sk-studio section + section { border-top: 1px solid var(--tbd) !important; }
+.sk-studio section::before { display: none !important; }
+.sk-studio img { border-radius: 14px !important; filter: none !important; }
+.sk-studio [data-testid="hero-cover"] img, .sk-studio .thero img { border-radius: 0 !important; }
+.sk-studio input, .sk-studio select, .sk-studio textarea { border-radius: 10px !important; }
+.sk-studio .tsec, .sk-studio .tsec-lg { padding-block: var(--rh-md); }

@@ -1,0 +1,129 @@
+/* ==========================================================================
+   Studio 2026 — the new agency-app skin. Applied when <html data-skin="studio">.
+   Overrides the platform design tokens and primitives so every page (dashboard,
+   tenant detail, leads, gallery, builder chrome) adopts the Lovable/shadcn look
+   without rewriting components. Flip back to Classic and nothing is lost.
+   ========================================================================== */
+html[data-skin="studio"] {
+  --bg: #fafafa;          /* zinc-50  */
+  --bg-2: #f4f4f5;        /* zinc-100 */
+  --card: #ffffff;
+  --line: #e4e4e7;        /* zinc-200 */
+  --fg: #18181b;          /* zinc-900 */
+  --mut: #52525b;         /* zinc-600 */
+  --dim: #a1a1aa;         /* zinc-400 */
+  --acc: #4f46e5;         /* indigo-600 */
+  --acc-2: #6366f1;
+  --radius: 14px;
+  color-scheme: light;
+}
+html[data-skin="studio"].dark, html[data-skin="studio"][data-mode="dark"] {
+  --bg: #09090b;          /* zinc-950 */
+  --bg-2: #18181b;
+  --card: #18181b;        /* zinc-900 */
+  --line: #27272a;        /* zinc-800 */
+  --fg: #fafafa;
+  --mut: #a1a1aa;
+  --dim: #71717a;
+  color-scheme: dark;
+}
+
+html[data-skin="studio"] body {
+  background: var(--bg);
+  color: var(--mut);
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Surfaces: elevated white cards, 1px borders, soft shadow ---------- */
+html[data-skin="studio"] .card-surface {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgb(16 24 40 / .04), 0 1px 3px rgb(16 24 40 / .06);
+  backdrop-filter: none;
+  transition: box-shadow .2s ease-in-out, border-color .2s ease-in-out, transform .2s ease-in-out;
+}
+html[data-skin="studio"] .card-surface:hover {
+  box-shadow: 0 4px 12px -2px rgb(16 24 40 / .08), 0 2px 6px -2px rgb(16 24 40 / .06);
+  border-color: #d4d4d8;
+}
+html[data-skin="studio"] .card-surface::before,
+html[data-skin="studio"] .card-surface::after { display: none !important; }
+html[data-skin="studio"] .glass, html[data-skin="studio"] .glass-panel {
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid var(--line);
+}
+
+/* ---------- Headings and copy ---------- */
+html[data-skin="studio"] h1, html[data-skin="studio"] h2, html[data-skin="studio"] h3,
+html[data-skin="studio"] .font-display {
+  color: var(--fg);
+  letter-spacing: -0.022em;
+  font-weight: 640;
+}
+html[data-skin="studio"] .overline {
+  color: var(--dim); letter-spacing: .06em; text-transform: uppercase; font-size: 11px; font-weight: 600;
+}
+
+/* ---------- Buttons: rounded-lg, restrained indigo/slate ---------- */
+html[data-skin="studio"] .btn-primary {
+  background: var(--acc); color: #fff; border: 1px solid transparent; border-radius: 10px;
+  box-shadow: 0 1px 2px rgb(16 24 40 / .1); font-weight: 560;
+  transition: all .2s ease-in-out;
+}
+html[data-skin="studio"] .btn-primary:hover { background: #4338ca; box-shadow: 0 4px 10px -2px rgb(79 70 229 / .35); }
+html[data-skin="studio"] .btn-ghost {
+  background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 1px 2px rgb(16 24 40 / .04); transition: all .2s ease-in-out;
+}
+html[data-skin="studio"] .btn-ghost:hover { background: var(--bg-2); border-color: #d4d4d8; }
+
+/* ---------- Chips / badges ---------- */
+html[data-skin="studio"] .chip {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--mut);
+  border-radius: 8px; font-weight: 550; box-shadow: none;
+}
+html[data-skin="studio"] .chip-active, html[data-skin="studio"] .badge-glow {
+  background: color-mix(in srgb, var(--acc) 10%, #fff); border-color: color-mix(in srgb, var(--acc) 35%, #fff);
+  color: var(--acc); box-shadow: none;
+}
+
+/* ---------- Inputs ---------- */
+html[data-skin="studio"] input, html[data-skin="studio"] textarea, html[data-skin="studio"] select {
+  background: var(--card) !important; border-color: var(--line) !important; color: var(--fg) !important;
+  border-radius: 10px !important;
+}
+html[data-skin="studio"] input::placeholder, html[data-skin="studio"] textarea::placeholder { color: var(--dim); }
+html[data-skin="studio"] input:focus, html[data-skin="studio"] textarea:focus, html[data-skin="studio"] select:focus {
+  border-color: var(--acc) !important; box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc) 14%, transparent);
+}
+
+/* ---------- Sticky nav with backdrop blur ---------- */
+html[data-skin="studio"] header, html[data-skin="studio"] nav.topbar {
+  background: color-mix(in srgb, var(--bg) 80%, transparent);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- Tables ---------- */
+html[data-skin="studio"] table thead tr { border-color: var(--line); color: var(--dim); }
+html[data-skin="studio"] table tbody tr { border-color: var(--line); }
+html[data-skin="studio"] table tbody tr:hover { background: var(--bg-2); }
+
+/* ---------- Skeletons ---------- */
+html[data-skin="studio"] .skeleton {
+  background: linear-gradient(90deg, #f4f4f5 25%, #e4e4e7 37%, #f4f4f5 63%);
+  background-size: 400% 100%; border-radius: 10px;
+}
+
+/* ---------- Kill the dark-theme glow/gradient furniture ---------- */
+html[data-skin="studio"] .pulse-dot { box-shadow: none; }
+html[data-skin="studio"] [class*="shadow-[0_0"], html[data-skin="studio"] [class*="shadow-[0_10px_30px"] { box-shadow: 0 1px 3px rgb(16 24 40 / .08) !important; }
+html[data-skin="studio"] .blur-3xl, html[data-skin="studio"] .blur-2xl { opacity: .1 !important; }
+html[data-skin="studio"] .text-white { color: var(--fg); }
+html[data-skin="studio"] .bg-white\/5, html[data-skin="studio"] .bg-white\/\[0\.03\] { background: var(--bg-2); }
+html[data-skin="studio"] .border-white\/10 { border-color: var(--line); }
+html[data-skin="studio"] .scrollbar-thin::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 8px; }

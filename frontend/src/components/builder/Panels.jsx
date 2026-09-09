@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import api from "@/lib/api";
 import { FONTS, applyMode } from "@/lib/theme";
 import { CURSOR_EFFECTS } from "@/lib/cursorEffects";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Sparkles, Palette } from "lucide-react";
 
 const SWATCHES = [["#F97316", "#14B8A6"], ["#EA580C", "#0EA5E9"], ["#F59E0B", "#10B981"], ["#FB7185", "#6366F1"], ["#0F172A", "#F97316"], ["#7C3AED", "#22D3EE"]];
 
@@ -24,7 +24,20 @@ export function ThemePanel({ theme, onChange }) {
       <div className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">Mode</span>
         <div className="flex rounded-full border border-[var(--line)] overflow-hidden">
           {[["light", Sun], ["dark", Moon]].map(([m, I]) => <button key={m} data-testid={`theme-mode-${m}`} onClick={() => onChange(applyMode(theme, m))} className={`px-3 py-1 flex items-center gap-1 ${theme.mode === m ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}><I size={11} /> {m}</button>)}
-        </div></div>
+        </div>
+      </div>
+      <div>
+          <span className="overline block mb-1.5">Site design</span>
+          <div className="flex rounded-lg border border-[var(--line)] overflow-hidden w-fit">
+            {[["classic", Palette, "Classic"], ["studio", Sparkles, "Studio 2026"]].map(([s, I, lbl]) => (
+              <button key={s} data-testid={`site-skin-${s}`} onClick={() => onChange({ ...theme, site_skin: s })}
+                className={`px-3 py-1 flex items-center gap-1 text-xs ${(theme.site_skin || "classic") === s ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}>
+                <I size={11} /> {lbl}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-[var(--mut)] mt-1.5">Studio 2026 modernises any template's cards, buttons and type without touching your content.</p>
+        </div>
       {[["font_heading", "Heading font"], ["font_body", "Body font"]].map(([k, l]) => (
         <label key={k} className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">{l}</span>
           <select data-testid={`theme-${k}-select`} value={theme[k]} onChange={e => set(k, e.target.value)} className="bg-[var(--bg-2)] border border-[var(--line)] rounded-md px-2 py-1 text-xs outline-none">{FONTS.map(f => <option key={f}>{f}</option>)}</select></label>

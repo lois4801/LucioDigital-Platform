@@ -20,7 +20,17 @@ CATEGORY = {
     "finance": "Finance", "it_services": "Tech", "creative_studio": "Creative",
     "logistics": "Logistics", "saas": "Tech", "legal": "Legal", "education": "Education",
     "real_estate": "Real Estate", "restaurant": "Hospitality", "events": "Events",
+    # Studio 2026 pack
+    "veterinary": "Medical", "dental": "Medical", "accounting": "Finance", "landscaping": "Home Services",
+    "photography": "Creative", "automotive": "Home Services", "beauty": "Beauty & Wellness",
+    "insurance": "Finance", "pet_grooming": "Pet Services", "hvac_plumbing": "Home Services",
+    "coworking": "Real Estate", "wellness": "Beauty & Wellness", "cleaning": "Home Services",
+    "music_school": "Education", "nonprofit": "Nonprofit", "architecture": "Creative",
 }
+
+
+def category_of(key: str, industry: str = "") -> str:
+    return CATEGORY.get(key) or (industry or "Other")
 
 
 def _now():
@@ -51,7 +61,7 @@ def build_template_site(key: str):
             "description": n["sub"], "thumbnail": n["hero"], "video_url": n["video"]}
     pages, theme, _n = build_premium_site(fake, key, {"name": n["brand"]})
     return {
-        "key": key, "brand": n["brand"], "industry": n["industry"], "category": CATEGORY[key],
+        "key": key, "brand": n["brand"], "industry": n["industry"], "category": category_of(key, n["industry"]),
         "tagline": n["title"], "summary": n["sub"], "thumbnail": n["hero"], "video": n["video"],
         "theme": theme,
         "pages": [{"name": p[0], "slug": p[1], "blocks": p[2]} for p in pages],
@@ -67,9 +77,10 @@ def register(api, db, get_current_user):
         for key, look in LOOKS.items():
             n = NICHES[key]
             out.append({
-                "key": key, "brand": n["brand"], "industry": n["industry"], "category": CATEGORY[key],
+                "key": key, "brand": n["brand"], "industry": n["industry"], "category": category_of(key, n["industry"]),
                 "tagline": n["title"], "summary": n["sub"], "thumbnail": n["hero"], "video": n["video"],
                 "mode": look["mode"], "primary": look["primary"], "secondary": look["secondary"],
+                "studio": bool(look.get("studio")),
                 "bg": look["bg"], "surface": look["surface"], "border": look["border"],
                 "font_heading": look["font_heading"], "font_body": look["font_body"],
                 "radius": look["radius"], "preset": look["preset"], "hero": look["hero"],
