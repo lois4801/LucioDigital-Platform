@@ -198,12 +198,15 @@ function draw(ctx, effect, p, accent) {
 export function startScopedCursorFX(canvas, effect, opts = {}) {
   const density = Math.max(0.2, Math.min(3, Number(opts.density) || 1));
   const speed = Math.max(0.2, Math.min(3, Number(opts.speed) || 1));
+  const bandMax = Math.max(0, Number(opts.sideBand) || 0);   // only these left/right gutters are drawn
+  let band = bandMax;
   const ctx = canvas.getContext("2d");
   let w = 0, h = 0;
   const resize = () => {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const r = canvas.getBoundingClientRect();
     w = r.width; h = r.height;
+    band = Math.min(bandMax, w * 0.14);   // narrower gutters on small screens
     canvas.width = Math.max(1, Math.round(w * dpr));
     canvas.height = Math.max(1, Math.round(h * dpr));
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -229,6 +232,14 @@ export function startScopedCursorFX(canvas, effect, opts = {}) {
   const loop = () => {
     if (!document.hidden) {
       ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      if (band > 0) {
+        // Draw only inside the left/right gutters so the centre stays readable.
+        ctx.beginPath();
+        ctx.rect(0, 0, band, h);
+        ctx.rect(w - band, 0, band, h);
+        ctx.clip();
+      }
       ctx.globalCompositeOperation = effect === "ink" || effect === "smoke" ? "source-over" : "lighter";
       for (let i = parts.length - 1; i >= 0; i--) {
         const p = parts[i];
@@ -238,6 +249,7 @@ export function startScopedCursorFX(canvas, effect, opts = {}) {
         draw(ctx, effect, p, "#10B981");
       }
       ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
     }
     raf = requestAnimationFrame(loop);
   };

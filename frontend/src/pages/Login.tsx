@@ -84,7 +84,7 @@ export default function Login() {
             </div>
           </div>
 
-          <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-1 px-1 pb-2">
+          <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-6 px-6 sm:-mx-12 sm:px-12 pb-2">
           <SocialSignIn mode="signin" />
       <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />

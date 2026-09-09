@@ -6,6 +6,8 @@ const Ctx = createContext(null);
 export function useScopedFXBurst() { return useContext(Ctx) || (() => {}); }
 
 // Wraps a panel so the active cursor effect emits from its controls and stays clipped inside its box.
+const BAND = 44;   // width of each side gutter the effects live in
+
 export default function ScopedCursorFX({ children, className = "", burstRef = null, selector = "button:not([data-fx-skip] *), input:not([data-fx-skip] *)", every = 200 }) {
   const { effect, density, speed } = useCursorFX();
   const wrap = useRef(null);
@@ -17,7 +19,7 @@ export default function ScopedCursorFX({ children, className = "", burstRef = nu
     if (effect === "none" || !cv.current) return;
     if (window.matchMedia("(pointer: coarse)").matches) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const inst = startScopedCursorFX(cv.current, effect, { density, speed });
+    const inst = startScopedCursorFX(cv.current, effect, { density, speed, sideBand: BAND });
     api.current = inst;
     return () => { inst.stop(); api.current = null; };
   }, [effect, density, speed]);
@@ -31,8 +33,10 @@ export default function ScopedCursorFX({ children, className = "", burstRef = nu
         wrap.current.querySelectorAll(selector).forEach((el) => {
           const r = el.getBoundingClientRect();
           if (r.height < 4) return;
-          const x = r.left - box.left + Math.random() * r.width;
+          // Spawn only in the left/right gutters, level with each control.
           const y = r.top - box.top + r.height * (0.2 + Math.random() * 0.7);
+          const b = Math.min(BAND, box.width * 0.14);
+          const x = Math.random() < 0.5 ? Math.random() * b : box.width - Math.random() * b;
           api.current.emit(x, y, 1);
         });
       }
@@ -46,7 +50,13 @@ export default function ScopedCursorFX({ children, className = "", burstRef = nu
     const box = wrap.current?.getBoundingClientRect();
     if (!el || !box || !api.current) return;
     const r = el.getBoundingClientRect();
-    api.current.emit(r.left - box.left + r.width / 2, r.top - box.top + r.height / 2, Math.min(10, n));
+    const y = r.top - box.top + r.height / 2;
+    const half = Math.max(1, Math.ceil(Math.min(10, n) / 2));
+    const b = Math.min(BAND, box.width * 0.14);
+    for (let i = 0; i < half; i++) {
+      api.current.emit(Math.random() * b, y, 1);
+      api.current.emit(box.width - Math.random() * b, y, 1);
+    }
   }, []);
 
   if (burstRef) burstRef.current = burst;
