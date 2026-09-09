@@ -275,7 +275,7 @@ export default function Builder({ appId, appDoc, user }) {
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
-          canLock={canLock} onToggleLock={toggleLock} />
+          canLock={canLock} onToggleLock={toggleLock} theme={theme} />
         <div className="ml-auto flex items-center gap-2">
           <div className="flex card-surface !p-0.5 rounded-full">
             <button data-testid="builder-undo-btn" title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.past.length}

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import RolloutModal from "@/components/RolloutModal";
+import PushToOnePicker from "@/components/PushToOnePicker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CursorFXPicker } from "@/components/CursorFX";
@@ -44,6 +45,8 @@ export default function Dashboard() {
   const [lockStates, setLockStates] = useState({});
   const [showArchived, setShowArchived] = useState(false);
   const [rolloutOpen, setRolloutOpen] = useState(false);
+  const [rolloutTarget, setRolloutTarget] = useState(null);
+  const [pendingMap, setPendingMap] = useState({});
   const [archived, setArchived] = useState([]);
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
@@ -59,7 +62,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -126,7 +129,7 @@ export default function Dashboard() {
     if (kind !== "all" && (a.kind || "website") !== kind) return false;
     if (q && !`${a.name} ${a.description} ${(a.tags||[]).join(" ")}`.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
-  }), [apps, industry, q, kind]);
+  }).sort((a, b) => (b.is_test_lab ? 1 : 0) - (a.is_test_lab ? 1 : 0)), [apps, industry, q, kind]);
 
   async function createApp() {
     if (!newApp.name) return toast.error("Name required");
@@ -189,6 +192,7 @@ export default function Dashboard() {
             {legacyCount > 0 && <button data-testid="bulk-upgrade-design-btn" onClick={bulkUpgrade} disabled={upBusy}
               className="chip chip-maint cursor-pointer hover:!text-white disabled:opacity-50">{upBusy ? "Upgrading…" : `Upgrade ${legacyCount} legacy site${legacyCount === 1 ? "" : "s"}`}</button>}
             <button data-testid="dashboard-inbox-badge" onClick={() => nav("/leads")} className={`chip cursor-pointer hover:!text-white transition-colors ${inboxUnread > 0 ? "chip-active badge-glow" : ""}`}>{inboxUnread > 0 ? `${inboxUnread} new lead${inboxUnread === 1 ? "" : "s"}` : "Leads"}</button>
+            <button data-testid="nav-rollout-history-btn" onClick={() => nav("/rollout-history")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Rollout History</button>
             <button data-testid="nav-deploy-hub-btn" onClick={() => nav("/deploy")} className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex">Deployment Hub</button>
             <label data-testid="import-plugin-btn" className="btn-ghost text-sm !py-2 !px-4 hidden md:inline-flex cursor-pointer">
               {pluginBusy ? "Restoring…" : "Import plugin package"}
@@ -410,7 +414,8 @@ export default function Dashboard() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
-                      {a.is_test_lab && <span data-testid={`tenant-test-badge-${a.app_id}`} className="chip chip-maint inline-flex items-center gap-1"><FlaskConical size={10} /> TEST</span>}
+                      {a.is_test_lab && <span data-testid={`tenant-test-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(16,185,129,0.16)", color: "#34D399", borderColor: "rgba(16,185,129,0.4)" }}><FlaskConical size={10} /> TEST</span>}
+                      {!a.is_test_lab && pendingMap[a.app_id] > 0 && <span data-testid={`tenant-pending-badge-${a.app_id}`} className="chip" style={{ background: "rgba(249,115,22,0.16)", color: "#FB923C", borderColor: "rgba(249,115,22,0.4)" }}>Pending Update</span>}
                       <span className="chip">{a.industry}</span>
                       {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
@@ -442,11 +447,22 @@ export default function Dashboard() {
                     <div className="font-display text-xl font-semibold">{a.name}</div>
                     <p className="text-sm text-[var(--mut)] mt-1 line-clamp-2">{a.description}</p>
                     {a.is_test_lab && (
-                      <button data-testid="push-to-all-tenants-card-btn"
-                        onClick={(e) => { e.stopPropagation(); setRolloutOpen(true); }}
-                        className="mt-4 w-full btn-primary text-xs !py-2.5 flex items-center justify-center gap-2">
-                        <Rocket size={13} /> Push to All Tenants
-                      </button>
+                      <div className="mt-4 space-y-2">
+                        <button data-testid="push-to-all-tenants-card-btn"
+                          onClick={(e) => { e.stopPropagation(); setRolloutTarget(null); setRolloutOpen(true); }}
+                          className="w-full btn-primary text-xs !py-2.5 flex items-center justify-center gap-2">
+                          <Rocket size={13} /> Push to All Tenants
+                        </button>
+                        <PushToOnePicker testid="push-to-one-tenant" label="Push to One Tenant"
+                          options={apps.filter((x) => !x.is_test_lab).map((x) => ({
+                            value: x.app_id, label: x.name,
+                            badge: pendingMap[x.app_id] > 0 ? `${pendingMap[x.app_id]}` : null,
+                          }))}
+                          onPick={(id) => {
+                            setRolloutTarget(apps.find((x) => x.app_id === id) || null);
+                            setRolloutOpen(true);
+                          }} />
+                      </div>
                     )}
                     <div className="mt-4 grid grid-cols-4 gap-2 font-mono text-[11px]">
                       <div><div className="text-[var(--dim)] uppercase">Uptime</div><div className="text-[var(--fg)]">{a.metrics?.uptime}%</div></div>
@@ -525,7 +541,8 @@ export default function Dashboard() {
           </section>
         )}
       </main>
-      <RolloutModal open={rolloutOpen} onClose={() => setRolloutOpen(false)} />
+      <RolloutModal open={rolloutOpen} onClose={() => { setRolloutOpen(false); setRolloutTarget(null); }}
+        targetAppId={rolloutTarget?.app_id || null} targetName={rolloutTarget?.name || ""} />
     </div>
   );
 }

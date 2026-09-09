@@ -153,6 +153,25 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #282D3F; border-radius: 999px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
+/* Tenant navigation strip — a scrollbar you can actually grab, always visible when it overflows. */
+.tenant-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: auto;
+  scrollbar-color: #666666 #2a2a2a;
+  scrollbar-gutter: stable;
+}
+.tenant-scroll::-webkit-scrollbar { height: 8px; -webkit-appearance: none; }
+.tenant-scroll::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 999px; }
+.tenant-scroll::-webkit-scrollbar-thumb {
+  background: #666666;
+  border-radius: 999px;
+  min-height: 6px;
+  transition: background-color 0.2s ease;
+}
+.tenant-scroll::-webkit-scrollbar-thumb:hover { background: #ffffff; }
+.tenant-scroll::-webkit-scrollbar-thumb:active { background: #ffffff; }
+
 .tab-underline {
     position: relative; padding: 12px 0; margin-right: 28px;
     color: var(--mut); font-family: 'JetBrains Mono', monospace; font-size: 13px;

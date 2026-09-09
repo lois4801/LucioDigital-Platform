@@ -23,6 +23,7 @@ import Portal from "@/pages/Portal";
 import Leads from "@/pages/Leads";
 import { applySkin, getSkin } from "@/components/SkinToggle";
 import TemplateGallery from "@/pages/TemplateGallery";
+import RolloutHistory from "@/pages/RolloutHistory";
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -54,6 +55,7 @@ function AppRouter() {
       <Route path="/deploy" element={<ProtectedRoute><PageTransition testid="page-deploy"><DeployHub /></PageTransition></ProtectedRoute>} />
       <Route path="/leads" element={<ProtectedRoute><PageTransition testid="page-leads"><Leads /></PageTransition></ProtectedRoute>} />
       <Route path="/templates" element={<ProtectedRoute><PageTransition testid="page-templates"><TemplateGallery /></PageTransition></ProtectedRoute>} />
+      <Route path="/rollout-history" element={<ProtectedRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></ProtectedRoute>} />
       <Route path="/choose/:token" element={<TemplateGallery clientMode />} />
       <Route path="/portal" element={<ProtectedRoute><PageTransition testid="page-portal"><Portal /></PageTransition></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />

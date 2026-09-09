@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Clock, Eye, Layers, Link2, Loader2, Rocket, Share2, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, FlaskConical, Layers, Link2, Loader2, Rocket, Share2, Sparkles, X } from "lucide-react";
 import api from "@/lib/api";
 import TemplateRolloutModal from "@/components/TemplateRolloutModal";
+import TemplatePushModal from "@/components/TemplatePushModal";
+import PushToOnePicker from "@/components/PushToOnePicker";
 import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -61,7 +63,8 @@ function FullPreview({ detail, onClose, onUse, useLabel }) {
   );
 }
 
-function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush }) {
+function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onTemplatePush, allKeys }) {
+  const isTest = t.key === "test_template";
   const ref = useRef(null);
   return (
     <motion.div ref={ref} initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, margin: "-40px" }}
@@ -73,8 +76,17 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent pointer-events-none" />
         <div className="absolute top-3 left-3 flex gap-1.5">
+          {isTest && (
+            <span data-testid="template-test-badge" className="chip inline-flex items-center gap-1"
+              style={{ background: "rgba(250,204,21,0.18)", color: "#FACC15", borderColor: "rgba(250,204,21,0.45)" }}>
+              <FlaskConical size={10} /> TEST
+            </span>
+          )}
           {state?.status === "pending" && (
-            <span data-testid={`template-pending-badge-${t.key}`} className="chip chip-maint inline-flex items-center gap-1"><Clock size={10} /> Pending Rollout</span>
+            <span data-testid={`template-pending-badge-${t.key}`} className="chip inline-flex items-center gap-1"
+              style={{ background: "rgba(249,115,22,0.16)", color: "#FB923C", borderColor: "rgba(249,115,22,0.4)" }}>
+              <Clock size={10} /> Pending Update
+            </span>
           )}
           {t.studio && <span data-testid={`template-studio-badge-${t.key}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
           <span className="chip">{t.category}</span>
@@ -99,7 +111,18 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush }) {
           <button data-testid={`template-use-${t.key}`} onClick={(e) => { e.stopPropagation(); onUse(t); }}
             className="btn-primary text-xs !py-1.5 !px-3 whitespace-nowrap">{useLabel}</button>
         </div>
-        {onPush && (
+        {isTest && onTemplatePush ? (
+          <div className="mt-2 space-y-2">
+            <button data-testid="push-to-all-templates-btn"
+              onClick={(e) => { e.stopPropagation(); onTemplatePush({ scope: "all" }); }}
+              className="w-full btn-primary text-[11px] !py-2 flex items-center justify-center gap-1.5">
+              <Rocket size={11} /> Push to All Templates
+            </button>
+            <PushToOnePicker testid="push-to-one-template" label="Push to One Template"
+              options={(allKeys || []).map((k) => ({ value: k, label: k.replace(/_/g, " ") }))}
+              onPick={(k) => onTemplatePush({ targetKey: k })} />
+          </div>
+        ) : onPush && (
           <button data-testid={`template-push-${t.key}`} onClick={(e) => { e.stopPropagation(); onPush(t, state); }}
             className={`mt-2 w-full text-[11px] !py-2 flex items-center justify-center gap-1.5 ${state?.status === "pending" ? "btn-primary" : "btn-ghost"}`}>
             <Rocket size={11} /> Push to All Tenants Using This Template
@@ -130,6 +153,7 @@ export default function TemplateGallery({ clientMode = false }) {
   const [shareInfo, setShareInfo] = useState(null);
   const [states, setStates] = useState({});
   const [pushing, setPushing] = useState(null);
+  const [tplPush, setTplPush] = useState(null);   // { scope } | { targetKey }
 
   const loadStates = () => {
     if (clientMode) return;
@@ -140,7 +164,11 @@ export default function TemplateGallery({ clientMode = false }) {
   useEffect(loadStates, [clientMode]);
 
   useEffect(() => {
-    api.get("/public/templates").then(r => { setList(r.data.templates); setCats(r.data.categories); })
+    api.get("/public/templates").then(r => {
+      // the sandbox template is never offered to clients
+      setList(clientMode ? r.data.templates.filter(t => t.key !== "test_template") : r.data.templates);
+      setCats(r.data.categories);
+    })
       .catch(() => toast.error("Could not load the template gallery")).finally(() => setLoading(false));
     if (clientMode && token) {
       api.get(`/public/template-shares/${token}`).then(r => { setShareInfo(r.data); setChosen(r.data.selected_key || null); })
@@ -171,7 +199,11 @@ export default function TemplateGallery({ clientMode = false }) {
     return () => { stop = true; };
   }, [list]);
 
-  const shown = useMemo(() => cat === "All" ? list : cat === "New design" ? list.filter(t => t.studio) : list.filter(t => t.category === cat), [list, cat]);
+  const shown = useMemo(() => {
+    const base = cat === "All" ? list : cat === "New design" ? list.filter(t => t.studio) : list.filter(t => t.category === cat);
+    // Test Template always sits first so it is never confused with a client-facing design.
+    return [...base].sort((a, b) => (b.key === "test_template" ? 1 : 0) - (a.key === "test_template" ? 1 : 0));
+  }, [list, cat]);
 
   function openFull(t) {
     const d = details[t.key];
@@ -236,7 +268,7 @@ export default function TemplateGallery({ clientMode = false }) {
           <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}
             {!clientMode && Object.values(states).some((s) => s.status === "pending") && (
               <span data-testid="gallery-pending-count" className="chip chip-maint inline-flex items-center gap-1">
-                <Clock size={10} /> {Object.values(states).filter((s) => s.status === "pending").length} pending rollout
+                <Clock size={10} /> {Object.values(states).filter((s) => s.status === "pending").length} pending update
               </span>
             )}
           </div>
@@ -267,6 +299,8 @@ export default function TemplateGallery({ clientMode = false }) {
           {shown.map(t => (
             <Card key={t.key} t={t} detail={details[t.key]} onOpen={openFull} onUse={useTemplate}
               state={states[t.key]} onPush={clientMode ? null : (tpl, st) => setPushing({ ...tpl, ...(st || {}) })}
+              onTemplatePush={clientMode ? null : setTplPush}
+              allKeys={list.filter((x) => x.key !== "test_template").map((x) => x.key)}
               selected={chosen === t.key} useLabel={clientMode ? (chosen === t.key ? "Your pick" : "Choose this") : "Use this template"} />
           ))}
         </div>
@@ -286,6 +320,11 @@ export default function TemplateGallery({ clientMode = false }) {
         useLabel={clientMode ? "Choose this design" : "Use this template"} />}
 
       {pushing && <TemplateRolloutModal template={pushing} onClose={() => setPushing(null)} onDone={loadStates} />}
+
+      {tplPush && (
+        <TemplatePushModal open initialScope={tplPush.scope || "all"} targetKey={tplPush.targetKey || null}
+          onClose={() => setTplPush(null)} onDone={() => { loadStates(); load(); }} />
+      )}
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">

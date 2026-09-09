@@ -4,24 +4,85 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import api from "@/lib/api";
 import { toast } from "sonner";
 
-export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggleLock, canLock }) {
+/** Relative luminance → decides whether a brand colour needs white or dark text. */
+function isLight(hex) {
+  const h = (hex || "").replace("#", "");
+  if (h.length !== 3 && h.length !== 6) return false;
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16) / 255);
+  const lin = [r, g, b].map(c => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2] > 0.45;
+}
+
+const rgba = (hex, a) => {
+  const h = (hex || "").replace("#", "");
+  const full = h.length === 3 ? h.split("").map(c => c + c).join("") : h;
+  if (full.length !== 6) return `rgba(139,92,246,${a})`;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(full.slice(i, i + 2), 16));
+  return `rgba(${r},${g},${b},${a})`;
+};
+
+/** Brand colour is read live from the page's own template theme, then the tenant theme. */
+const brandOf = (page, theme) => page?.theme_preview?.primary || theme?.primary || "#8B5CF6";
+
+export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   return (
-    <div className="flex items-center gap-1 overflow-x-auto scrollbar-thin" data-testid="pages-bar">
-      {pages.map(p => (
-        <div key={p.page_id} className={`group flex items-center gap-1 rounded-full text-xs font-mono pl-3 pr-1 py-1 border cursor-pointer ${current === p.page_id ? "bg-[var(--acc)]/12 border-[var(--acc)]/50 text-[var(--acc)]" : "border-[var(--line)] text-[var(--mut)] hover:text-white"}`}
-          data-testid={`page-tab-${p.slug.replace("/", "") || "home"}`} onClick={() => onSelect(p.page_id)}>
-          {p.locked ? <Lock size={11} className="text-amber-400" /> : <FileText size={11} />} {p.name}
-          {canLock && <button data-testid={`page-lock-${p.slug.replace("/", "") || "home"}`} title={p.locked ? "Unlock for clients" : "Lock so clients cannot edit"}
-            onClick={e => { e.stopPropagation(); onToggleLock(p); }}
-            className={`w-5 h-5 rounded-full flex items-center justify-center hover:text-amber-300 ${p.locked ? "opacity-100 text-amber-400" : "opacity-0 group-hover:opacity-100"}`}>
-            {p.locked ? <Lock size={10} /> : <Unlock size={10} />}
-          </button>}
-          {p.slug !== "/" ? <button onClick={e => { e.stopPropagation(); onDelete(p); }} className="w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 hover:text-red-400"><Trash2 size={10} /></button> : <span className="w-1" />}
-        </div>
-      ))}
-      <button data-testid="page-add-btn" onClick={() => setOpen(true)} className="w-7 h-7 rounded-full border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--mut)] hover:text-white hover:border-white/40"><Plus size={12} /></button>
+    <div className="flex-1 min-w-0" data-testid="pages-bar-wrap">
+      <div className="flex items-stretch gap-2 tenant-scroll pb-2.5" data-testid="pages-bar">
+        {pages.map(p => {
+          const on = current === p.page_id;
+          const brand = brandOf(p, theme);
+          const light = isLight(brand);
+          const fg = on ? (light ? "#222222" : "#FFFFFF") : "var(--mut)";
+          const tag = p.template_key || (p.slug === "/" ? "home" : p.slug.replace("/", ""));
+          const tid = p.slug.replace("/", "") || "home";
+          return (
+            <div key={p.page_id} data-testid={`page-tab-${tid}`} onClick={() => onSelect(p.page_id)}
+              aria-current={on ? "true" : undefined}
+              className="group shrink-0 max-w-[210px] rounded-xl px-3 py-2 cursor-pointer"
+              style={{
+                background: on ? rgba(brand, 0.85) : "var(--bg-2)",
+                border: on ? `2px solid ${brand}` : "1px solid var(--line)",
+                boxShadow: on ? `0 8px 26px ${rgba(brand, 0.3)}` : "none",
+                color: fg,
+                transition: "background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease",
+              }}>
+              <div className="flex items-center gap-1.5">
+                {p.locked ? <Lock size={11} className="shrink-0" style={{ color: on ? fg : "#FBBF24" }} />
+                  : <FileText size={11} className="shrink-0 opacity-70" />}
+                <span className="text-xs font-mono truncate" style={{ color: fg }}>{p.name}</span>
+                {canLock && (
+                  <button data-testid={`page-lock-${tid}`} title={p.locked ? "Unlock for clients" : "Lock so clients cannot edit"}
+                    onClick={e => { e.stopPropagation(); onToggleLock(p); }}
+                    className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${p.locked ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                    style={{ color: on ? fg : "#FBBF24" }}>
+                    {p.locked ? <Lock size={9} /> : <Unlock size={9} />}
+                  </button>
+                )}
+                {p.slug !== "/" && (
+                  <button data-testid={`page-delete-${tid}`} onClick={e => { e.stopPropagation(); onDelete(p); }}
+                    className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 opacity-0 group-hover:opacity-100 hover:text-red-400"
+                    style={{ color: on ? fg : "var(--dim)" }}><Trash2 size={9} /></button>
+                )}
+              </div>
+              <span data-testid={`page-tag-${tid}`}
+                className="mt-1.5 inline-block text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded truncate max-w-full"
+                style={{
+                  background: on ? "rgba(0,0,0,0.26)" : "rgba(255,255,255,0.04)",
+                  color: on ? rgba(light ? "#000000" : "#FFFFFF", 0.72) : "var(--dim)",
+                }}>
+                {tag}
+              </span>
+            </div>
+          );
+        })}
+        <button data-testid="page-add-btn" onClick={() => setOpen(true)}
+          className="shrink-0 w-9 self-stretch rounded-xl border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--mut)] hover:text-white hover:border-white/40">
+          <Plus size={13} />
+        </button>
+      </div>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">
           <DialogHeader><DialogTitle className="font-display">New page</DialogTitle></DialogHeader>

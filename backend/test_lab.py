@@ -40,6 +40,40 @@ THEME_KEYS = ("primary", "secondary", "bg", "surface", "border", "fg", "muted", 
 MOTION_KEYS = ("motion", "cursor")
 APP_MOTION_KEYS = ("cursor_effect", "cursor_density", "cursor_speed")
 
+# Diff rows: (change_id, category, human label, source, field)
+#   source "theme" = tenant.theme[field] · "app" = tenant[field]
+DIFF_FIELDS = [
+    ("design.mode", "Design", "Light / dark mode", "theme", "mode"),
+    ("design.primary", "Design", "Primary colour", "theme", "primary"),
+    ("design.secondary", "Design", "Secondary colour", "theme", "secondary"),
+    ("design.bg", "Design", "Background colour", "theme", "bg"),
+    ("design.surface", "Design", "Surface colour", "theme", "surface"),
+    ("design.border", "Design", "Border colour", "theme", "border"),
+    ("design.fg", "Design", "Text colour", "theme", "fg"),
+    ("design.muted", "Design", "Muted text colour", "theme", "muted"),
+    ("design.font_heading", "Design", "Heading font", "theme", "font_heading"),
+    ("design.font_body", "Design", "Body font", "theme", "font_body"),
+    ("design.radius", "Design", "Corner radius", "theme", "radius"),
+    ("design.preset", "Design", "Section style preset", "theme", "preset"),
+    ("design.hero", "Design", "Hero layout", "theme", "hero"),
+    ("animations.motion", "Animations", "Scroll & reveal animations", "theme", "motion"),
+    ("animations.cursor", "Animations", "Custom cursor trail", "theme", "cursor"),
+    ("animations.glass", "Animations", "Glass-morphism surfaces", "theme", "glass"),
+    ("animations.grain", "Animations", "Grain / noise overlay", "theme", "grain"),
+    ("animations.cursor_effect", "Animations", "Cursor effect", "app", "cursor_effect"),
+    ("animations.cursor_density", "Animations", "Cursor density", "app", "cursor_density"),
+    ("animations.cursor_speed", "Animations", "Cursor speed", "app", "cursor_speed"),
+    ("features.site_skin", "Features", "Site skin (Classic / Studio 2026)", "theme", "site_skin"),
+    ("features.studio", "Features", "Studio 2026 component set", "theme", "studio"),
+    ("features.design_v2", "Features", "Design system v2 renderer", "theme", "design_v2"),
+    ("features.premium_v", "Features", "Premium site version", "theme", "premium_v"),
+    ("features.look_v", "Features", "Template look version", "theme", "look_v"),
+    ("features.ui_skin", "Features", "Dashboard skin", "app", "ui_skin"),
+]
+# Which rollout scope each category belongs to (kept so old scope-based calls still work).
+CATEGORY_SCOPE = {"Design": "theme", "Animations": "motion", "Features": "skin",
+                  "Content": "labels", "Forms": "forms"}
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -147,10 +181,86 @@ async def mark_template_states(db) -> int:
     return pending
 
 
+def _common(values: list):
+    """Most common live value + whether tenants disagree."""
+    from collections import Counter
+    keyed = [json.dumps(v, sort_keys=True, default=str) for v in values]
+    if not keyed:
+        return None, False
+    top, _n = Counter(keyed).most_common(1)[0]
+    return json.loads(top), len(set(keyed)) > 1
+
+
+async def build_diff(db, targets: list, lab: dict) -> dict:
+    """Aggregate diff between the Test Lab and every live tenant. Only real differences appear."""
+    lab_theme = lab.get("theme") or {}
+    rows = []
+    for cid, cat, label, source, field in DIFF_FIELDS:
+        new = lab_theme.get(field) if source == "theme" else lab.get(field)
+        lives = [(t.get("theme") or {}).get(field) if source == "theme" else t.get(field) for t in targets]
+        differing = [v for v in lives if v != new]
+        if not targets or not differing:
+            continue
+        old, variance = _common(differing)
+        rows.append({"id": cid, "category": cat, "label": label, "old": old, "new": new,
+                     "kind": "added" if old in (None, "") else ("removed" if new in (None, "") else "changed"),
+                     "tenants": len(differing), "variance": variance})
+
+    lab_labels = ((await db.ui_labels.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})) or {}).get("labels") or {}
+    live_labels = {}
+    for t in targets:
+        doc = await db.ui_labels.find_one({"app_id": t["app_id"]}, {"_id": 0}) or {}
+        for k, v in (doc.get("labels") or {}).items():
+            live_labels.setdefault(k, []).append(v)
+    for k, new in lab_labels.items():
+        lives = live_labels.get(k) or []
+        differing = [v for v in lives if v != new] or ([None] if not lives else [])
+        if not targets or not differing:
+            continue
+        old, variance = _common(differing)
+        rows.append({"id": f"content.labels.{k}", "category": "Content", "label": f"Label “{k}”",
+                     "old": old, "new": new, "kind": "added" if old is None else "changed",
+                     "tenants": len(differing), "variance": variance})
+    for k in live_labels:
+        if k not in lab_labels:
+            old, _v = _common(live_labels[k])
+            rows.append({"id": f"content.labels.{k}", "category": "Content",
+                         "label": f"Label “{k}” removed", "old": old, "new": None, "kind": "removed",
+                         "tenants": len(live_labels[k]), "variance": False})
+
+    lab_forms = await db.cta_forms.find({"app_id": TEST_LAB_ID}, {"_id": 0}).to_list(100)
+    for f in lab_forms:
+        key = f.get("key")
+        new = {"fields": [x.get("label") for x in (f.get("fields") or [])],
+               "success_message": f.get("success_message")}
+        lives = []
+        for t in targets:
+            doc = await db.cta_forms.find_one({"app_id": t["app_id"], "key": key}, {"_id": 0})
+            if doc:
+                lives.append({"fields": [x.get("label") for x in (doc.get("fields") or [])],
+                              "success_message": doc.get("success_message")})
+        differing = [v for v in lives if v != new]
+        if not differing:
+            continue
+        old, variance = _common(differing)
+        rows.append({"id": f"forms.{key}", "category": "Forms", "label": f"CTA form “{f.get('title') or key}”",
+                     "old": old, "new": new, "kind": "changed", "tenants": len(differing), "variance": variance})
+
+    by_cat: dict = {}
+    for r in rows:
+        by_cat.setdefault(r["category"], []).append(r)
+    return {"changes": rows, "by_category": by_cat, "total": len(rows),
+            "target_count": len(targets),
+            "targets": [{"app_id": t["app_id"], "name": t.get("name")} for t in targets],
+            "generated_at": _now()}
+
+
 def register(api, db, get_current_user, get_user_app, log_activity):
 
     class RolloutIn(BaseModel):
         scopes: List[str] = []
+        changes: Optional[List[str]] = None
+        target_app_ids: Optional[List[str]] = None
         confirm: str = ""
 
     class AdminIn(BaseModel):
@@ -178,15 +288,33 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(404, "Test Lab tenant is missing — restart the backend to recreate it")
         return doc
 
-    async def _targets() -> List[dict]:
-        return await db.apps.find({"app_id": {"$ne": TEST_LAB_ID}, "archived": {"$ne": True}},
-                                  {"_id": 0, "app_id": 1, "name": 1, "theme": 1, "site_niche": 1}).to_list(500)
+    async def _targets(only: Optional[List[str]] = None) -> List[dict]:
+        q = {"app_id": {"$ne": TEST_LAB_ID}, "archived": {"$ne": True}}
+        if only:
+            q["app_id"] = {"$in": [a for a in only if a != TEST_LAB_ID]}
+        return await db.apps.find(q,
+                                  {"_id": 0, "app_id": 1, "name": 1, "theme": 1, "site_niche": 1,
+                                   "ui_skin": 1, "cursor_effect": 1, "cursor_density": 1,
+                                   "cursor_speed": 1}).to_list(500)
 
-    def _patch_for(scopes: List[str], lab: dict, target: dict) -> dict:
-        """The $set patch a single tenant receives for the chosen scopes."""
+    def _patch_for(scopes: List[str], lab: dict, target: dict, changes: Optional[List[str]] = None) -> dict:
+        """The $set patch a single tenant receives. `changes` (from the Diff Viewer) wins when given."""
         lab_theme = lab.get("theme") or {}
         theme = dict(target.get("theme") or {})
         upd: dict = {}
+        if changes is not None:
+            picked = set(changes)
+            for cid, _cat, _label, source, field in DIFF_FIELDS:
+                if cid not in picked:
+                    continue
+                if source == "theme":
+                    if field in lab_theme:
+                        theme[field] = lab_theme[field]
+                elif field in lab:
+                    upd[field] = lab[field]
+            if theme != (target.get("theme") or {}):
+                upd["theme"] = theme
+            return upd
         if "theme" in scopes:
             theme.update({k: lab_theme[k] for k in THEME_KEYS if k in lab_theme})
         if "mode" in scopes and "mode" in lab_theme:
@@ -203,29 +331,39 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             upd["theme"] = theme
         return upd
 
-    async def _snapshot_keys(scopes: List[str]) -> List[str]:
-        keys = ["theme"]
-        if "motion" in scopes:
-            keys += list(APP_MOTION_KEYS)
-        if "skin" in scopes:
-            keys.append("ui_skin")
-        return keys
+    async def _snapshot(job_id: str, app_id: str):
+        """Full pre-rollout snapshot: design, animations, features, labels and form structures."""
+        full = await db.apps.find_one({"app_id": app_id}, {"_id": 0}) or {}
+        labels = await db.ui_labels.find_one({"app_id": app_id}, {"_id": 0})
+        forms = await db.cta_forms.find({"app_id": app_id}, {"_id": 0}).to_list(100)
+        await db.rollout_snapshots.insert_one({
+            "snapshot_id": _uid("snap"), "job_id": job_id, "app_id": app_id, "created_at": _now(),
+            "before": {"theme": full.get("theme"), "ui_skin": full.get("ui_skin"),
+                       **{k: full.get(k) for k in APP_MOTION_KEYS}},
+            "labels": (labels or {}).get("labels"),
+            "forms": [{"key": f.get("key"), "fields": f.get("fields"),
+                       "success_message": f.get("success_message")} for f in forms],
+        })
 
-    async def _run_rollout(job_id: str, scopes: List[str], user: dict):
+    async def _run_rollout(job_id: str, scopes: List[str], user: dict, changes: Optional[List[str]] = None,
+                           only: Optional[List[str]] = None):
         lab = await _test_lab()
-        targets = await _targets()
-        snap_keys = await _snapshot_keys(scopes)
-        labels_doc = await db.ui_labels.find_one({"app_id": TEST_LAB_ID}, {"_id": 0}) if "labels" in scopes else None
-        lab_forms = await db.cta_forms.find({"app_id": TEST_LAB_ID}, {"_id": 0}).to_list(100) if "forms" in scopes else []
+        targets = await _targets(only)
+        picked = set(changes or [])
+        want_labels = ("labels" in scopes) if changes is None else any(c.startswith("content.labels.") for c in picked)
+        want_forms = ("forms" in scopes) if changes is None else any(c.startswith("forms.") for c in picked)
+        labels_doc = await db.ui_labels.find_one({"app_id": TEST_LAB_ID}, {"_id": 0}) if want_labels else None
+        lab_forms = await db.cta_forms.find({"app_id": TEST_LAB_ID}, {"_id": 0}).to_list(100) if want_forms else []
+        if changes is not None and want_forms:
+            lab_forms = [f for f in lab_forms if f"forms.{f.get('key')}" in picked]
         done = 0
         changed = 0
+        failed = 0
         for t in targets:
             try:
                 full = await db.apps.find_one({"app_id": t["app_id"]}, {"_id": 0})
-                await db.rollout_snapshots.insert_one({
-                    "snapshot_id": _uid("snap"), "job_id": job_id, "app_id": t["app_id"],
-                    "before": {k: full.get(k) for k in snap_keys}, "created_at": _now()})
-                upd = _patch_for(scopes, lab, full)
+                await _snapshot(job_id, t["app_id"])
+                upd = _patch_for(scopes, lab, full, changes)
                 if upd:
                     upd["updated_at"] = _now()
                     await db.apps.update_one({"app_id": t["app_id"]}, {"$set": upd})
@@ -241,15 +379,19 @@ def register(api, db, get_current_user, get_user_app, log_activity):
                                   "updated_at": _now()}})
             except Exception:
                 logger.exception("rollout failed for %s", t["app_id"])
+                failed += 1
             done += 1
             await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
-                "done": done, "changed": changed, "pct": int(done / max(1, len(targets)) * 100)}})
+                "done": done, "changed": changed, "failed": failed,
+                "pct": int(done / max(1, len(targets)) * 100)}})
             await asyncio.sleep(0)
+        status = "failed" if failed and not changed else ("partial" if failed else "done")
         await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
-            "status": "done", "pct": 100, "finished_at": _now(),
-            "detail": f"Applied to {changed} of {len(targets)} tenant(s)"}})
+            "status": status, "pct": 100, "finished_at": _now(),
+            "detail": f"Applied to {changed} of {len(targets)} tenant(s)"
+                      + (f" · {failed} failed" if failed else "")}})
         await log_activity(TEST_LAB_ID, user["user_id"], "rollout.all",
-                           f"Pushed {', '.join(scopes)} from the Test Lab to {changed} tenant(s)")
+                           f"Pushed {len(picked) or len(scopes)} change(s) from the Test Lab to {changed} tenant(s)")
 
     # ---------- Test Lab ----------
     @api.get("/test-lab")
@@ -286,17 +428,130 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await _require_rollout_admin(user)
         _check_confirm(body.confirm)
         scopes = [s for s in body.scopes if s in SCOPES]
-        if not scopes:
+        changes = body.changes
+        only = body.target_app_ids or None
+        if changes is not None:
+            valid = {c["id"] for c in (await build_diff(db, await _targets(only), await _test_lab()))["changes"]}
+            changes = [c for c in changes if c in valid]
+            if not changes:
+                raise HTTPException(400, "Select at least one change to push")
+            scopes = sorted({CATEGORY_SCOPE.get(c.split(".")[0].capitalize(), "theme") for c in changes})
+        elif not scopes:
             raise HTTPException(400, "Choose at least one thing to push")
-        await _test_lab()
-        targets = await _targets()
-        job = {"job_id": _uid("roll"), "scopes": scopes, "status": "running", "pct": 0, "done": 0,
-               "changed": 0, "total": len(targets), "by": user["user_id"], "by_email": user.get("email"),
+        lab = await _test_lab()
+        targets = await _targets(only)
+        diff = await build_diff(db, targets, lab)
+        if changes is not None:
+            diff = {**diff, "changes": [c for c in diff["changes"] if c["id"] in set(changes)]}
+            diff["by_category"] = {}
+            for r in diff["changes"]:
+                diff["by_category"].setdefault(r["category"], []).append(r)
+            diff["total"] = len(diff["changes"])
+        job = {"job_id": _uid("roll"), "scopes": scopes, "changes": changes,
+               "kind": "single" if only else "global", "target_app_ids": only,
+               "status": "running", "pct": 0, "done": 0, "changed": 0, "failed": 0,
+               "total": len(targets), "by": user["user_id"], "by_email": user.get("email"),
+               "by_name": user.get("name"), "diff": diff,
+               "categories": sorted(diff["by_category"].keys()),
                "detail": "Starting rollout", "created_at": _now()}
         await db.rollout_jobs.insert_one(dict(job))
-        asyncio.create_task(_run_rollout(job["job_id"], scopes, user))
+        asyncio.create_task(_run_rollout(job["job_id"], scopes, user, changes, only))
         job.pop("_id", None)
         return job
+
+    @api.get("/test-lab/diff")
+    async def test_lab_diff(app_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+        lab = await _test_lab()
+        return await build_diff(db, await _targets([app_id] if app_id else None), lab)
+
+    @api.get("/test-lab/pending")
+    async def pending_map(user: dict = Depends(get_current_user)):
+        """Per-tenant count of unpushed Test Lab changes — drives the orange "Pending Update" badge."""
+        lab = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})
+        if not lab:
+            return {"tenants": {}}
+        out = {}
+        for t in await _targets():
+            d = await build_diff(db, [t], lab)
+            if d["total"]:
+                out[t["app_id"]] = d["total"]
+        return {"tenants": out, "total": sum(out.values())}
+
+    @api.get("/test-lab/rollout/history")
+    async def rollout_history(user: dict = Depends(get_current_user)):
+        jobs = await db.rollout_jobs.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+        undoable = next((j["job_id"] for j in jobs
+                         if j.get("status") in ("done", "partial") and not j.get("undone_at")), None)
+        admins = await _rollout_admins()
+        return {"entries": [{**j, "can_undo": j["job_id"] == undoable} for j in jobs],
+                "is_rollout_admin": (user.get("email") or "").lower().strip() in admins}
+
+    async def _run_undo(job_id: str, user: dict):
+        snaps = await db.rollout_snapshots.find({"job_id": job_id}, {"_id": 0}).to_list(1000)
+        done = 0
+        for s in snaps:
+            try:
+                if s.get("template_key"):
+                    from site_content import LOOKS, NICHES
+                    key, before = s["template_key"], s.get("before_look") or {}
+                    if key in LOOKS:
+                        LOOKS[key].update(before)
+                        if "primary" in before:
+                            NICHES[key]["primary"] = before["primary"]
+                        if "secondary" in before:
+                            NICHES[key]["secondary"] = before["secondary"]
+                        await db.template_looks.update_one(
+                            {"key": key}, {"$set": {"key": key, "look": LOOKS[key], "updated_at": _now()}},
+                            upsert=True)
+                    done += 1
+                    await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
+                        "undo_done": done, "undo_pct": int(done / max(1, len(snaps)) * 100)}})
+                    continue
+                before = s.get("before") or {}
+                setter = {k: v for k, v in before.items() if v is not None}
+                unset = {k: "" for k, v in before.items() if v is None}
+                ops = {}
+                if setter:
+                    ops["$set"] = {**setter, "updated_at": _now()}
+                if unset:
+                    ops["$unset"] = unset
+                if ops:
+                    await db.apps.update_one({"app_id": s["app_id"]}, ops)
+                if s.get("labels") is not None:
+                    await db.ui_labels.update_one({"app_id": s["app_id"]},
+                                                  {"$set": {"labels": s["labels"], "updated_at": _now()}},
+                                                  upsert=True)
+                for f in s.get("forms") or []:
+                    await db.cta_forms.update_one(
+                        {"app_id": s["app_id"], "key": f.get("key")},
+                        {"$set": {"fields": f.get("fields") or [],
+                                  "success_message": f.get("success_message"), "updated_at": _now()}})
+            except Exception:
+                logger.exception("undo failed for %s", s.get("app_id"))
+            done += 1
+            await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
+                "undo_done": done, "undo_pct": int(done / max(1, len(snaps)) * 100)}})
+            await asyncio.sleep(0)
+        await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
+            "undone_at": _now(), "undone_by": user.get("email"), "undo_pct": 100,
+            "undo_total": len(snaps), "status_before_undo": "done", "status": "undone"}})
+        await log_activity(TEST_LAB_ID, user["user_id"], "rollout.undo",
+                           f"Undid rollout {job_id} — restored {len(snaps)} tenant(s)")
+
+    @api.post("/test-lab/rollout/jobs/{job_id}/undo")
+    async def undo_rollout(job_id: str, body: RolloutIn, user: dict = Depends(get_current_user)):
+        await _require_rollout_admin(user)
+        _check_confirm(body.confirm)
+        jobs = await db.rollout_jobs.find({}, {"_id": 0}).sort("created_at", -1).to_list(200)
+        undoable = next((j for j in jobs
+                         if j.get("status") in ("done", "partial") and not j.get("undone_at")), None)
+        if not undoable or undoable["job_id"] != job_id:
+            raise HTTPException(400, "Only the most recent completed rollout can be undone")
+        snaps = await db.rollout_snapshots.count_documents({"job_id": job_id})
+        await db.rollout_jobs.update_one({"job_id": job_id},
+                                         {"$set": {"undo_pct": 0, "undo_total": snaps, "undo_done": 0}})
+        asyncio.create_task(_run_undo(job_id, user))
+        return {"ok": True, "job_id": job_id, "tenants": snaps}
 
     @api.get("/test-lab/rollout/jobs")
     async def rollout_jobs(user: dict = Depends(get_current_user)):
@@ -359,13 +614,25 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         look = theme_for(NICHES[key], key)
         targets = await db.apps.find({"site_niche": key, "archived": {"$ne": True},
                                       "app_id": {"$ne": TEST_LAB_ID}}, {"_id": 0}).to_list(500)
+        diff_rows = [{"id": f"design.{k}", "category": "Design", "label": f"Template token “{k}”",
+                      "old": None, "new": v, "kind": "changed", "tenants": len(targets), "variance": False}
+                     for k, v in look.items()]
+        await db.rollout_jobs.insert_one({
+            "job_id": job_id, "kind": "template", "template_key": key, "scopes": ["theme"],
+            "status": "running", "pct": 0, "done": 0, "changed": 0, "failed": 0, "total": len(targets),
+            "by": user["user_id"], "by_email": user.get("email"), "by_name": user.get("name"),
+            "categories": ["Design"], "diff": {"changes": diff_rows, "by_category": {"Design": diff_rows},
+                                               "total": len(diff_rows), "target_count": len(targets),
+                                               "targets": [{"app_id": t["app_id"], "name": t.get("name")} for t in targets]},
+            "detail": f"Pushing the {key} template design", "created_at": _now()})
         for t in targets:
-            await db.rollout_snapshots.insert_one({
-                "snapshot_id": _uid("snap"), "job_id": job_id, "app_id": t["app_id"],
-                "before": {"theme": t.get("theme")}, "created_at": _now()})
+            await _snapshot(job_id, t["app_id"])
             await db.apps.update_one({"app_id": t["app_id"]},
                                      {"$set": {"theme": {**(t.get("theme") or {}), **look},
                                                "updated_at": _now()}})
+        await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
+            "status": "done", "pct": 100, "done": len(targets), "changed": len(targets),
+            "finished_at": _now(), "detail": f"Applied to {len(targets)} tenant(s) using {key}"}})
         await db.template_states.update_one({"key": key}, {"$set": {
             "key": key, "look_hash": _look_hash(key), "status": "live", "pending_hash": None,
             "last_pushed_at": _now(), "updated_at": _now()}}, upsert=True)

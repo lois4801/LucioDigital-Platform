@@ -978,6 +978,9 @@ async def startup():
         logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
         logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
         from site_content import retheme_all  # noqa: F401  (kept for manual/admin use only)
+        import test_template
+        test_template.install()
+        logger.info(f"Template look overrides loaded: {await test_template.load_overrides(db)}")
         from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states
         await ensure_test_lab(db, admin_id)
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
@@ -1061,6 +1064,8 @@ from supabase_export import register as register_supabase_export
 register_supabase_export(api, db, get_current_user, get_user_app, log_activity)
 from test_lab import register as register_test_lab
 register_test_lab(api, db, get_current_user, get_user_app, log_activity)
+from test_template import register as register_test_template
+register_test_template(api, db, get_current_user, log_activity)
 from site_sync import register as register_site_sync
 import site_sync as _site_sync
 _site_sync.require_ai_access = GROWTH["require_ai_access"]

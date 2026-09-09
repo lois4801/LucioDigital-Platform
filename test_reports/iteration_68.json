@@ -1,0 +1,28 @@
+{
+  "summary": "Iteration 68 — Diff viewer + Rollout history + Undo verified end-to-end. Ran 17 pytest cases (all passed) covering: GET /api/test-lab/diff shape and category correctness, POST /api/test-lab/rollout with the new `changes:[...]` payload (wrong-confirm 400, empty 400, invalid ids 400, non-admin 403, partial rollout only mutating picked fields with tenant name/description untouched, legacy scopes still working), GET /api/test-lab/rollout/history (newest-first, exactly one can_undo=true, is_rollout_admin flag), POST /api/test-lab/rollout/jobs/{job_id}/undo (wrong-confirm 400, older-job 400 with 'most recent' message, correct undo restores theme.primary + flips can_undo=false + sets undone_at/undone_by/undo_pct=100 while pages/name/description remain byte-identical), template rollout writes a history entry with kind='template', template_key='saas', Design category and a populated diff (also 403 for non-admin), and full regression on Test Lab protection + 32 template pages. Playwright pass: seeded a diff via PUT /apps/{id}/theme, clicked push-to-all-tenants-card-btn → diff-viewer opens with diff-category-design, 6 diff-row-* rows, all three bottom buttons (diff-back-btn-bottom, diff-push-selected-btn, diff-push-all-btn) render with counts; unchecking a diff-check-* row lowered 'Push Selected (6)' → 'Push Selected (5)'; clicking Push All opens rollout-modal with rollout-selected-list + the CONFIRM warning, rollout-back-to-diff-btn returns to viewer, diff-back-btn-bottom closes viewer without pushing. nav-rollout-history-btn opens page-rollout-history showing 13 history-entry-* cards; expanding history-toggle-* renders the shared DiffTable (21 rows for the saas template job); expanded newest entry shows 'Undo This Rollout' → undo-modal renders with the exact restore-warning text and both undo-confirm-btn / undo-cancel-btn.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter68_diff_history_undo.py",
+    "/app/test_reports/pytest/iter68.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "test_lab.py:281 _check_confirm raises 400 for any non-CONFIRM word — good, but the message 'Type CONFIRM to apply this rollout' is shown for both the rollout and the undo endpoints; consider a distinct 'Type CONFIRM to undo' string for clarity.",
+    "test_lab.py:296 _patch_for silently drops a picked change if the lab does not have that field set — the diff row would still exist because build_diff always compares against the lab value. In current data this never happens, but a lab tenant that hadn't been themed yet could produce a job that finishes 'done' with 0 mutations. Consider surfacing this in the job detail.",
+    "test_lab.py:344 _run_rollout stores the pre-rollout snapshot even when there are 0 real changes (empty patch); harmless but grows rollout_snapshots. iteration_67 already flagged this — still worth a TTL/index.",
+    "The template-rollout branch (test_lab.py:570) creates history entries but does NOT compute a real 'old vs new' diff — every row has old:null which shows as '—' in the UI. Fine for MVP but consider snapshotting the tenant's prior theme value per key for a richer history diff.",
+    "server.py + test_lab.py are getting long; splitting `_run_rollout` and `_run_undo` into a small `rollout_worker.py` would reduce test_lab.py from 617 lines to ~450."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter68_diff_history_undo.py (new, 17 tests all passing)",
+    "/app/test_reports/iteration_68.json"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (every required data-testid renders and every flow works)"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026!  •  Non-admin client.editor@example.com / ClientEdit2026! — both used, no changes made.",
+  "seed_data_creation": "Repeatedly mutated app_03efdf8b1af4 theme (primary/secondary hex codes) via PUT /apps/{id}/theme to force a diff. Each rollout then restored the target back to Test Lab colours; the final undo test restored the target's original primary. No tenants/pages/leads/users/template_states were created or deleted. app_testlab and app_03efdf8b1af4 remain intact with their original names and page counts.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Tenants unchanged: app_testlab (protected, 32 pages) and app_03efdf8b1af4 (Rollout Target Demo — its primary/secondary hex may be whatever the last rollout in iter68 left, currently the Test Lab palette). rollout_jobs collection now has many entries including one new saas-template job (kind='template'), and rollout_snapshots keeps growing per rollout. IMPORTANT: pytest.ini defaults to `-n 2 --dist loadscope` — this test file MUST be run with `-n 0` because all tests share the single rollout target tenant. To seed a diff for future tests, use PUT /api/apps/{id}/theme with body {\"theme\": {...}}; do NOT try PATCH /api/apps/{id} (theme is ignored on that endpoint). The undo button data-testid=history-undo-btn-{job_id} is only rendered inside the expanded card (behind history-toggle-{job_id}) — always click the toggle first.",
+  "rca of the issue": "No functional issues found. The only test-scripting hiccup was that PATCH /api/apps/{id} silently ignores theme changes (safelist filter), which surfaced as a 400 'Select at least one change to push' when the seed step no-op'd. Fixed by seeding via the dedicated PUT /api/apps/{id}/theme endpoint. Also switched off pytest-xdist for this suite (-n 0) since all 17 cases share app_03efdf8b1af4."
+}

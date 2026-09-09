@@ -16,6 +16,15 @@ Core requirements:
 9. Booking calendar, paid members area, client panel
 
 ## Hard platform rules (user-mandated)
+- **CREDIT-SAFE DEFAULT — TEST INSTANCES ONLY (June 2026, permanent, overrides everything else).**
+  Every change goes to exactly ONE test instance first:
+  - Template design / animation / layout / new section work → the **Test Template** (`test_template`).
+  - App, feature, UI, form, dashboard or system-behaviour work → the **LucioDigital Test Lab**
+    tenant (`app_testlab`).
+  It reaches anything else ONLY when the admin opens the Diff Viewer and clicks **Push to One** or
+  **Push to All** and types CONFIRM. No prompt, agent action, migration or startup task may write to
+  more than that single test instance in one operation. If a request does not name a specific tenant
+  or template, it targets the test instance — never "all".
 - **DEFAULT TARGET IS THE TEST LAB (June 2026, permanent).** Every design change, animation, template
   redesign or new platform behaviour lands on the `LucioDigital Test Lab` tenant (`app_testlab`) only.
   It reaches live tenants **exclusively** when a rollout admin clicks "Push to All Tenants" (or a
@@ -273,3 +282,50 @@ FastAPI/Mongo. No feature or UI changes.
   push button on the Test Lab dashboard card (`tenant-test-badge-app_testlab`,
   `push-to-all-tenants-card-btn`) and in the tenant editor header (`header-test-badge`,
   `push-to-all-tenants-btn`).
+
+
+## June 2026 — Diff Viewer + Rollout History + Undo (iter68, 17/17 backend, UI verified)
+- `GET /api/test-lab/diff[?app_id=]` — aggregated diff between the Test Lab and live tenants.
+  `DIFF_FIELDS` drives Design / Animations / Features rows; UI labels and CTA form field lists add
+  Content / Forms rows; removed labels appear as `kind: "removed"`. Rows carry
+  `{id, category, label, old, new, kind, tenants, variance}` and only appear when they genuinely differ.
+- `POST /api/test-lab/rollout` accepts `changes:[ids]` (Push Selected) as well as the legacy
+  `scopes:[...]`, plus `target_app_ids:[...]` for Push to One Tenant. Stores the filtered diff +
+  categories on the job. `_run_rollout` reports `done` / `partial` / `failed`.
+- `GET /api/test-lab/rollout/history` — permanent, read-only, newest first, exactly one entry has
+  `can_undo: true`. `GET /api/test-lab/pending` returns per-tenant unpushed-change counts.
+- `_snapshot()` captures theme + ui_skin + cursor fields + UI labels + CTA form structures before every
+  rollout. `POST /api/test-lab/rollout/jobs/{job_id}/undo` (CONFIRM + most-recent-only) restores them in
+  the background with `undo_pct`, then marks the entry `undone` with `undone_at` / `undone_by`.
+- Frontend: `components/DiffViewer.jsx` (full-screen viewer + the shared `DiffTable`),
+  `pages/RolloutHistory.jsx` at `/rollout-history` (nav button `nav-rollout-history-btn`),
+  `RolloutModal.jsx` is now two-stage (diff → confirm).
+
+## June 2026 — Test Template + Push to One + visual indicators (iter69, 13/13 backend, UI verified)
+- **`backend/test_template.py`** — `test_template` is a dedicated 33rd template cloned from
+  `it_services` (no client-facing design is ever used as a sandbox) and is hidden from client-facing
+  template pickers. `install()` registers it at startup; `load_overrides(db)` re-applies every pushed
+  look from the `template_looks` collection so pushes survive restarts.
+- `GET /api/test-template` · `GET /api/test-template/diff?scope=all|classic|studio|selected&keys=` ·
+  `POST /api/test-template/rollout` (rollout-admin + CONFIRM, `changes` for Push Selected). A push
+  writes a `rollout_jobs` entry with `kind="template_look"`, snapshots `before_look` per template, and
+  flips each touched template's `template_states.status` to `pending` (tenants on it still need a push).
+- `_run_undo()` handles `before_look` snapshots, so template pushes are undoable like tenant rollouts.
+- Push to One Tenant: `_targets(only)` + `RolloutIn.target_app_ids` + `?app_id=` on the diff endpoint;
+  those jobs are recorded with `kind="single"`.
+- Frontend: `components/TemplatePushModal.jsx` (scope switch + diff + CONFIRM),
+  `components/PushToOnePicker.jsx`; Test Template pinned first in the gallery with a **yellow** TEST
+  badge (`template-test-badge`) and both push buttons; Test Lab pinned first on the dashboard with a
+  **green** TEST badge and `push-to-one-tenant-btn`; **orange** "Pending Update" badges on tenants
+  (`tenant-pending-badge-*`) and templates (`template-pending-badge-*`).
+
+## June 2026 — Site Mode page bar restyle (PagesBar)
+- The user's "tenant navigation bar" is the horizontal page bar at the top of Site Mode
+  (`components/builder/PagesBar.jsx`) — in the Test Lab it lists all 33 template pages.
+- Selected card fills with **that page's own** `theme_preview.primary` (falls back to the tenant theme)
+  at 85%, 2px full-opacity brand border, `0 8px 26px` brand glow at 30%, text white or `#222222` chosen
+  by relative luminance, and a template-key tag pill on a darker translucent background. Unselected
+  cards stay flat `--bg-2` and dim. All colour properties transition in `0.25s ease`.
+- New `.tenant-scroll` class in `index.css`: 8px-tall always-visible scrollbar, rounded caps,
+  `#666666` thumb → `#ffffff` on hover/active, `#2a2a2a` track, Firefox `scrollbar-color` included.
+- Never hardcode brand colours here — they are read live from the page/tenant theme.

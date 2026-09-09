@@ -1,11 +1,16 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, ShieldCheck, X, Plus, Trash2 } from "lucide-react";
+import { Loader2, AlertTriangle, ShieldCheck, X, Plus, Trash2, History } from "lucide-react";
+import { Link } from "react-router-dom";
+import DiffViewer from "@/components/DiffViewer";
 
 /** Confirmation + scoped, background rollout of Test Lab settings to every active tenant. */
-export default function RolloutModal({ open, onClose }) {
+export default function RolloutModal({ open, onClose, targetAppId = null, targetName = "" }) {
   const [preview, setPreview] = useState(null);
+  const [diff, setDiff] = useState(null);
+  const [stage, setStage] = useState("diff"); // diff → confirm
+  const [picked, setPicked] = useState(null);
   const [scopes, setScopes] = useState(["theme", "mode", "skin", "motion"]);
   const [word, setWord] = useState("");
   const [job, setJob] = useState(null);
@@ -15,9 +20,12 @@ export default function RolloutModal({ open, onClose }) {
 
   useEffect(() => {
     if (!open) return;
+    setStage("diff"); setJob(null); setWord(""); setPicked(null);
     api.get("/test-lab/rollout/preview").then(({ data }) => setPreview(data)).catch(() => toast.error("Could not load the rollout summary"));
+    api.get("/test-lab/diff", { params: targetAppId ? { app_id: targetAppId } : {} })
+      .then(({ data }) => setDiff(data)).catch(() => toast.error("Could not build the diff"));
     api.get("/rollout-admins").then(({ data }) => setAdmins(data)).catch(() => {});
-  }, [open]);
+  }, [open, targetAppId]);
 
   useEffect(() => {
     if (!job || job.status !== "running") return;
@@ -41,7 +49,9 @@ export default function RolloutModal({ open, onClose }) {
   async function confirm() {
     setBusy(true);
     try {
-      const { data } = await api.post("/test-lab/rollout", { scopes, confirm: word });
+      const payload = picked ? { changes: picked, confirm: word } : { scopes, confirm: word };
+      if (targetAppId) payload.target_app_ids = [targetAppId];
+      const { data } = await api.post("/test-lab/rollout", payload);
       setJob(data);
       toast.info("Rollout started — you can keep working while it runs");
     } catch (e) {
@@ -66,6 +76,20 @@ export default function RolloutModal({ open, onClose }) {
 
   if (!open) return null;
 
+  if (stage === "diff" && !job) {
+    if (!diff) {
+      return (
+        <div className="fixed inset-0 z-[75] bg-[var(--bg)] flex items-center justify-center" data-testid="diff-loading">
+          <Loader2 size={20} className="animate-spin text-[var(--mut)]" />
+        </div>
+      );
+    }
+    return (
+      <DiffViewer diff={diff} onBack={onClose}
+        onPush={(ids) => { setPicked(ids); setStage("confirm"); }} />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-[80] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
       data-testid="rollout-modal" onClick={onClose}>
@@ -73,7 +97,9 @@ export default function RolloutModal({ open, onClose }) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="overline">Global rollout</div>
-            <h3 className="font-display text-2xl font-semibold tracking-tight mt-1">Push to All Tenants</h3>
+            <h3 className="font-display text-2xl font-semibold tracking-tight mt-1">
+              {targetAppId ? `Push to ${targetName || "one tenant"}` : "Push to All Tenants"}
+            </h3>
           </div>
           <button data-testid="rollout-close-btn" onClick={onClose} className="btn-ghost !p-2"><X size={15} /></button>
         </div>
@@ -102,10 +128,13 @@ export default function RolloutModal({ open, onClose }) {
         ) : (
           <>
             <p className="text-sm text-[var(--mut)] mt-3">
-              Pick what gets copied from the Test Lab onto the {preview.target_count} active tenant(s).
-              Tenant content — text, images, pages, leads and CMS records — is never touched.
+              {picked
+                ? `${picked.length} change(s) selected in the diff viewer will be applied to the ${preview.target_count} active tenant(s).`
+                : `Pick what gets copied from the Test Lab onto the ${preview.target_count} active tenant(s).`}
+              {" "}Tenant content — text, images, pages, leads and CMS records — is never touched.
             </p>
 
+            {!picked && (
             <div className="mt-5 space-y-2">
               {preview.scopes.map((s) => (
                 <label key={s.key} data-testid={`rollout-scope-${s.key}`}
@@ -122,10 +151,25 @@ export default function RolloutModal({ open, onClose }) {
                 </label>
               ))}
             </div>
+            )}
+
+            {picked && (
+              <div className="mt-5 max-h-52 overflow-y-auto rounded-xl border border-[var(--line)] divide-y divide-[var(--line)]"
+                data-testid="rollout-selected-list">
+                {(diff?.changes || []).filter((c) => picked.includes(c.id)).map((c) => (
+                  <div key={c.id} className="px-3 py-2 text-xs flex items-center justify-between gap-2">
+                    <span className="truncate"><b className="text-[var(--dim)] font-mono mr-2">{c.category}</b>{c.label}</span>
+                    <span className="font-mono text-[10px] text-emerald-300 truncate max-w-[40%]">{typeof c.new === "object" ? JSON.stringify(c.new) : String(c.new)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="mt-5 p-3 rounded-xl bg-amber-500/8 border border-amber-500/30 text-sm text-amber-200 flex items-start gap-2">
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-              Are you sure you want to apply all current Test Lab settings to all active tenants? This cannot be undone.
+              {targetAppId
+                ? "Are you sure you want to apply these changes? This cannot be undone."
+                : "Are you sure you want to apply all current Test Lab settings to all active tenants? This cannot be undone."}
             </div>
 
             <label className="block mt-4">
@@ -137,11 +181,17 @@ export default function RolloutModal({ open, onClose }) {
 
             <div className="flex flex-wrap gap-2 mt-5">
               <button data-testid="rollout-confirm-btn" onClick={confirm}
-                disabled={busy || !scopes.length || word.trim().toUpperCase() !== "CONFIRM"}
+                disabled={busy || (!picked && !scopes.length) || word.trim().toUpperCase() !== "CONFIRM"}
                 className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2 disabled:opacity-50">
                 {busy ? <Loader2 size={14} className="animate-spin" /> : <ShieldCheck size={14} />} Confirm
               </button>
               <button data-testid="rollout-cancel-btn" onClick={onClose} className="btn-ghost text-sm !py-2 !px-4">Cancel</button>
+              {picked && (
+                <button data-testid="rollout-back-to-diff-btn" onClick={() => { setStage("diff"); setPicked(null); }}
+                  className="btn-ghost text-sm !py-2 !px-4">Back to diff</button>
+              )}
+              <Link to="/rollout-history" data-testid="rollout-history-link"
+                className="btn-ghost text-sm !py-2 !px-4 ml-auto flex items-center gap-2"><History size={13} /> History</Link>
             </div>
 
             {admins && (
