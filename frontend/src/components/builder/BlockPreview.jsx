@@ -128,7 +128,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
         <div className={`text-sm mt-3 ${m}`}>{openItem.date}{openItem.tags?.length ? " · " + openItem.tags.join(", ") : ""}</div>
         {openItem.cover && <img src={openItem.cover} alt="" loading="lazy" decoding="async" className="w-full aspect-video object-cover rounded-[var(--tr)] mt-8" />}
         <p className={`text-xl mt-8 ${m}`}>{openItem.excerpt}</p>
-        {(openItem.body || "").split("\n").filter(Boolean).map((x, i) => <p key={i} className="text-lg leading-relaxed mt-5">{x}</p>)}
+        {(openItem.body || "").split("\n").filter(Boolean).map((x, i) => <p key={`${x.slice(0, 24)}-${i}`} className="text-lg leading-relaxed mt-5">{x}</p>)}
       </div></section>
     );
     return (
@@ -149,7 +149,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       {p.logo && <img data-testid="navbar-logo" src={absUrl(p.logo)} alt="" className="h-8 w-auto object-contain order-first" />}
       <div className="hidden md:flex gap-6 text-sm font-medium text-[var(--tmut)]">
         {(p.links || []).map((l, i) => (
-          <span key={i} className="relative group">
+          <span key={`${(typeof l === "string" ? l : l?.label) || "nav"}-${i}`} className="relative group">
             <button data-testid={`nav-link-${i}`} onClick={(e) => { e.stopPropagation(); if (!onEdit) onNavigate?.(l.href); }} className={`hover:text-[var(--tfg)] flex items-center gap-1 ${v2 ? "tlink" : ""}`}>
               <T value={l.label} {...E(`links.${i}.label`)} />
               {l.children?.length > 0 && <Icons.ChevronDown size={12} />}
@@ -204,18 +204,18 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   }
   if (block.type === "stats") return (
     <section className={cls} data-testid="block-stats"><Kicker><T value={p.heading} {...E("heading")} /></Kicker>
-      <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 ${stag}`}>{(p.items || []).map((it, i) => <div key={i} className={`${card} text-left`}><div className="font-[var(--tfh)] text-3xl lg:text-4xl font-extrabold text-[var(--tp)]"><T value={it.value} {...E(`items.${i}.value`)} /></div><div className="text-sm text-[var(--tmut)] mt-2"><T value={it.label} {...E(`items.${i}.label`)} /></div></div>)}</div>
+      <div className={`grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6 ${stag}`}>{(p.items || []).map((it, i) => <div key={`${it.label || it.value || "it"}-${i}`} className={`${card} text-left`}><div className="font-[var(--tfh)] text-3xl lg:text-4xl font-extrabold text-[var(--tp)]"><T value={it.value} {...E(`items.${i}.value`)} /></div><div className="text-sm text-[var(--tmut)] mt-2"><T value={it.label} {...E(`items.${i}.label`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "team") return (
     <section className={cls} data-testid="block-team"><H2 value={p.heading} {...E("heading")} />
-      <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left ${stag}`}>{(dyn("members") || []).map((mb, i) => <div key={i} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" loading="lazy" decoding="async" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
+      <div className={`grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-10 text-left ${stag}`}>{(dyn("members") || []).map((mb, i) => <div key={`${mb.name || "mb"}-${i}`} className={`${card} !p-4`}>{mb.photo && <div className="relative mb-4"><img src={mb.photo} alt="" loading="lazy" decoding="async" className="w-full aspect-square object-cover rounded-[calc(var(--tr)-6px)]" /><Swap path={`members.${i}.photo`} current={mb.photo} /></div>}<div className="font-[var(--tfh)] font-bold"><T value={mb.name} {...E(`members.${i}.name`)} /></div><div className="text-xs text-[var(--tp)] mt-1 font-semibold uppercase tracking-wider"><T value={mb.role} {...E(`members.${i}.role`)} /></div></div>)}</div>
     </section>
   );
   if (block.type === "logos") return (
     <section className={`${cls} text-center`}>
       <T as="p" value={p.heading} {...E("heading")} className={`block text-xs uppercase tracking-[0.15em] font-semibold ${m}`} />
-      <div className="mt-6 flex flex-wrap justify-center gap-10 text-xl font-bold text-[var(--tmut)]/70 font-[var(--tfh)]">{(p.names || []).map((n, i) => <T key={i} value={n} {...E(`names.${i}`)} />)}</div>
+      <div className="mt-6 flex flex-wrap justify-center gap-10 text-xl font-bold text-[var(--tmut)]/70 font-[var(--tfh)]">{(p.names || []).map((n, i) => <T key={`${n}-${i}`} value={n} {...E(`names.${i}`)} />)}</div>
     </section>
   );
   if (block.type === "features") return (
@@ -224,7 +224,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       {p.subheading !== undefined && <T as="p" value={p.subheading} {...E("subheading")} className={`block mt-3 text-lg max-w-xl ${m} ${s.align === "center" ? "mx-auto" : ""}`} />}
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(dyn("items") || []).map((it, i) => (
-          <div key={i} className={card}>
+          <div key={`${it.title || it.name || "card"}-${i}`} className={card}>
             <div className="w-11 h-11 rounded-xl bg-[var(--tp)]/15 text-[var(--tp)] flex items-center justify-center mb-4 shadow-[0_0_24px_-6px_var(--tp)]"><Icon name={it.icon} /></div>
             <T as="h3" value={it.title} {...E(`items.${i}.title`)} className={`block font-[var(--tfh)] ${v2 ? "t-h3" : "text-lg"} font-bold`} />
             <T as="p" value={it.desc} {...E(`items.${i}.desc`)} className="block text-sm text-[var(--tmut)] mt-2" />
@@ -235,7 +235,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   );
   if (block.type === "gallery") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
-      <div className={`grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8 ${stag}`}>{(dyn("images") || []).map((u, i) => <div key={i} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
+      <div className={`grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-8 ${stag}`}>{(dyn("images") || []).map((u, i) => <div key={`${u}-${i}`} className="relative overflow-hidden rounded-[var(--tr)]"><img src={u} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] transition-transform duration-500 hover:scale-[1.02]" /><Swap path={`images.${i}`} current={u} /></div>)}</div>
     </section>
   );
   if (block.type === "video") return (
@@ -248,7 +248,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(dyn("items") || []).map((it, i) => (
-          <div key={i} className={card}>
+          <div key={`${it.title || it.name || "card"}-${i}`} className={card}>
             <div className="flex gap-0.5 text-[var(--tp)] mb-3">{[...Array(5)].map((_, k) => <Icons.Star key={k} size={14} fill="currentColor" />)}</div>
             <T as="p" value={`“${it.quote}”`} {...E(`items.${i}.quote`)} className="block text-base leading-relaxed" />
             <div className="mt-4"><T value={it.name} {...E(`items.${i}.name`)} className="font-semibold text-sm" /><div className="text-xs text-[var(--tmut)]"><T value={it.role} {...E(`items.${i}.role`)} /></div></div>
@@ -261,7 +261,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     <section className={cls}><H2 value={p.heading} {...E("heading")} className="text-center block" />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(dyn("plans") || []).map((pl, i) => (
-          <div key={i} className={`${card} ${pl.highlight ? "!border-[var(--tp)] shadow-[0_24px_60px_-30px_var(--tp)]" : ""}`}>
+          <div key={`${pl.name || "plan"}-${i}`} className={`${card} ${pl.highlight ? "!border-[var(--tp)] shadow-[0_24px_60px_-30px_var(--tp)]" : ""}`}>
             <T value={pl.name} {...E(`plans.${i}.name`)} className="text-sm font-semibold text-[var(--tmut)]" />
             <div className="font-[var(--tfh)] text-4xl font-extrabold mt-2"><T value={pl.price} {...E(`plans.${i}.price`)} /><span className="text-sm text-[var(--tmut)] font-medium">/{pl.period || "mo"}</span></div>
             <ul className="mt-4 space-y-2 text-sm text-[var(--tmut)]">{(pl.features || []).map((f, k) => <li key={k} className="flex gap-2"><Icons.Check size={14} className="text-[var(--ts)] mt-0.5" /><T value={f} {...E(`plans.${i}.features.${k}`)} /></li>)}</ul>
@@ -275,7 +275,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     <section className={cls}><div className="max-w-3xl mx-auto text-left"><H2 value={p.heading} {...E("heading")} />
       <div className="mt-6 divide-y divide-[var(--tbd)]">
         {(dyn("items") || []).map((it, i) => (
-          <details key={i} className="py-4 group"><summary className="font-semibold cursor-pointer list-none flex justify-between items-center"><T value={it.q} {...E(`items.${i}.q`)} /><Icons.ChevronDown size={16} className="group-open:rotate-180 transition-transform" /></summary>
+          <details key={`${it.q || "faq"}-${i}`} className="py-4 group"><summary className="font-semibold cursor-pointer list-none flex justify-between items-center"><T value={it.q} {...E(`items.${i}.q`)} /><Icons.ChevronDown size={16} className="group-open:rotate-180 transition-transform" /></summary>
             <T as="p" value={it.a} {...E(`items.${i}.a`)} className="block text-[var(--tmut)] mt-2 text-sm leading-relaxed" /></details>
         ))}
       </div></div>
@@ -286,7 +286,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     return (
       <section className={cls}><H2 value={p.heading} {...E("heading")} />
         <div className="h-44 mt-8 flex items-end gap-3">{(p.series || []).map((x, i) => (
-          <div key={i} className="flex-1 flex flex-col items-center gap-2"><div style={{ height: `${(x.v / max) * 100}%`, background: "linear-gradient(180deg,var(--tp),var(--ts))" }} className="w-full rounded-t-lg min-h-[6px]" /><div className="text-[10px] text-[var(--tmut)]"><T value={x.m} {...E(`series.${i}.m`)} /></div></div>))}</div>
+          <div key={`${x.m || "bar"}-${i}`} className="flex-1 flex flex-col items-center gap-2"><div style={{ height: `${(x.v / max) * 100}%`, background: "linear-gradient(180deg,var(--tp),var(--ts))" }} className="w-full rounded-t-lg min-h-[6px]" /><div className="text-[10px] text-[var(--tmut)]"><T value={x.m} {...E(`series.${i}.m`)} /></div></div>))}</div>
         {p.caption && <T as="p" value={p.caption} {...E("caption")} className={`block mt-4 text-sm ${m}`} />}
       </section>
     );
@@ -364,7 +364,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
   if (block.type === "footer") return (
     <footer className="px-6 sm:px-8 lg:px-12 py-14 border-t border-[var(--tbd)] grid md:grid-cols-4 gap-8 text-left">
       <div>{p.logo && <img data-testid="footer-logo" src={absUrl(p.logo)} alt="" loading="lazy" decoding="async" className="h-8 w-auto object-contain mb-3" />}<T value={p.brand} {...E("brand")} className="font-[var(--tfh)] font-extrabold text-lg" /><T as="p" value={p.tagline} {...E("tagline")} className="block text-sm text-[var(--tmut)] mt-2" /></div>
-      {(p.columns || []).map((c, i) => <div key={i}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={typeof l === "string" ? l : (l?.label || "")} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
+      {(p.columns || []).map((c, i) => <div key={`${c.title || "col"}-${i}`}><T value={c.title} {...E(`columns.${i}.title`)} className="text-sm font-semibold" /><ul className="mt-3 space-y-2 text-sm text-[var(--tmut)]">{(c.links || []).map((l, k) => <li key={k}><T value={typeof l === "string" ? l : (l?.label || "")} {...E(`columns.${i}.links.${k}`)} /></li>)}</ul></div>)}
     </footer>
   );
   return <div className="p-6 text-sm text-[var(--tmut)]">Unknown block: {block.type}</div>;

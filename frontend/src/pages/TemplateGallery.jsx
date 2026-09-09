@@ -102,8 +102,7 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected }) {
 export default function TemplateGallery({ clientMode = false }) {
   const nav = useNavigate();
   const { token } = useParams();
-  const [list, setList] = useState([]);
-  const [cats, setCats] = useState([]);
+  const [list, setList] = useState([]);  const [cats, setCats] = useState([]);
   const [cat, setCat] = useState("All");
   const [details, setDetails] = useState({});
   const [full, setFull] = useState(null);

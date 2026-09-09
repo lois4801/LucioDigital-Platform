@@ -161,7 +161,7 @@ async def bundle_fonts(bundler: Bundler, client: httpx.AsyncClient, heading: str
         sheet = r.text
     except Exception:
         logger.warning("font sheet download failed")
-        return f"/* Google Fonts unavailable at export time; falls back to system fonts. */\n"
+        return "/* Google Fonts unavailable at export time; falls back to system fonts. */\n"
     for font_url in set(re.findall(r"url\((https://[^)]+)\)", sheet)):
         data, _ct = await bundler._remote(client, font_url)
         if not data:

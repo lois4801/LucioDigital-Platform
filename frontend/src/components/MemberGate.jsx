@@ -12,17 +12,26 @@ const err = (e) => {
   return e.message || "Something went wrong";
 };
 
+/** Per-tab storage for tenant-site JWTs — not readable by another tab, cleared when the tab closes.
+ *  Any token still sitting in localStorage from an older build is migrated once and removed. */
+function readJwt(token) {
+  const k = memberKey(token);
+  const legacy = localStorage.getItem(k);
+  if (legacy) { sessionStorage.setItem(k, legacy); localStorage.removeItem(k); }
+  return sessionStorage.getItem(k) || "";
+}
+
 export function useMember(token) {
-  const [state, setState] = useState({ loading: true, user: null, jwt: localStorage.getItem(memberKey(token)) || "" });
+  const [state, setState] = useState({ loading: true, user: null, jwt: readJwt(token) });
   useEffect(() => {
-    const jwt = localStorage.getItem(memberKey(token)) || "";
+    const jwt = readJwt(token);
     if (!jwt) { setState({ loading: false, user: null, jwt: "" }); return; }
     axios.get(`${BASE}/site/${token}/auth/me`, { headers: { Authorization: `Bearer ${jwt}` } })
       .then(r => setState({ loading: false, user: r.data.user, jwt }))
-      .catch(() => { localStorage.removeItem(memberKey(token)); setState({ loading: false, user: null, jwt: "" }); });
+      .catch(() => { sessionStorage.removeItem(memberKey(token)); setState({ loading: false, user: null, jwt: "" }); });
   }, [token]);
-  const signIn = (jwt, user) => { localStorage.setItem(memberKey(token), jwt); setState({ loading: false, user, jwt }); };
-  const signOut = () => { localStorage.removeItem(memberKey(token)); setState({ loading: false, user: null, jwt: "" }); };
+  const signIn = (jwt, user) => { sessionStorage.setItem(memberKey(token), jwt); setState({ loading: false, user, jwt }); };
+  const signOut = () => { sessionStorage.removeItem(memberKey(token)); setState({ loading: false, user: null, jwt: "" }); };
   return { ...state, signIn, signOut };
 }
 

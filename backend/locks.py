@@ -9,12 +9,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
 
-KINDS = ("page", "block", "form", "cms_collection", "cms_item", "workflow",
-         "data_destination", "app_mode", "overview")
-
-LABELS = {"page": "page", "block": "section", "form": "form", "cms_collection": "collection",
-          "cms_item": "content item", "workflow": "workflow", "data_destination": "data destination",
-          "app_mode": "App Mode blueprint", "overview": "Overview"}
+from lock_shared import KINDS, LABELS, active_grant, consume_grant  # noqa: F401
 
 
 def _now():
@@ -43,7 +38,7 @@ async def assert_item_editable(db, app_doc: dict, kind: str, item_id: str, user:
     from page_guard import role_of
     if await role_of(db, app_doc, user) in ("owner", "admin"):
         return None
-    from edit_requests import active_grant
+
     grant = await active_grant(db, app_doc["app_id"], item_id, user["user_id"])
     if grant:
         return grant
@@ -114,7 +109,6 @@ async def consume_if_grant(db, grant: Optional[dict], app_id: str, user: dict, l
     """A single-use grant is spent the moment the client's change lands."""
     if not grant:
         return
-    from edit_requests import consume_grant
     await consume_grant(db, grant["grant_id"])
     await db.messages.update_one({"message_id": grant.get("message_id")},
                                  {"$set": {"edit_request.state": "completed", "edit_request.completed_at": _now()}})

@@ -7,6 +7,8 @@ from typing import Optional, List
 from fastapi import HTTPException, Depends
 from pydantic import BaseModel
 
+from lock_shared import KINDS, LABELS, active_grant, consume_grant  # noqa: F401
+
 logger = logging.getLogger(__name__)
 GRANT_HOURS = 48
 
@@ -20,16 +22,6 @@ def _iso():
 
 def _uid(p):
     return f"{p}_{uuid.uuid4().hex[:12]}"
-
-
-async def active_grant(db, app_id: str, page_id: str, user_id: str) -> Optional[dict]:
-    g = await db.edit_grants.find_one({"app_id": app_id, "page_id": page_id, "user_id": user_id,
-                                       "used": False, "expires_at": {"$gt": _iso()}}, {"_id": 0})
-    return g
-
-
-async def consume_grant(db, grant_id: str):
-    await db.edit_grants.update_one({"grant_id": grant_id}, {"$set": {"used": True, "used_at": _iso()}})
 
 
 class RequestIn(BaseModel):
@@ -88,7 +80,6 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
     async def create_item_request(app_id: str, body: ItemRequestIn, user: dict = Depends(get_current_user)):
         """Generic 'Request a change' for any locked item: section, form, CMS entry, workflow, App Mode…"""
         doc = await get_user_app(app_id, user)
-        from locks import KINDS, LABELS
         if body.kind not in KINDS:
             raise HTTPException(400, f"Unknown item kind '{body.kind}'")
         if not (body.description or "").strip():

@@ -7,6 +7,14 @@ import { Inbox, Users, Layers, BarChart3, LogOut, Loader2, Check, Trash2, Plus, 
 const BASE = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const KEY = (t) => `site_admin_token_${t}`;
 
+/** Per-tab JWT storage (sessionStorage) with a one-time migration off localStorage. */
+function readSiteJwt(token) {
+  const k = KEY(token);
+  const legacy = localStorage.getItem(k);
+  if (legacy) { sessionStorage.setItem(k, legacy); localStorage.removeItem(k); }
+  return sessionStorage.getItem(k) || "";
+}
+
 const err = (e) => {
   const d = e.response?.data?.detail;
   if (typeof d === "string") return d;
@@ -18,7 +26,7 @@ export default function SiteAdmin() {
   const { token } = useParams();
   const [params] = useSearchParams();
   const resetToken = params.get("reset");
-  const [jwtToken, setJwtToken] = useState(() => localStorage.getItem(KEY(token)) || "");
+  const [jwtToken, setJwtToken] = useState(() => readSiteJwt(token));
   const [summary, setSummary] = useState(null);
   const [tab, setTab] = useState("submissions");
   const [loading, setLoading] = useState(true);
@@ -32,10 +40,10 @@ export default function SiteAdmin() {
   const loadSummary = () => http.get("/admin/summary").then(r => { setSummary(r.data); setLoading(false); }).catch(() => { setSummary(null); setLoading(false); });
   useEffect(() => { loadSummary(); }, [http]);
 
-  function signOut() { localStorage.removeItem(KEY(token)); setJwtToken(""); setSummary(null); }
+  function signOut() { sessionStorage.removeItem(KEY(token)); setJwtToken(""); setSummary(null); }
 
   if (loading) return <div className="min-h-screen grid place-items-center bg-[var(--bg)] text-[var(--fg)]"><Loader2 className="animate-spin" /></div>;
-  if (!summary) return <SignIn token={token} resetToken={resetToken} inviteCode={params.get("invite")} onToken={(t) => { localStorage.setItem(KEY(token), t); setJwtToken(t); setLoading(true); }} />;
+  if (!summary) return <SignIn token={token} resetToken={resetToken} inviteCode={params.get("invite")} onToken={(t) => { sessionStorage.setItem(KEY(token), t); setJwtToken(t); setLoading(true); }} />;
 
   const TABS = [["submissions", "Submissions", Inbox], ["bookings", "Bookings", CalendarCheck], ["users", "Users", Users], ["content", "Content", Layers], ["analytics", "Analytics", BarChart3]];
   return (

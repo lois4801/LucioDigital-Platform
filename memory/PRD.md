@@ -97,6 +97,28 @@ global inbox, labelled "Removed tenant". They can be recreated from the Template
   AppDetail), CTA buttons in `BlockPreview` become real buttons, Builder canvas opens the editor,
   Leads Source column shows the triggering button label.
 
+## Sept 9, 2026 — Code-quality review fixes (iter63, 17/17 backend, frontend 100%)
+- **Circular import removed:** new `backend/lock_shared.py` owns `KINDS`, `LABELS`, `active_grant`,
+  `consume_grant`; `locks.py` and `edit_requests.py` both import it at module top and neither
+  imports the other (the old deferred function-level imports are gone). Lock + edit-request +
+  single-use-grant flows re-verified end to end.
+- **Token storage hardened:** the two client-facing site JWTs moved from localStorage to
+  sessionStorage with a one-time migration that copies then deletes any legacy token —
+  `SiteAdmin.jsx` (`site_admin_token_*`) and `MemberGate.jsx` (`site_member_token_*`).
+  `Builder.jsx` localStorage was left as-is: it holds page draft content, not credentials.
+- **Stable React keys:** all 12 array-index keys in `BlockPreview.jsx` replaced with
+  content-derived keys (nav, stats, team, logos, gallery, features, testimonials, pricing, FAQ,
+  chart, footer columns, article paragraphs). Zero key warnings / ReferenceErrors across 4 tenant
+  pages + all 16 template previews.
+- **Lint truth-checks:** server.py:762 is an embed `<script>` built from `FRONTEND_URL` + the public
+  preview token, **not a secret** (repo-wide scan for sk_live/sk_test/AKIA/PEM/inline passwords
+  outside `os.environ` came back clean). pyflakes found **no** undefined variables; the real
+  findings (3 f-strings without placeholders) were fixed. The "260 `is` vs `==`" finding is a false
+  positive — every instance is a correct `is None` / `is not None` check.
+- **Deliberately not done:** the complexity / import-count refactors (splitting `register()`
+  functions, splitting Dashboard and Builder). They are churn with real regression risk and no
+  user-visible benefit; revisit only if a feature needs to touch those files anyway.
+
 ## Order agreed with user
 ElevenLabs → External DB sync → Delete-my-account → GitHub push (PAT on hold)
 

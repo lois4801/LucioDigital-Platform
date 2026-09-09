@@ -120,7 +120,7 @@ def render_block(b: dict, pages_nav: str, cols: List[dict] = None) -> str:
         items = "".join(f"<div class='card'><div class='stat'>{esc(i.get('value'))}</div><p class='mut' style='margin-top:8px'>{esc(i.get('label'))}</p></div>" for i in p.get("items", []))
         return f"<section class='{cls}'><div class='wrap'><p class='kicker'>{esc(p.get('heading'))}</p><div class='grid g4'>{items}</div></div></section>"
     if t == "team":
-        items = "".join(f"<div class='card' style='padding:16px'>" + (f"<img class='tm' src='{esc(m.get('photo'))}' alt=''>" if m.get("photo") else "") + f"<h3 style='font-size:18px'>{esc(m.get('name'))}</h3><p class='kicker' style='margin:6px 0 0'>{esc(m.get('role'))}</p></div>" for m in p.get("members", []))
+        items = "".join("<div class='card' style='padding:16px'>" + (f"<img class='tm' src='{esc(m.get('photo'))}' alt=''>" if m.get("photo") else "") + f"<h3 style='font-size:18px'>{esc(m.get('name'))}</h3><p class='kicker' style='margin:6px 0 0'>{esc(m.get('role'))}</p></div>" for m in p.get("members", []))
         return f"<section class='{cls}'><div class='wrap'><h2 style='font-size:40px'>{esc(p.get('heading'))}</h2><div class='grid g4' style='margin-top:40px'>{items}</div></div></section>"
     if t == "logos":
         return f"<section class='sm {cls}'><div class='wrap center'><p class='mut' style='font-size:13px;letter-spacing:.1em;text-transform:uppercase'>{esc(p.get('heading'))}</p><div class='logos' style='margin-top:20px'>{''.join(f'<span>{esc(n)}</span>' for n in p.get('names', []))}</div></div></section>"
@@ -286,7 +286,7 @@ def starter_backend(spec: dict) -> str:
         lines += [
             f"@api.get('/{coll}')", f"async def list_{coll}():", f"    return await db.{coll}.find({{}}, {{'_id': 0}}).to_list(500)", "",
             f"@api.post('/{coll}')", f"async def create_{coll}(body: {cls}In):",
-            f"    doc = {{'id': uuid.uuid4().hex, **body.model_dump()}}", f"    await db.{coll}.insert_one(dict(doc))", "    return doc", "",
+            "    doc = {'id': uuid.uuid4().hex, **body.model_dump()}", f"    await db.{coll}.insert_one(dict(doc))", "    return doc", "",
             f"@api.get('/{coll}/{{item_id}}')", f"async def get_{coll}(item_id: str):",
             f"    doc = await db.{coll}.find_one({{'id': item_id}}, {{'_id': 0}})", "    if not doc: raise HTTPException(404)", "    return doc", "",
             f"@api.put('/{coll}/{{item_id}}')", f"async def update_{coll}(item_id: str, body: {cls}In):",
