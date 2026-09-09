@@ -33,7 +33,8 @@ export function CursorFXProvider({ children }) {
     if (!isEffect(id)) return;
     setSaved(id); setPreview(null);
     localStorage.setItem(KEY, id);
-    try { await api.patch("/me/preferences", { cursor_effect: id }); } catch {}
+    // Visitors keep their pick in this browser; signed-in users also get it saved server-side.
+    try { await api.patch("/me/preferences", { cursor_effect: id }); } catch { /* anonymous visitor */ }
   }, []);
 
   const saveTimer = useRef(null);
@@ -90,7 +91,7 @@ export function CursorTrailThemed() {
   return <CursorTrail color={dot} />;
 }
 
-export function CursorFXPicker() {  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();
+export function CursorFXPicker({ up = false }) {  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();
   const [open, setOpen] = useState(false);
   const box = useRef(null);
   useEffect(() => {
@@ -118,7 +119,7 @@ export function CursorFXPicker() {  const { saved, effect, density, speed, choos
       </button>
       {open && (
         <div data-testid="cursor-fx-menu" onMouseLeave={() => setPreview(null)}
-          className="absolute right-0 mt-2 w-72 max-h-[70vh] overflow-y-auto scrollbar-thin rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-2xl p-2 z-[80]">
+          className={`absolute w-[min(18rem,calc(100vw-2.5rem))] max-h-[60vh] overflow-y-auto scrollbar-thin rounded-2xl border border-[var(--line)] bg-[var(--card)] shadow-2xl p-2 z-[80] ${up ? "left-0 bottom-full mb-2" : "left-0 sm:left-auto sm:right-0 mt-2"}`}>
           <div className="px-2 py-1.5">
             <div className="overline">Cursor effects</div>
             <div className="text-[10px] text-[var(--dim)] mt-1">Hover to try · click to keep</div>

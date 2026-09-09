@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
-import { useTenantCursorFX } from "@/components/CursorFX";
+import { useTenantCursorFX, CursorFXPicker } from "@/components/CursorFX";
 import ChatWidget from "@/components/ChatWidget";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
@@ -13,7 +13,7 @@ import MemberAccount from "@/components/MemberAccount";
 import Paywall from "@/components/Paywall";
 import CtaFormModal, { CtaCtx, ctaKey } from "@/components/CtaFormModal";
 import { LogOut } from "lucide-react";
-import { Layers, Eye } from "lucide-react";
+import { Layers, Eye, LogIn } from "lucide-react";
 
 export default function PublicPreview() {
   const { token } = useParams();
@@ -85,6 +85,17 @@ export default function PublicPreview() {
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">Lois-Tech</span></Link>
         </div>
       </div>}
+      {!embed && (
+        <div className="fixed bottom-5 left-5 z-[60] flex flex-col items-start gap-2" data-testid="preview-floating-actions">
+          <div className="rounded-full backdrop-blur-xl bg-[#0B0F17]/85 border border-white/10 shadow-2xl p-1">
+            <CursorFXPicker up />
+          </div>
+          <Link data-testid="preview-signin-btn" to="/login"
+            className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-xs px-4 py-2 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-1.5">
+            <LogIn size={12} /> Sign in
+          </Link>
+        </div>
+      )}
       {navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
       <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}

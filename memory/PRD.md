@@ -266,6 +266,30 @@ FastAPI/Mongo. No feature or UI changes.
   edge is clipped. Verified at 1600px and 1100px: rows at y=90 / 135.5 / 224.5, zero overlap.
 - Keep this structure for any new header control — add it inside Row 3, never beside the page cards.
 
+## June 2026 — Sign-in overhaul (auth_extra.py)
+- **No prefilled credentials.** `Login.jsx` used to hardcode the owner's email + password in
+  `useState` — removed. New visitors get empty fields (`autoComplete="off"`); an address is restored
+  only if the visitor ticked **"Save my email on this device only"** (`localStorage` key
+  `lt_saved_email`, per browser, never the password, never shared between visitors).
+- **`backend/auth_extra.py`** (all sessions reuse the existing HttpOnly cookie JWT):
+  - `GET /api/auth/providers` → which options are live (`google`, `magic_link`, `microsoft`, `yahoo`).
+  - Email verification: form signup now sets `email_verified: false` and sends a Resend
+    (Emergent-managed, `EMERGENT_EMAIL_KEY`) confirmation mail; `POST /api/auth/verify/request`
+    (throttled 3/2min) and `GET /api/auth/verify?token=` → `/login?verified=1`.
+  - Magic link sign-in **and** form-free sign-up: `POST /api/auth/magic-link`,
+    `GET /api/auth/magic?token=` (creates the account if new, then logs in).
+  - Microsoft Entra (`common` tenant → covers outlook/hotmail/live) and Yahoo OIDC:
+    `/api/auth/{provider}/start|callback`, authorization-code + PKCE, signed state cookie, nonce check,
+    JWKS ID-token validation, identity linking via `users.auth_identities`. **Dormant until
+    `MICROSOFT_CLIENT_ID/SECRET` and `YAHOO_CLIENT_ID/SECRET` are set** — `start` then redirects to
+    `/login?provider_unavailable=<provider>` and the button shows a "use email instead" toast.
+  - Tokens live in `auth_tokens` (sha256 hash, single-use, 30-min expiry).
+- Frontend: `components/SocialSignIn.jsx` (Google + Microsoft + Yahoo + magic link) on both Login and
+  Register; Register shows a "confirm your email" notice with a Resend button.
+- Landing + public tenant sites: always-visible floating **Sign in** button (bottom-left,
+  `floating-signin-btn` / `preview-signin-btn`) plus a floating **cursor-effects picker** for every
+  visitor (11 effects, opens upward, remembered per browser; signed-in users also sync server-side).
+
 ## Remaining roadmap (updated)
 - P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today
 - P1: Real ElevenLabs voice + real GitHub push (waiting on user PATs)

@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink } from "lucide-react";
+import { ArrowRight, Layers, Play, Pause, Mic, Image as ImageIcon, Film, CreditCard, Globe, Link2, GripVertical, Sparkles, ShieldCheck, X, ExternalLink, LogIn } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { CursorFXPicker } from "@/components/CursorFX";
 import { Words, Spotlight, fast } from "@/components/motion";
 import ChatWidget from "@/components/ChatWidget";
 import api from "@/lib/api";
@@ -174,6 +175,24 @@ export default function Landing() {
           )}
         </nav>
       </header>
+
+      {/* Always-visible sign-in / dashboard button + cursor-effect picker for every visitor */}
+      <div className="fixed bottom-5 left-5 z-[60] flex flex-col items-start gap-2" data-testid="landing-floating-actions">
+        <div className="rounded-full backdrop-blur-xl bg-[var(--bg)]/85 border border-white/10 shadow-2xl p-1">
+          <CursorFXPicker up />
+        </div>
+        {user ? (
+          <button data-testid="floating-dashboard-btn" onClick={() => nav("/dashboard")}
+            className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
+            <LogIn size={14} /> Open dashboard
+          </button>
+        ) : (
+          <Link data-testid="floating-signin-btn" to="/login"
+            className="rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-5 py-2.5 shadow-[0_0_24px_rgba(16,185,129,0.35)] transition-colors flex items-center gap-2">
+            <LogIn size={14} /> Sign in
+          </Link>
+        )}
+      </div>
 
       {/* Hero */}
       <section className="relative z-10 px-6 lg:px-14 pt-36 lg:pt-44 pb-20 text-center">

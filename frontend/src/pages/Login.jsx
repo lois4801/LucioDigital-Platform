@@ -1,29 +1,37 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, Mail, Lock, ChevronRight } from "lucide-react";
+import SocialSignIn from "@/components/SocialSignIn";
 
-// REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-function googleAuth() {
-  const redirectUrl = window.location.origin + "/dashboard";
-  window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
-}
+const SAVED_EMAIL_KEY = "lt_saved_email";
 
 export default function Login() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState("jaybernabe@luciodigital.com");
-  const [password, setPassword] = useState("Lucio2026!");
+  const [params] = useSearchParams();
+  // Nothing is pre-filled for a new visitor. A saved address only ever lives in this browser.
+  const [email, setEmail] = useState(() => localStorage.getItem(SAVED_EMAIL_KEY) || "");
+  const [remember, setRemember] = useState(() => !!localStorage.getItem(SAVED_EMAIL_KEY));
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  useEffect(() => {
+    if (params.get("verified")) toast.success("Email confirmed — you're all set.");
+    const unavailable = params.get("provider_unavailable");
+    if (unavailable) toast.info(`${unavailable} sign-in isn't connected yet — use your email or a sign-in link.`);
+  }, [params]);
 
   async function onSubmit(e) {
     e.preventDefault();
     setBusy(true); setErr("");
     try {
       await login(email, password);
+      if (remember) localStorage.setItem(SAVED_EMAIL_KEY, email.trim());
+      else localStorage.removeItem(SAVED_EMAIL_KEY);
       toast.success("Welcome back.");
       nav("/dashboard");
     } catch (e) {
@@ -60,11 +68,7 @@ export default function Login() {
           <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
           <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
 
-          <button data-testid="auth-google-login-btn" onClick={googleAuth}
-            className="mt-8 w-full flex items-center justify-center gap-2 py-3 rounded-full border border-[var(--line)] hover:border-white/25 hover:bg-white/5 transition-all">
-            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-            Continue with Google
-          </button>
+          <SocialSignIn mode="signin" />
 
           <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
@@ -78,16 +82,25 @@ export default function Login() {
               <div className="relative">
                 <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
                 <input data-testid="login-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                  required
+                  required autoComplete="off" placeholder="you@company.com"
                   className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
               </div>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input data-testid="login-remember-email" type="checkbox" checked={remember}
+                onChange={(e) => {
+                  setRemember(e.target.checked);
+                  if (!e.target.checked) localStorage.removeItem(SAVED_EMAIL_KEY);
+                }}
+                className="accent-[var(--acc)]" />
+              <span className="text-xs text-[var(--mut)]">Save my email on this device only</span>
             </label>
             <label className="block">
               <span className="overline block mb-2">Password</span>
               <div className="relative">
                 <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
                 <input data-testid="login-password-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                  required
+                  required autoComplete="current-password"
                   className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl pl-9 pr-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
               </div>
             </label>

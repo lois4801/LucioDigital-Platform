@@ -253,6 +253,7 @@ async def register(body: RegisterIn, response: Response):
         "role": "owner",
         "password_hash": hash_password(body.password),
         "auth_provider": "jwt",
+        "email_verified": False,
         "picture": None,
         "created_at": now_utc().isoformat(),
     }
@@ -260,9 +261,14 @@ async def register(body: RegisterIn, response: Response):
     access = create_access_token(user_id, email)
     refresh = create_refresh_token(user_id)
     set_auth_cookies(response, access, refresh)
+    try:
+        from auth_extra import send_verification_email
+        await send_verification_email(db, email, body.name)
+    except Exception:
+        logger.info("verification email not sent for %s", email)
     doc.pop("password_hash", None)
     doc.pop("_id", None)
-    return doc
+    return {**doc, "verification_sent": True}
 
 
 @api.post("/auth/login")
@@ -1067,6 +1073,8 @@ from test_lab import register as register_test_lab
 register_test_lab(api, db, get_current_user, get_user_app, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
+from auth_extra import register as register_auth_extra
+register_auth_extra(api, db, get_current_user, create_access_token, create_refresh_token, set_auth_cookies)
 from site_sync import register as register_site_sync
 import site_sync as _site_sync
 _site_sync.require_ai_access = GROWTH["require_ai_access"]
