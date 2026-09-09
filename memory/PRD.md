@@ -16,6 +16,24 @@ Core requirements:
 9. Booking calendar, paid members area, client panel
 
 ## Hard platform rules (user-mandated)
+- **NO AUTOMATIC TESTING OR PREVIEW RENDERS (June 2026, permanent).** After finishing a set of code
+  changes the agent must STOP, list what changed, and ask verbatim:
+  *"I have finished applying the requested changes. Here is a summary of everything that was modified:
+  [list of changes]. Before I run any tests or render a preview, do you have any additional
+  modifications you would like to make first? Adding them now will save credits by combining
+  everything into a single test run. Reply YES to add more changes or NO to proceed with testing now."*
+  Wait for the admin. YES → accept the next change and repeat the prompt when done. NO → run tests and
+  render a preview for the **Test Lab only**, never for a live tenant. This is mandatory before every
+  single test run, with no exceptions. The admin also has an explicit **Run Test** button
+  (`run-test-btn` → `POST /api/test-lab/run-test`, Test-Lab-scoped smoke check).
+- Agents must never auto-run a full platform test, never spin up new tenants / demo sites / template
+  previews during a build pass, and never rebuild, re-render or redeploy until the admin triggers it.
+- **STAGING TENANT.** `Rollout Target Demo` (`is_staging: true`, orange STAGING badge, `protected`) is
+  the final real-environment check. It is excluded from `_targets()` so "Push to All Tenants" only ever
+  means live client tenants; it is reached exclusively via **Push to Staging** on the Test Lab card
+  (`push-to-staging-btn`) or the Test Template card (`push-template-to-staging-btn` →
+  `POST /api/test-template/push-staging`), both of which go through the diff viewer + CONFIRM and are
+  recorded in the history log (`kind: "template_staging"`) and undoable.
 - **CREDIT-SAFE DEFAULT — TEST INSTANCES ONLY (June 2026, permanent, overrides everything else).**
   Every change goes to exactly ONE test instance first:
   - Template design / animation / layout / new section work → the **Test Template** (`test_template`).

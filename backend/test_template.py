@@ -125,6 +125,45 @@ def register(api, db, get_current_user, log_activity):
                 "targets": [{"app_id": k, "name": k} for k in targets],
                 "generated_at": _now()}
 
+    @api.post("/test-template/push-staging")
+    async def push_test_template_staging(body: TplRolloutIn, user: dict = Depends(get_current_user)):
+        """Real-environment check: apply the Test Template look to the staging tenant only."""
+        from site_content import LOOKS
+        await _require_admin(user)
+        if (body.confirm or "").strip().upper() != "CONFIRM":
+            raise HTTPException(400, "Type CONFIRM to apply this rollout")
+        staging = await db.apps.find_one({"is_staging": True}, {"_id": 0})
+        if not staging:
+            raise HTTPException(404, "No staging tenant configured")
+        lab = LOOKS[TEST_TEMPLATE_KEY]
+        picked = set(body.changes) if body.changes is not None else None
+        fields = [f for f, cat, _l in LOOK_FIELDS
+                  if picked is None or f"{cat.lower()}.{f}" in picked]
+        if not fields:
+            raise HTTPException(400, "Select at least one change to push")
+        job_id = _uid("tplstag")
+        rows = [{"id": f"design.{f}", "category": "Design", "label": f"Template token “{f}”",
+                 "old": (staging.get("theme") or {}).get(f), "new": lab.get(f), "kind": "changed",
+                 "tenants": 1, "variance": False} for f in fields]
+        await db.rollout_snapshots.insert_one({
+            "snapshot_id": _uid("snap"), "job_id": job_id, "app_id": staging["app_id"],
+            "before": {"theme": staging.get("theme")}, "created_at": _now()})
+        await db.apps.update_one({"app_id": staging["app_id"]}, {"$set": {
+            "theme": {**(staging.get("theme") or {}), **{f: lab.get(f) for f in fields}},
+            "updated_at": _now()}})
+        await db.rollout_jobs.insert_one({
+            "job_id": job_id, "kind": "template_staging", "status": "done", "pct": 100, "done": 1,
+            "changed": 1, "failed": 0, "total": 1, "by": user["user_id"],
+            "by_email": user.get("email"), "by_name": user.get("name"), "categories": ["Design"],
+            "diff": {"changes": rows, "by_category": {"Design": rows}, "total": len(rows),
+                     "target_count": 1,
+                     "targets": [{"app_id": staging["app_id"], "name": staging.get("name")}]},
+            "detail": f"Applied {len(fields)} Test Template change(s) to staging",
+            "created_at": _now(), "finished_at": _now()})
+        await log_activity(TEST_LAB_ID, user["user_id"], "rollout.template_staging",
+                           f"Pushed {len(fields)} Test Template change(s) to staging")
+        return {"ok": True, "job_id": job_id, "staging": staging["app_id"], "changes": len(fields)}
+
     @api.get("/test-template")
     async def get_test_template(user: dict = Depends(get_current_user)):
         from site_content import LOOKS

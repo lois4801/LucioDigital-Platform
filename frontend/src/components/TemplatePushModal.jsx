@@ -11,7 +11,7 @@ const SCOPES = [
 ];
 
 /** Test Template → real templates. Diff viewer first, then the confirmation modal. */
-export default function TemplatePushModal({ open, initialScope = "all", targetKey = null, onClose, onDone }) {
+export default function TemplatePushModal({ open, initialScope = "all", targetKey = null, staging = false, onClose, onDone }) {
   const [scope, setScope] = useState(targetKey ? "selected" : initialScope);
   const [diff, setDiff] = useState(null);
   const [stage, setStage] = useState("diff");
@@ -31,10 +31,14 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
   async function confirm() {
     setBusy(true);
     try {
-      const { data } = await api.post("/test-template/rollout", {
-        scope, keys: scope === "selected" ? [targetKey] : null, changes: picked, confirm: word,
-      });
-      toast.success(`Changes successfully applied to ${data.templates_updated} template(s).`);
+      const { data } = staging
+        ? await api.post("/test-template/push-staging", { changes: picked, confirm: word })
+        : await api.post("/test-template/rollout", {
+            scope, keys: scope === "selected" ? [targetKey] : null, changes: picked, confirm: word,
+          });
+      toast.success(staging
+        ? "Changes successfully applied to the staging tenant."
+        : `Changes successfully applied to ${data.templates_updated} template(s).`);
       onDone?.();
       onClose();
     } catch (e) {
@@ -52,7 +56,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
     }
     return (
       <div data-testid="template-diff-wrap">
-        {!targetKey && (
+        {!targetKey && !staging && (
           <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[76] flex gap-1.5 p-1 rounded-full bg-[var(--bg-2)] border border-[var(--line)]">
             {SCOPES.map((s) => (
               <button key={s.key} data-testid={`template-scope-${s.key}`} onClick={() => setScope(s.key)}
@@ -75,7 +79,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
           <div>
             <div className="overline">Test Template rollout</div>
             <h3 className="font-display text-xl font-semibold tracking-tight mt-1">
-              {targetKey ? `Push to “${targetKey}”` : `Push to ${diff?.target_count ?? 0} template(s)`}
+              {staging ? "Push to Staging" : targetKey ? `Push to “${targetKey}”` : `Push to ${diff?.target_count ?? 0} template(s)`}
             </h3>
           </div>
           <button data-testid="template-push-close" onClick={onClose} className="btn-ghost !p-2"><X size={15} /></button>

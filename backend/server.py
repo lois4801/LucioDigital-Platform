@@ -981,8 +981,9 @@ async def startup():
         import test_template
         test_template.install()
         logger.info(f"Template look overrides loaded: {await test_template.load_overrides(db)}")
-        from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states
+        from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states, ensure_staging_tenant
         await ensure_test_lab(db, admin_id)
+        await ensure_staging_tenant(db, admin_id)
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
         logger.info(f"Templates pending rollout: {await mark_template_states(db)}")
         await clear_synced_label_overrides(db)

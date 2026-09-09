@@ -146,6 +146,37 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
     return await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})
 
 
+STAGING_NAME = "Rollout Target Demo"
+
+
+async def ensure_staging_tenant(db, owner_id: str) -> dict:
+    """The permanent staging tenant: a real environment the admin can push to before going live.
+    Never modified automatically — only by an explicit Push to Staging."""
+    doc = await db.apps.find_one({"is_staging": True}, {"_id": 0})
+    if not doc:
+        doc = await db.apps.find_one({"name": STAGING_NAME}, {"_id": 0})
+    if doc:
+        await db.apps.update_one({"app_id": doc["app_id"]},
+                                 {"$set": {"is_staging": True, "protected": True, "archived": False}})
+        return await db.apps.find_one({"app_id": doc["app_id"]}, {"_id": 0})
+    from site_content import LOOKS, NICHES, theme_for
+    key = "hvac" if "hvac" in LOOKS else next(iter(LOOKS))
+    doc = {
+        "app_id": _uid("app"), "owner_id": owner_id, "name": STAGING_NAME,
+        "industry": NICHES[key]["industry"], "kind": "website",
+        "description": "Staging tenant — the final real-environment check before pushing to live tenants.",
+        "status": "active", "tags": ["staging"], "color": "#F97316",
+        "is_staging": True, "protected": True, "archived": False,
+        "theme": theme_for(NICHES[key], key), "site_niche": key, "premium_site_v": 3,
+        "metrics": {"uptime": 100.0, "cpu": 10, "ram": 24, "response_ms": 110, "visitors_24h": 0},
+        "created_at": _now(), "updated_at": _now(),
+    }
+    await db.apps.insert_one(dict(doc))
+    doc.pop("_id", None)
+    logger.info("Staging tenant ready: %s", doc["app_id"])
+    return doc
+
+
 async def retheme_test_lab_only(db) -> int:
     """Startup maintenance now stops at the Test Lab — live tenants are never re-themed silently."""
     from site_content import LOOKS, NICHES, theme_for
@@ -289,13 +320,50 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         return doc
 
     async def _targets(only: Optional[List[str]] = None) -> List[dict]:
-        q = {"app_id": {"$ne": TEST_LAB_ID}, "archived": {"$ne": True}}
+        # "All tenants" means live client tenants: the Test Lab and the staging tenant are only
+        # ever reached through an explicit Push to Staging / Test Lab edit.
+        q = {"app_id": {"$ne": TEST_LAB_ID}, "archived": {"$ne": True}, "is_staging": {"$ne": True}}
         if only:
-            q["app_id"] = {"$in": [a for a in only if a != TEST_LAB_ID]}
+            q = {"app_id": {"$in": [a for a in only if a != TEST_LAB_ID]}, "archived": {"$ne": True}}
         return await db.apps.find(q,
                                   {"_id": 0, "app_id": 1, "name": 1, "theme": 1, "site_niche": 1,
                                    "ui_skin": 1, "cursor_effect": 1, "cursor_density": 1,
                                    "cursor_speed": 1}).to_list(500)
+
+    @api.get("/staging-tenant")
+    async def staging_tenant(user: dict = Depends(get_current_user)):
+        doc = await db.apps.find_one({"is_staging": True}, {"_id": 0, "app_id": 1, "name": 1, "theme": 1})
+        if not doc:
+            raise HTTPException(404, "No staging tenant configured — restart the backend to create it")
+        return doc
+
+    @api.post("/test-lab/run-test")
+    async def run_test(user: dict = Depends(get_current_user)):
+        """Admin-triggered smoke check. Nothing here runs automatically."""
+        await _require_rollout_admin(user)
+        lab = await _test_lab()
+        pages = await db.pages.count_documents({"app_id": TEST_LAB_ID})
+        blocks = sum(len(p.get("blocks") or []) for p in
+                     await db.pages.find({"app_id": TEST_LAB_ID}, {"_id": 0, "blocks": 1}).to_list(200))
+        targets = await _targets()
+        diff = await build_diff(db, targets, lab)
+        staging = await db.apps.find_one({"is_staging": True}, {"_id": 0, "app_id": 1, "name": 1})
+        checks = [
+            {"name": "Test Lab tenant", "ok": bool(lab), "detail": lab.get("name")},
+            {"name": "Template pages loaded", "ok": pages > 0, "detail": f"{pages} page(s), {blocks} block(s)"},
+            {"name": "Staging tenant", "ok": bool(staging), "detail": (staging or {}).get("name", "missing")},
+            {"name": "Live tenants reachable", "ok": True, "detail": f"{len(targets)} live tenant(s)"},
+            {"name": "Unpushed Test Lab changes", "ok": True, "detail": f"{diff['total']} change(s) waiting"},
+            {"name": "Forms configured", "ok": True,
+             "detail": f"{await db.cta_forms.count_documents({'app_id': TEST_LAB_ID})} CTA form(s)"},
+        ]
+        result = {"ran_at": _now(), "by": user.get("email"), "scope": "test_lab_only",
+                  "passed": sum(1 for c in checks if c["ok"]), "total": len(checks), "checks": checks,
+                  "preview_url": f"/apps/{TEST_LAB_ID}"}
+        await db.apps.update_one({"app_id": TEST_LAB_ID}, {"$set": {"last_test": result}})
+        await log_activity(TEST_LAB_ID, user["user_id"], "test.run",
+                           f"Ran the Test Lab smoke test — {result['passed']}/{result['total']} checks passed")
+        return result
 
     def _patch_for(scopes: List[str], lab: dict, target: dict, changes: Optional[List[str]] = None) -> dict:
         """The $set patch a single tenant receives. `changes` (from the Diff Viewer) wins when given."""

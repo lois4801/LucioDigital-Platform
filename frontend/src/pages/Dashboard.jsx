@@ -5,7 +5,7 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical, Loader2 } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import RolloutModal from "@/components/RolloutModal";
 import PushToOnePicker from "@/components/PushToOnePicker";
@@ -47,6 +47,20 @@ export default function Dashboard() {
   const [rolloutOpen, setRolloutOpen] = useState(false);
   const [rolloutTarget, setRolloutTarget] = useState(null);
   const [pendingMap, setPendingMap] = useState({});
+  const [staging, setStaging] = useState(null);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
+  async function runTest() {
+    setTesting(true);
+    try {
+      const { data } = await api.post("/test-lab/run-test");
+      setTestResult(data);
+      toast.success(`Test Lab check: ${data.passed}/${data.total} passed`);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Could not run the test");
+    } finally { setTesting(false); }
+  }
   const [archived, setArchived] = useState([]);
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
@@ -62,7 +76,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/staging-tenant").then(r => setStaging(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -415,6 +429,7 @@ export default function Dashboard() {
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
                       {a.is_test_lab && <span data-testid={`tenant-test-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(16,185,129,0.16)", color: "#34D399", borderColor: "rgba(16,185,129,0.4)" }}><FlaskConical size={10} /> TEST</span>}
+                      {a.is_staging && <span data-testid={`tenant-staging-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(249,115,22,0.18)", color: "#FB923C", borderColor: "rgba(249,115,22,0.45)" }}><Rocket size={10} /> STAGING</span>}
                       {!a.is_test_lab && pendingMap[a.app_id] > 0 && <span data-testid={`tenant-pending-badge-${a.app_id}`} className="chip" style={{ background: "rgba(249,115,22,0.16)", color: "#FB923C", borderColor: "rgba(249,115,22,0.4)" }}>Pending Update</span>}
                       <span className="chip">{a.industry}</span>
                       {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
@@ -424,7 +439,7 @@ export default function Dashboard() {
                       {!a.theme?.design_v2 && <span data-testid={`card-legacy-badge-${a.app_id}`} className="chip chip-maint">Legacy look</span>}
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
-                      {!a.is_test_lab && (
+                      {!a.is_test_lab && !a.is_staging && (
                       <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
                         onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
                         className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -462,6 +477,22 @@ export default function Dashboard() {
                             setRolloutTarget(apps.find((x) => x.app_id === id) || null);
                             setRolloutOpen(true);
                           }} />
+                        <button data-testid="push-to-staging-btn" disabled={!staging}
+                          onClick={(e) => { e.stopPropagation(); setRolloutTarget(staging); setRolloutOpen(true); }}
+                          className="w-full btn-ghost text-xs !py-2 flex items-center justify-center gap-1.5 disabled:opacity-40"
+                          style={{ borderColor: "rgba(249,115,22,0.5)", color: "#FB923C" }}>
+                          <Rocket size={11} /> Push to Staging
+                        </button>
+                        <button data-testid="run-test-btn" disabled={testing}
+                          onClick={(e) => { e.stopPropagation(); runTest(); }}
+                          className="w-full btn-ghost text-xs !py-2 flex items-center justify-center gap-1.5 disabled:opacity-50">
+                          {testing ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} {testing ? "Running test…" : "Run Test"}
+                        </button>
+                        {testResult && (
+                          <div data-testid="run-test-result" className="text-[10px] font-mono text-[var(--dim)] text-center">
+                            {testResult.passed}/{testResult.total} checks passed · Test Lab only
+                          </div>
+                        )}
                       </div>
                     )}
                     <div className="mt-4 grid grid-cols-4 gap-2 font-mono text-[11px]">
