@@ -200,7 +200,61 @@ function draw(ctx, effect, p, accent) {
   void accent;
 }
 
-// Attaches a fullscreen canvas trail to the pointer. Returns a cleanup fn.
+// Scoped variant: particles live inside one element's box (auth panel) and are clipped to it.
+// Returns { emit(x, y, n), stop() } with coordinates local to the canvas.
+export function startScopedCursorFX(canvas, effect, opts = {}) {
+  const density = Math.max(0.2, Math.min(3, Number(opts.density) || 1));
+  const speed = Math.max(0.2, Math.min(3, Number(opts.speed) || 1));
+  const ctx = canvas.getContext("2d");
+  let w = 0, h = 0;
+  const resize = () => {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const r = canvas.getBoundingClientRect();
+    w = r.width; h = r.height;
+    canvas.width = Math.max(1, Math.round(w * dpr));
+    canvas.height = Math.max(1, Math.round(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  };
+  resize();
+  const ro = new ResizeObserver(resize);
+  ro.observe(canvas);
+
+  const parts = [];
+  const MAX_SCOPED = 130;
+  const emit = (x, y, n = 1) => {
+    for (let i = 0; i < n; i++) {
+      if (parts.length >= MAX_SCOPED) break;
+      const p = makeParticle(effect, x, y, rand(-6, 6), rand(-6, 6));
+      if (!p) continue;
+      p.size *= 0.6 + 0.4 * density;
+      p.vx *= speed; p.vy *= speed; p.decay *= speed;
+      parts.push(p);
+    }
+  };
+
+  let raf = 0;
+  const loop = () => {
+    if (!document.hidden) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.globalCompositeOperation = effect === "ink" || effect === "smoke" ? "source-over" : "lighter";
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        step(effect, p);
+        // Fade anything that wanders past the panel edges so nothing escapes the perimeter.
+        if (p.life <= 0 || p.y < -20 || p.y > h + 20 || p.x < -20 || p.x > w + 20) { parts.splice(i, 1); continue; }
+        draw(ctx, effect, p, "#10B981");
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+    raf = requestAnimationFrame(loop);
+  };
+  raf = requestAnimationFrame(loop);
+
+  return {
+    emit,
+    stop: () => { ro.disconnect(); cancelAnimationFrame(raf); ctx.clearRect(0, 0, w, h); },
+  };
+}
 export function startCursorFX(canvas, effect, accent = "#10B981", opts = {}) {
   const density = Math.max(0.2, Math.min(3, Number(opts.density) || 1));
   const speed = Math.max(0.2, Math.min(3, Number(opts.speed) || 1));

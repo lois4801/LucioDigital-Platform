@@ -6,20 +6,16 @@ import { toast } from "sonner";
 import { Layers, ChevronRight, MailCheck } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
 import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
-import { burstCursorFX, swatchOf } from "@/lib/cursorEffects";
-import { useAmbientCursorFX } from "@/hooks/useAmbientCursorFX";
+import { swatchOf } from "@/lib/cursorEffects";
+import ScopedCursorFX from "@/components/ScopedCursorFX";
 
 export default function Register() {
   const { register } = useAuth();
   const { effect } = useCursorFX();
   const [c1, c2] = swatchOf(effect);
   const panel = useRef(null);
-  useAmbientCursorFX(panel, "button:not([data-fx-skip] *), input:not([data-fx-skip] *)", effect, { every: 200, per: 1 });
-  const burstAt = (el, n = 6) => {
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    burstCursorFX(r.left + r.width / 2, r.top + r.height / 2, n);
-  };
+  const fxBurst = useRef(null);
+  const burstAt = (el, n = 6) => { fxBurst.current?.(el, n); };
   const nav = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
@@ -70,6 +66,7 @@ export default function Register() {
             </div>
           </div>
 
+          <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-1 px-1 pb-2">
           <SocialSignIn mode="signup" />
       <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
@@ -105,6 +102,7 @@ export default function Register() {
               {busy ? "Creating…" : "Create workspace"} <ChevronRight size={16} />
             </button>
           </form>
+          </ScopedCursorFX>
 
           <p className="mt-6 text-sm text-[var(--mut)]">
             Have an account? <Link to="/login" className="text-[var(--acc)] hover:underline">Sign in</Link>

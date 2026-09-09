@@ -6,8 +6,8 @@ import { toast } from "sonner";
 import { Layers, Mail, Lock, ChevronRight } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
 import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
-import { burstCursorFX, swatchOf } from "@/lib/cursorEffects";
-import { useAmbientCursorFX } from "@/hooks/useAmbientCursorFX";
+import { swatchOf } from "@/lib/cursorEffects";
+import ScopedCursorFX from "@/components/ScopedCursorFX";
 
 const SAVED_EMAIL_KEY = "lt_saved_email";
 
@@ -16,15 +16,10 @@ export default function Login() {
   const { effect } = useCursorFX();
   const [c1, c2] = swatchOf(effect);
   const panel = useRef(null);
-  // Every auth control (Google/Microsoft/Yahoo, magic link, inputs, Sign in) keeps emitting the chosen effect.
-  useAmbientCursorFX(panel, "button:not([data-fx-skip] *), input:not([data-fx-skip] *)", effect, { every: 200, per: 1 });
+  const fxBurst = useRef(null);
   const nav = useNavigate();
-  // The form reacts with the chosen cursor effect: a small themed burst at the focused field.
-  const burstAt = (el, n = 6) => {
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    burstCursorFX(r.left + r.width / 2, r.top + r.height / 2, n);
-  };
+  // The form reacts with the chosen cursor effect: a burst clipped inside the auth panel.
+  const burstAt = (el, n = 6) => { fxBurst.current?.(el, n); };
   const [params] = useSearchParams();
   // Nothing is pre-filled for a new visitor. A saved address only ever lives in this browser.
   const [email, setEmail] = useState(() => localStorage.getItem(SAVED_EMAIL_KEY) || "");
@@ -89,6 +84,7 @@ export default function Login() {
             </div>
           </div>
 
+          <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-1 px-1 pb-2">
           <SocialSignIn mode="signin" />
       <div className="flex items-center gap-3 my-6">
             <div className="h-px flex-1 bg-[var(--line)]" />
@@ -135,6 +131,7 @@ export default function Login() {
               {busy ? "Signing in…" : "Sign in"} <ChevronRight size={16} />
             </button>
           </form>
+          </ScopedCursorFX>
 
           <p className="mt-6 text-sm text-[var(--mut)]">
             No account yet? <Link to="/register" className="text-[var(--acc)] hover:underline">Create one</Link>
