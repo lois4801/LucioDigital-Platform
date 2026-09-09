@@ -35,10 +35,68 @@ MOODS = {
 }
 
 
-def theme_for(n):
+# One unique visual identity per industry template: palette, type pair, radius, card/button
+# treatment (via site_preset) and hero layout. LOOK_V bumps whenever these tokens change.
+LOOK_V = 1
+LOOKS = {
+ "hvac": dict(mode="dark", primary="#F97316", secondary="#FACC15", bg="#101215", surface="#191C21", border="#2C313A", fg="#F8FAFC", muted="#9AA3AF",
+              font_heading="Archivo", font_body="Inter", radius=4, preset="industrial", hero="cover", glass=False, grain=True),
+ "healthcare": dict(mode="light", primary="#0D9488", secondary="#60A5FA", bg="#FFFFFF", surface="#F1FAF9", border="#D6EBE9", fg="#111111", muted="#4B5563",
+              font_heading="Fraunces", font_body="DM Sans", radius=18, preset="clinical", hero="split", glass=False, grain=False),
+ "construction": dict(mode="dark", primary="#FACC15", secondary="#9CA3AF", bg="#17181A", surface="#202226", border="#3A3E45", fg="#F5F5F4", muted="#A1A1AA",
+              font_heading="Oswald", font_body="Inter", radius=0, preset="concrete", hero="cover", glass=False, grain=True),
+ "fitness": dict(mode="dark", primary="#EF4444", secondary="#F97316", bg="#050506", surface="#101014", border="#26262E", fg="#FFFFFF", muted="#9CA3AF",
+              font_heading="Syne", font_body="Inter", radius=2, preset="energy", hero="cover", glass=True, grain=False),
+ "retail": dict(mode="light", primary="#1F5138", secondary="#B08D57", bg="#FBF8F1", surface="#FFFFFF", border="#E7DFCF", fg="#111111", muted="#57534E",
+              font_heading="Cormorant Garamond", font_body="DM Sans", radius=10, preset="editoriallux", hero="split", glass=False, grain=False),
+ "hospitality": dict(mode="dark", primary="#C9A24E", secondary="#1E3A5F", bg="#0A1628", surface="#10203A", border="#23395B", fg="#F7F3EA", muted="#A9B7CC",
+              font_heading="Playfair Display", font_body="Nunito", radius=6, preset="harbour", hero="cover", glass=True, grain=True),
+ "finance": dict(mode="dark", primary="#C6A15B", secondary="#94A3B8", bg="#141416", surface="#1D1D20", border="#32323A", fg="#F5F5F4", muted="#A3A3A8",
+              font_heading="Lora", font_body="Inter", radius=4, preset="ledger", hero="split", glass=False, grain=False),
+ "it_services": dict(mode="dark", primary="#22D3EE", secondary="#6366F1", bg="#060B18", surface="#0C1428", border="#1B2B4D", fg="#E8F6FF", muted="#8FA6C4",
+              font_heading="Space Grotesk", font_body="Inter", radius=6, preset="techno", hero="centered", glass=True, grain=False),
+ "creative_studio": dict(mode="dark", primary="#A855F7", secondary="#F43F5E", bg="#000000", surface="#0C0A12", border="#241C33", fg="#FFFFFF", muted="#9E97AD",
+              font_heading="Syne", font_body="Inter", radius=0, preset="noir", hero="cover", glass=True, grain=True),
+ "logistics": dict(mode="dark", primary="#F59E0B", secondary="#38BDF8", bg="#101418", surface="#171D23", border="#2A343D", fg="#F1F5F9", muted="#94A3B8",
+              font_heading="Barlow Condensed", font_body="Inter", radius=2, preset="freight", hero="cover", glass=False, grain=True),
+ "saas": dict(mode="dark", primary="#8B5CF6", secondary="#34D399", bg="#0B0A14", surface="#14121F", border="#262138", fg="#F8FAFC", muted="#A5A0BC",
+              font_heading="Plus Jakarta Sans", font_body="Inter", radius=14, preset="saas", hero="split", glass=True, grain=False),
+ "legal": dict(mode="light", primary="#7B1E27", secondary="#A98C63", bg="#FBF7F1", surface="#FFFFFF", border="#E3D9C8", fg="#111111", muted="#4B5563",
+              font_heading="Playfair Display", font_body="Lora", radius=2, preset="counsel", hero="split", glass=False, grain=False),
+ "education": dict(mode="light", primary="#1D4ED8", secondary="#FBBF24", bg="#FFFFFF", surface="#F4F7FF", border="#DBE4FA", fg="#111111", muted="#475569",
+              font_heading="Nunito", font_body="Nunito", radius=16, preset="campus", hero="split", glass=False, grain=False),
+ "real_estate": dict(mode="light", primary="#C2643B", secondary="#2F4F4A", bg="#FDFAF6", surface="#FFFFFF", border="#EADFD4", fg="#111111", muted="#57534E",
+              font_heading="Fraunces", font_body="DM Sans", radius=12, preset="realty", hero="split", glass=False, grain=False),
+ "restaurant": dict(mode="dark", primary="#EA580C", secondary="#D4A574", bg="#14100D", surface="#1E1813", border="#38291E", fg="#FBF3E8", muted="#B4A292",
+              font_heading="Fraunces", font_body="Lora", radius=8, preset="ember", hero="cover", glass=True, grain=True),
+ "events": dict(mode="dark", primary="#D9C089", secondary="#F5E6C8", bg="#000000", surface="#0E0D0B", border="#2A251C", fg="#FFFFFF", muted="#A8A192",
+              font_heading="Cormorant Garamond", font_body="Inter", radius=0, preset="cinematic", hero="cover", glass=True, grain=True),
+}
+
+
+def theme_for(n, key=None):
+    look = LOOKS.get(key or "")
+    if look:
+        return {"mode": look["mode"], "primary": look["primary"], "secondary": look["secondary"], "bg": look["bg"], "surface": look["surface"],
+                "fg": look["fg"], "muted": look["muted"], "border": look["border"], "font_heading": look["font_heading"], "font_body": look["font_body"],
+                "radius": look["radius"], "site_preset": look["preset"], "hero_variant": look["hero"], "motion": True,
+                "cursor": look["mode"] == "dark", "glass": look["glass"], "grain": look["grain"], "design_v2": True, "premium_v": 3, "look_v": LOOK_V}
     m = MOODS[n["mood"]]
     return {"mode": "dark", "primary": n["primary"], "secondary": n["secondary"], "bg": m["bg"], "surface": m["surface"], "fg": "#F8FAFC", "muted": "#A1A7B8", "border": m["border"],
             "font_heading": m["font_heading"], "font_body": m["font_body"], "radius": m["radius"], "motion": True, "cursor": True, "glass": True, "grain": True, "design_v2": True, "premium_v": 3}
+
+
+async def retheme_all(db):
+    """Apply the current per-template look to every tenant. Site content is never touched."""
+    n = 0
+    async for app in db.apps.find({}, {"_id": 0, "app_id": 1, "name": 1, "industry": 1, "site_niche": 1, "theme": 1}):
+        key = app.get("site_niche") or niche_for(app)
+        if key not in LOOKS or (app.get("theme") or {}).get("look_v") == LOOK_V:
+            continue
+        theme = {**(app.get("theme") or {}), **theme_for(NICHES[key], key)}
+        await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"theme": theme}})
+        n += 1
+    return n
 
 
 # Each niche: brand, mood, colors, hero, media, sections (ordered), copy. Every word is written for that industry.
@@ -402,7 +460,8 @@ def build_premium_site(app, niche_key=None, brand=None):
     pages_nav = [("Home", "/"), ("About", "/about"), ("Services", "/services"), ("Contact", "/contact")]
     nav = _blk("navbar", {"brand": brand, **({"logo": brand_logo} if brand_logo else {}), "links": [{"label": a, "href": b} for a, b in pages_nav], "cta": n["cta"]}, hover=False)
     footer = _blk("footer", {"brand": brand, **({"logo": brand_logo} if brand_logo else {}), "tagline": n["sub"][:90].rsplit(" ", 1)[0] + "…", "columns": [{"title": "Company", "links": ["About", "Services", "Careers", "Press"]}, {"title": "Contact", "links": [n["email"], n["phone"], n["address"]]}, {"title": "Legal", "links": ["Privacy", "Terms", "Accessibility"]}]}, hover=False)
-    hero = _blk("hero", {"variant": "cover", "badge": n["badge"], "title": n["title"], "subtitle": n["sub"], "cta": n["cta"], "cta2": n["cta2"], "image": n["hero"]}, "default", "left", "lg", hover=False)
+    hv = LOOKS.get(key, {}).get("hero", "cover")
+    hero = _blk("hero", {"variant": hv, "badge": n["badge"], "title": n["title"], "subtitle": n["sub"], "cta": n["cta"], "cta2": n["cta2"], "image": n["hero"]}, "default", "center" if hv == "centered" else "left", "lg", hover=False)
     home = [nav, hero] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate(n["sections"])) if b] + [footer]
     at, story = n["about"]
     about = [nav, _blk("hero", {"variant": "cover", "badge": "Our story", "title": at, "subtitle": story, "cta": "Get in touch", "image": img(n["gallery"][1])}, "default", "left", "lg", hover=False),
@@ -411,7 +470,7 @@ def build_premium_site(app, niche_key=None, brand=None):
     services = [nav, _blk("hero", {"variant": "left", "badge": n["industry"], "title": n[svc_key][0] if isinstance(n[svc_key][0], str) else "Services", "subtitle": n["sub"], "cta": n["cta"]}, "default", "left", "md", hover=False),
                 _sec(n, svc_key, 1, brand)] + [b for b in (_sec(n, k, i, brand) for i, k in enumerate([k for k in n["sections"] if k in ("plans", "offers", "rooms", "testimonials", "stories", "cases", "faq")], start=2)) if b] + [_sec(n, "cta", 0, brand), footer]
     contact = [nav, _blk("contact", {"heading": "Let's talk", "subtitle": "A real person replies within one business day.", "email": n["email"], "phone": n["phone"], "address": n["address"]}, "default", "left", "lg"), _sec(n, "faq", 1, brand), footer]
-    return [("Home", "/", home), ("About", "/about", about), ("Services", "/services", services), ("Contact", "/contact", contact)], theme_for(n), n
+    return [("Home", "/", home), ("About", "/about", about), ("Services", "/services", services), ("Contact", "/contact", contact)], theme_for(n, key), n
 
 
 async def apply_premium(db, app, niche_key=None):
@@ -483,7 +542,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         cur = app.get("site_niche") or niche_for(app)
         mood = NICHES[cur]["mood"]
         keys = [cur] + [k for k, v in NICHES.items() if k != cur and v["mood"] == mood][:2] + [k for k, v in NICHES.items() if k != cur and v["mood"] != mood][:2]
-        return {"current": cur, "vote": app.get("look_vote"), "options": [{"key": k, "brand": app["name"], "sample": NICHES[k]["brand"], "industry": NICHES[k]["industry"], "mood": NICHES[k]["mood"], "primary": NICHES[k]["primary"], "secondary": NICHES[k]["secondary"], "hero": NICHES[k]["hero"], "title": NICHES[k]["title"], "bg": MOODS[NICHES[k]["mood"]]["bg"], "font": MOODS[NICHES[k]["mood"]]["font_heading"]} for k in keys[:5]]}
+        return {"current": cur, "vote": app.get("look_vote"), "options": [{"key": k, "brand": app["name"], "sample": NICHES[k]["brand"], "industry": NICHES[k]["industry"], "mood": NICHES[k]["mood"], "primary": LOOKS.get(k, NICHES[k])["primary"], "secondary": LOOKS.get(k, NICHES[k])["secondary"], "hero": NICHES[k]["hero"], "title": NICHES[k]["title"], "bg": LOOKS.get(k, {}).get("bg") or MOODS[NICHES[k]["mood"]]["bg"], "font": LOOKS.get(k, {}).get("font_heading") or MOODS[NICHES[k]["mood"]]["font_heading"]} for k in keys[:5]]}
 
     @api.post("/apps/{app_id}/site/look-vote")
     async def look_vote(app_id: str, body: VoteIn, user: dict = Depends(get_current_user)):

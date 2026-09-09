@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "@/lib/api";
-import { FONTS } from "@/lib/theme";
+import { FONTS, applyMode } from "@/lib/theme";
 import { CURSOR_EFFECTS } from "@/lib/cursorEffects";
 import { Sun, Moon } from "lucide-react";
 
@@ -23,7 +23,7 @@ export function ThemePanel({ theme, onChange }) {
       <Color k="primary" label="Primary" /><Color k="secondary" label="Secondary" />
       <div className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">Mode</span>
         <div className="flex rounded-full border border-[var(--line)] overflow-hidden">
-          {[["light", Sun], ["dark", Moon]].map(([m, I]) => <button key={m} data-testid={`theme-mode-${m}`} onClick={() => set("mode", m)} className={`px-3 py-1 flex items-center gap-1 ${theme.mode === m ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}><I size={11} /> {m}</button>)}
+          {[["light", Sun], ["dark", Moon]].map(([m, I]) => <button key={m} data-testid={`theme-mode-${m}`} onClick={() => onChange(applyMode(theme, m))} className={`px-3 py-1 flex items-center gap-1 ${theme.mode === m ? "bg-[var(--acc)]/15 text-[var(--acc)]" : "text-[var(--mut)]"}`}><I size={11} /> {m}</button>)}
         </div></div>
       {[["font_heading", "Heading font"], ["font_body", "Body font"]].map(([k, l]) => (
         <label key={k} className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">{l}</span>

@@ -1,3 +1,4 @@
+import hashlib
 import uuid
 from datetime import datetime, timezone
 
@@ -11,6 +12,11 @@ def _id(p):
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _pv_token(app_id):
+    """Deterministic preview token so published preview links survive a DB reset."""
+    return "pv_" + hashlib.sha256(f"preview:{app_id}".encode()).hexdigest()[:20]
 
 
 NICHES = {
@@ -155,7 +161,7 @@ async def ensure_editor_tenant(db, owner_id, hash_password):
             "description": "Residential and commercial roofing with 24/7 storm response and financing.",
             "tags": ["Roofing", "Bookings", "Leads"], "color": "#F97316",
             "thumbnail": U + "photo-1632759145355-8c1d0a1bff2a?w=1400&q=80",
-            "transfer_mode": False, "preview_enabled": True, "preview_token": _id("pv") + uuid.uuid4().hex[:8],
+            "transfer_mode": False, "preview_enabled": True, "preview_token": _pv_token(EDITOR_TENANT_ID),
             "metrics": {"uptime": 99.95, "cpu": 28, "ram": 54, "response_ms": 92, "visitors_24h": 1840},
             "created_at": _now(), "updated_at": _now(),
         }
@@ -181,3 +187,39 @@ async def ensure_editor_tenant(db, owner_id, hash_password):
         {"$set": {"role": "editor"}, "$setOnInsert": {"created_at": _now()}},
         upsert=True,
     )
+
+
+# Canonical demo tenants, one per showcase industry. Fixed app_ids so a wiped or rolled-back
+# database always self-heals to the same set instead of generating new tenants.
+DEMO_TENANTS = [
+    ("app_009e5e117f77", "retail"),
+    ("app_04366e4b6d97", "saas"),
+    ("app_cca4d5dd736d", "logistics"),
+    ("app_b86054a26f34", "fitness"),
+    ("app_77d30fefb622", "finance"),
+    ("app_b96a63e4b700", "creative_studio"),
+]
+
+
+async def ensure_demo_tenants(db, owner_id):
+    from site_content import NICHES, build_premium_site, theme_for
+    made = 0
+    for app_id, key in DEMO_TENANTS:
+        if await db.apps.find_one({"app_id": app_id}, {"_id": 0, "app_id": 1}):
+            continue
+        n = NICHES[key]
+        doc = {
+            "app_id": app_id, "owner_id": owner_id, "name": n["brand"], "industry": n["industry"],
+            "description": n["sub"], "status": "active", "tags": [n["industry"]], "color": n["primary"],
+            "thumbnail": n["hero"], "video_url": n["video"], "transfer_mode": False,
+            "preview_enabled": True, "preview_token": _pv_token(app_id),
+            "site_niche": key, "premium_site_v": 3, "theme": theme_for(n, key),
+            "metrics": {"uptime": 99.9, "cpu": 24, "ram": 48, "response_ms": 96, "visitors_24h": 1200},
+            "created_at": _now(), "updated_at": _now(),
+        }
+        await db.apps.insert_one(dict(doc))
+        pages, _theme, _n = build_premium_site(doc, key, {"name": n["brand"]})
+        for i, (pname, slug, blocks) in enumerate(pages):
+            await db.pages.insert_one({"page_id": _id("pg"), "app_id": app_id, "name": pname, "slug": slug, "order": i, "blocks": blocks, "updated_at": _now()})
+        made += 1
+    return made

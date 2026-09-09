@@ -976,12 +976,15 @@ async def startup():
         logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
     try:
         await reseed_demo_sites(db, admin_id)
-        from seed_sites import ensure_editor_tenant
+        from seed_sites import ensure_editor_tenant, ensure_demo_tenants
         await ensure_editor_tenant(db, admin_id, hash_password)
+        logger.info(f"Demo tenants restored: {await ensure_demo_tenants(db, admin_id)}")
         # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
         from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
         logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
         logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
+        from site_content import retheme_all
+        logger.info(f"Template look applied to {await retheme_all(db)} tenant(s)")
         await clear_synced_label_overrides(db)
     except Exception as e:
         logger.error(f"demo site bootstrap skipped: {e}")

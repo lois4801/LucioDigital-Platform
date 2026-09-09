@@ -1,0 +1,41 @@
+{
+  "summary": "Iter57 — Full validation of the 3-part 'unique-look-per-template + mode toggle + Maison Verde bug fixes' pass. All 17 backend regression tests in test_iter57_looks.py pass (100%): all 7 canonical tenants carry the expected per-template theme fingerprints (site_niche/mode/font_heading/site_preset), the 7 themes are pairwise distinct on (primary,bg,font_heading,site_preset,radius), POST /apps/{id}/templates/{key}/apply against a throwaway tenant maps 4/4 tested keys (retail→editoriallux+Cormorant Garamond, fitness→energy+Syne, finance→ledger+Lora, logistics→freight+Barlow Condensed), PUT /apps/{id}/theme persists a subsequent mode + manual primary override, client.editor sees exactly 1 tenant (Northwind), admin sees 7, and public /api/public/showcase + /api/public/landing/tenants both return live data. Frontend computed-CSS checks against the live public preview URLs confirmed: Maison Verde (light) renders on cream #FBF8F1 with Cormorant Garamond, h1 rgb(17,17,17), h2/p rgb(51,51,51), a visible 'Find a store' secondary CTA with 2px dark border + dark label, container class `min-h-screen dsv2 tmode-light pr-site-editoriallux`, zero strikethroughs. Northwind (dark) → Oswald + white heading + rgb(229,229,229) body. Northline (dark) → Barlow Condensed. Forge (dark) → Syne + black bg. Nocturne (dark) → tmode-dark pr-site-noir + Syne + purple #A855F7 accent + a 'Take the virtual tour' cta2 with light 2px outline + white label. Backend startup log confirms retheme_all + ensure_demo_tenants + ensure_editor_tenant all fire correctly. IMPORTANT: The preview_token URLs listed in the review request are stale for 6 of the 7 tenants — during my run the demo tenants were wiped once and ensure_demo_tenants regenerated fresh preview_token values (only Maison Verde's token pv_62958c58ce0422a1a58b matches). Any external caller reusing the review's URLs (except Maison Verde and Northwind) will get 'Preview link is invalid or has been revoked' — because the token is stored on the tenant doc and rotates on every demo-restore.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "seed_sites.ensure_demo_tenants", "issue": "preview_token is generated fresh (_id('pv')+uuid.uuid4().hex[:8]) every time a demo tenant is re-inserted, so any preview URL previously published (docs, release notes, review requests) breaks the moment the DB is rolled back and the demo re-inserts run. Suggest deriving preview_token deterministically from app_id (e.g. 'pv_' + hashlib.md5(app_id.encode()).hexdigest()[:20]) so the six documented public preview links remain stable across resets."},
+      {"endpoint": "DB stability", "issue": "Between the pytest run (12:48) and a follow-up admin API check (12:52) 6 of 7 tenants disappeared without an intentional delete — the only mutation my suite performed was creating and DELETE'ing one throwaway tenant. supervisorctl restart backend triggered ensure_demo_tenants to restore 5/6 demo tenants + ensure_editor_tenant restored Northwind, so the self-healing works. Root cause of the mid-session wipe is unclear (this is the same 'rollback earlier today' the review context flagged); recommend adding a lifecycle audit log or a scheduled consistency check that logs a WARNING when a DEMO_TENANTS or EDITOR_TENANT_ID row goes missing without a DELETE audit event."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter57_looks.py",
+    "/app/test_reports/pytest/iter57.xml"
+  ],
+  "action_items": [
+    "Make preview_token deterministic per app_id in seed_sites.ensure_demo_tenants so publicly-shared preview URLs survive DB rollbacks (Maison Verde still works because its token happened to be regenerated to the documented value or was never rotated; the other five are all rotated on re-seed).",
+    "Optional: add a startup consistency check that WARNs when the canonical DEMO_TENANTS or EDITOR_TENANT_ID vanish, so silent rollbacks are visible in the logs."
+  ],
+  "critical_code_review_comments": [
+    "site_content.LOOKS is well-designed — every one of 16 entries carries a genuinely distinct (primary, bg, font_heading, site_preset, radius) combination and mode is intentionally set per-niche (retail/legal/education/real_estate/healthcare = light, everything else = dark). retheme_all() correctly gates on look_v so tenants that already carry LOOK_V=1 are skipped, avoiding thrash on every restart.",
+    "templates.apply_template correctly maps template key → LOOKS niche via INDUSTRY_MAP with a fallback path when key isn't in LOOKS. Verified retail/fitness/finance/logistics map to their unique visual identities on a throwaway tenant. site_niche is persisted on the app so subsequent renders continue to pick the same look.",
+    "studio.put_theme's ThemeIn model wraps the payload as {'theme': {...}} rather than accepting the theme dict at the top level. Fine but worth documenting — the review request implied a top-level payload, and my first attempt returned 422 until I wrapped it.",
+    "POST /api/apps requires 'industry' as a required field (Pydantic 422 otherwise). Not a bug, but worth noting for anyone testing throwaway tenant creation.",
+    "seed_sites.ensure_demo_tenants inserts a fresh preview_token on every re-seed. Deterministic tokens (hash of app_id) would make the published preview URLs survive rollbacks.",
+    "Legacy /app/backend/tests/test_iter{11..52}*.py suites still hardcode long-dead tenant ids — per the review agent-to-agent context they are legacy and left alone."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter57_looks.py (new — 17 focused regression tests for the iter57 delivery)"
+  ],
+  "success_rate": {"backend": "100% (17/17 iter57 targeted tests pass)", "frontend": "100% (Maison Verde + Nocturne + Northwind + Northline + Forge previews all verified with computed styles matching spec)"},
+  "test_credentials": "Read from /app/memory/test_credentials.md; admin (jaybernabe@luciodigital.com/Lucio2026!) and editor (client.editor@example.com/ClientEdit2026!) both work.",
+  "seed_data_creation": "One throwaway tenant per pytest module run (TEST_iter57_throwaway, industry=SaaS) created via POST /api/apps, used to exercise template apply + PUT /theme + mode toggle, deleted in fixture teardown.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "The 3-part iter57 delivery (unique-look-per-template + Site Mode toggle + Maison Verde Part-3 bug fixes) is functionally correct and reproducible. Live preview URLs listed in the review request are stale for 5 tenants (Meridian, Nocturne, Orbit, Forge, Northline) because ensure_demo_tenants rotates preview_token on every re-seed — fetch the current tokens dynamically via `curl -b cj $API/api/apps | jq '.[] | {name, preview_token}'` before running preview-URL tests. The DB was silently reset once during my session (all tenants except Maison Verde disappeared); a supervisorctl restart backend restored 5/6 demo tenants + Northwind via the self-healing startup path, so the system is resilient. Legacy iter11-52 suites still hardcode dead ids and are expected to 404 — leave them alone.",
+  "rca of the issue": "No functional regression in the iter57 delivery itself. Two operational observations: (1) preview_token is non-deterministic across re-seeds, so publishing a preview URL is a one-shot commitment — remediation is deterministic token derivation from app_id in ensure_demo_tenants. (2) A silent tenant wipe occurred mid-session (same class of event flagged in the review context 'a past pass wiped real tenants and 5 demo tenants were lost again to a rollback earlier today'); the self-healing ensure_demo_tenants + ensure_editor_tenant on the next backend restart fully restored 6/7 tenants (plus the persistent Maison Verde), which validates the iter55/56 idempotency fixes — but the source of the mid-session delete remains untraced. Suggest wrapping DELETE /api/apps/{app_id} in a startup-check audit log so future silent wipes surface immediately."
+}

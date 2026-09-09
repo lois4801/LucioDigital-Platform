@@ -1,0 +1,210 @@
+/* ============================================================================
+   Part 2 — Light / Dark design system, and Part 3 — text contrast + strikethrough fixes.
+   Applied via .tmode-light / .tmode-dark on the tenant site root (canvas + public preview).
+   ========================================================================== */
+
+/* ---------- Text colour contract (never lighter than the background) ---------- */
+.tmode-light, .tmode-dark { color: var(--tbody); }
+.tmode-light h1, .tmode-light h2, .tmode-light h3, .tmode-light h4,
+.tmode-light .t-h1, .tmode-light .t-h2, .tmode-light .t-h3,
+.tmode-dark h1, .tmode-dark h2, .tmode-dark h3, .tmode-dark h4,
+.tmode-dark .t-h1, .tmode-dark .t-h2, .tmode-dark .t-h3 { color: var(--thead); }
+.tmode-light p, .tmode-light li, .tmode-light summary, .tmode-light .t-lead,
+.tmode-dark p, .tmode-dark li, .tmode-dark summary, .tmode-dark .t-lead { color: var(--tbody); }
+/* Muted helpers stay muted but never drop below the mode floor */
+.tmode-light .text-\[var\(--tmut\)\] { color: #4B5563; }
+.tmode-dark .text-\[var\(--tmut\)\] { color: #A1A7B8; }
+/* Navbar text follows the mode */
+.tmode-light nav, .tmode-light nav button, .tmode-light nav span { color: #111111; }
+.tmode-dark nav, .tmode-dark nav button, .tmode-dark nav span { color: #FFFFFF; }
+/* Accent / dark section bands keep white type on the brand fill */
+.tmode-light .tsec-accent, .tmode-light .tsec-accent h1, .tmode-light .tsec-accent h2,
+.tmode-light .tsec-accent h3, .tmode-light .tsec-accent p,
+.tmode-dark .tsec-accent, .tmode-dark .tsec-accent h1, .tmode-dark .tsec-accent h2,
+.tmode-dark .tsec-accent h3, .tmode-dark .tsec-accent p { color: #FFFFFF; }
+
+/* Reveal animations never change colour mid-sequence */
+.tmode-light .tstagger > *, .tmode-light [style*="opacity"] h1, .tmode-light [style*="opacity"] h2 { color: inherit; }
+
+/* ---------- Part 3: strikethrough reset on body copy (CSS bug, not formatting) ---------- */
+.tmode-light :is(p, span, li, h1, h2, h3, h4, summary, strong, em, div),
+.tmode-dark :is(p, span, li, h1, h2, h3, h4, summary, strong, em, div) { text-decoration-line: none !important; }
+.tmode-light a:hover, .tmode-dark a:hover { text-decoration-line: none; }
+
+/* ---------- Surfaces, cards, dividers ---------- */
+.tmode-light .tcard, .tmode-light .tglass {
+  background: #FFFFFF !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+  border-color: color-mix(in srgb, var(--tbd) 90%, transparent) !important;
+  box-shadow: 0 1px 2px rgb(17 17 17 / 0.04), 0 12px 32px -24px rgb(17 17 17 / 0.35) !important;
+}
+.tmode-light .tcard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 2px 4px rgb(17 17 17 / 0.05), 0 22px 48px -28px rgb(17 17 17 / 0.4) !important;
+  border-color: color-mix(in srgb, var(--tp) 45%, var(--tbd)) !important;
+}
+.tmode-light .tsec-muted { background: var(--tsf); }
+.tmode-light .tglassnav { background: color-mix(in srgb, #FFFFFF 88%, transparent); box-shadow: 0 1px 0 rgb(17 17 17 / 0.06); }
+.tmode-light hr, .tmode-light .divide-y > * + * { border-color: #E5E7EB; }
+
+.tmode-dark .tcard {
+  border-color: color-mix(in srgb, var(--tp) 18%, var(--tbd)) !important;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.05) inset, 0 24px 60px -42px rgb(0 0 0 / 0.9), 0 0 0 1px color-mix(in srgb, var(--tp) 8%, transparent) !important;
+}
+.tmode-dark .tcard:hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--tp) 34%, transparent), 0 40px 90px -46px var(--tp) !important; }
+
+/* ---------- Buttons ---------- */
+.tmode-light .tbtn-solid { background: var(--tp); color: #FFFFFF; box-shadow: 0 8px 20px -12px rgb(17 17 17 / 0.45); }
+.tmode-light .tbtn-solid:hover { box-shadow: 0 14px 30px -14px rgb(17 17 17 / 0.5); }
+.tmode-light .tbtn-ghost { border-color: #111111 !important; color: #111111 !important; background: transparent !important; }
+.tmode-light .tbtn-ghost:hover { background: #111111 !important; color: #FFFFFF !important; }
+.tmode-dark .tbtn-ghost { border-color: #FFFFFF !important; color: #FFFFFF !important; background: transparent !important; }
+.tmode-dark .tbtn-ghost:hover { background: #FFFFFF !important; color: #0A0A0F !important; }
+
+/* ---------- Heading font (Tailwind cannot compile font-[var(--tfh)], so bind it here) ---------- */
+.tmode-light :is(h1, h2, h3, h4), .tmode-dark :is(h1, h2, h3, h4),
+.tmode-light .font-\[var\(--tfh\)\], .tmode-dark .font-\[var\(--tfh\)\] { font-family: var(--tfh); }
+
+/* ---------- Cover hero scrim: keep the photograph readable in light mode ---------- */
+.tmode-light .hero-scrim { background: linear-gradient(100deg, color-mix(in srgb, var(--tbg) 94%, transparent) 0%, color-mix(in srgb, var(--tbg) 78%, transparent) 42%, color-mix(in srgb, var(--tbg) 18%, transparent) 100%) !important; }
+.tmode-light .hero-scrim-b { background: linear-gradient(180deg, transparent 55%, var(--tbg) 100%) !important; }
+
+/* Keep the accent bloom behind cover heroes subtle so the photograph stays the subject */
+.tmode-dark [data-testid="hero-cover"] .blur-3xl { opacity: .16 !important; }
+
+/* ---------- Depth: glow in dark, soft shadow in light ---------- */
+.tmode-light .tgrain::before { opacity: 0; }
+.tmode-light [class*="shadow-[0_10px_30px"], .tmode-light [class*="shadow-[0_24px_60px"] { box-shadow: 0 10px 26px -18px rgb(17 17 17 / 0.35) !important; }
+.tmode-light .blur-3xl { opacity: .12 !important; }
+
+/* ============================================================================
+   Part 1 — 16 unique template identities. Each preset changes type treatment,
+   card style, button shape, dividers and section rhythm so no two templates match.
+   ========================================================================== */
+
+/* 1. Summit Air & Heat — bold industrial orange/charcoal, heavy sans, gridded cards */
+.pr-site-industrial h1, .pr-site-industrial h2 { font-weight: 800; letter-spacing: -0.03em; text-transform: uppercase; }
+.pr-site-industrial .tcard { border-radius: 4px !important; border-width: 2px; border-color: color-mix(in srgb, var(--tp) 30%, var(--tbd)) !important; }
+.pr-site-industrial .tbtn { border-radius: 4px !important; text-transform: uppercase; letter-spacing: .09em; font-weight: 800; }
+.pr-site-industrial section + section { border-top: 3px solid color-mix(in srgb, var(--tp) 35%, var(--tbd)); }
+.pr-site-industrial .tglassnav { border-bottom-width: 3px; border-bottom-color: var(--tp); }
+
+/* 2. Northgate Family Medicine — clinical white/teal, rounded cards, friendly serif heads */
+.pr-site-clinical h1, .pr-site-clinical h2, .pr-site-clinical h3 { font-weight: 600; letter-spacing: -0.01em; }
+.pr-site-clinical .tcard { border-radius: 24px !important; box-shadow: 0 18px 40px -30px rgb(13 148 136 / .45) !important; }
+.pr-site-clinical .tbtn { border-radius: 999px !important; }
+.pr-site-clinical .tsec-muted { background: linear-gradient(180deg, #F1FAF9, #FFFFFF); }
+.pr-site-clinical section + section { border-top: 1px solid #E3F2F1; }
+
+/* 3. Ironbridge Construction — concrete grey/safety yellow, condensed caps, diagonal dividers */
+.pr-site-concrete h1, .pr-site-concrete h2 { font-weight: 700; text-transform: uppercase; letter-spacing: .01em; line-height: .95; }
+.pr-site-concrete .tcard { border-radius: 0 !important; border-left: 6px solid var(--tp) !important; }
+.pr-site-concrete .tbtn { border-radius: 0 !important; text-transform: uppercase; letter-spacing: .12em; }
+.pr-site-concrete section { position: relative; }
+.pr-site-concrete section + section::before {
+  content: ""; position: absolute; inset: -1px 0 auto 0; height: 34px;
+  background: var(--tbg); clip-path: polygon(0 0, 100% 100%, 0 100%);
+}
+.pr-site-concrete img { border-radius: 0 !important; }
+
+/* 4. Forge Athletic Club — black/electric red, aggressive type, glowing pricing cards */
+.pr-site-energy h1, .pr-site-energy h2 { font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em; font-style: italic; }
+.pr-site-energy .tcard { border-radius: 2px !important; border-color: color-mix(in srgb, var(--tp) 45%, #26262E) !important; }
+.pr-site-energy .tcard:hover { box-shadow: 0 0 0 1px var(--tp), 0 0 60px -10px var(--tp) !important; }
+.pr-site-energy .tbtn { border-radius: 2px !important; text-transform: uppercase; letter-spacing: .14em; font-weight: 800; }
+.pr-site-energy .tbtn-solid { box-shadow: 0 0 30px -6px var(--tp); }
+.pr-site-energy section + section { border-top: 1px solid #1A1A20; }
+
+/* 5. Maison Verde — cream/forest editorial luxury, masonry grid, generous whitespace */
+.pr-site-editoriallux h1, .pr-site-editoriallux h2 { font-weight: 500; letter-spacing: -0.005em; }
+.pr-site-editoriallux .tsec, .pr-site-editoriallux .tsec-lg { padding-block: var(--rh-lg); }
+.pr-site-editoriallux .tcard { border-radius: 10px !important; border-color: #EDE5D6 !important; box-shadow: 0 20px 50px -40px rgb(31 81 56 / .5) !important; }
+.pr-site-editoriallux .tbtn { border-radius: 2px !important; text-transform: uppercase; letter-spacing: .18em; font-size: .74rem; }
+.pr-site-editoriallux .grid.sm\:grid-cols-2.md\:grid-cols-3 > *:nth-child(3n+1) { margin-top: 0; }
+.pr-site-editoriallux .grid.sm\:grid-cols-2.md\:grid-cols-3 > *:nth-child(3n+2) { margin-top: 2.5rem; }
+.pr-site-editoriallux .grid.sm\:grid-cols-2.md\:grid-cols-3 > *:nth-child(3n) { margin-top: 1.25rem; }
+
+/* 6. The Harbourline Hotel — navy/gold, refined serif, image hover overlays */
+.pr-site-harbour h1, .pr-site-harbour h2 { font-weight: 500; letter-spacing: .005em; }
+.pr-site-harbour .overline, .pr-site-harbour .t-small { letter-spacing: .3em; }
+.pr-site-harbour .tcard { border-radius: 6px !important; border-color: color-mix(in srgb, var(--tp) 40%, var(--tbd)) !important; }
+.pr-site-harbour .tbtn { border-radius: 0 !important; text-transform: uppercase; letter-spacing: .2em; font-size: .72rem; }
+.pr-site-harbour .relative.overflow-hidden img { transition: transform .8s cubic-bezier(.22,1,.36,1), filter .6s; filter: saturate(.9) brightness(.92); }
+.pr-site-harbour .relative.overflow-hidden:hover img { transform: scale(1.06); filter: saturate(1.05) brightness(1); }
+
+/* 7. Meridian Wealth Partners — charcoal/gold, formal serif, conservative grid */
+.pr-site-ledger h1, .pr-site-ledger h2 { font-weight: 600; letter-spacing: -0.015em; }
+.pr-site-ledger .tcard { border-radius: 4px !important; background: color-mix(in srgb, var(--tsf) 92%, var(--tp)) !important; }
+.pr-site-ledger .tbtn { border-radius: 3px !important; letter-spacing: .06em; }
+.pr-site-ledger [data-testid="block-stats"] .tcard { border-top: 3px solid var(--tp) !important; }
+.pr-site-ledger section + section { border-top: 1px solid #2A2A31; }
+
+/* 8. Vantage Point IT — navy/cyan tech, mono accents, grid backdrop */
+.pr-site-techno { background-image: linear-gradient(color-mix(in srgb, #1B2B4D 55%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, #1B2B4D 55%, transparent) 1px, transparent 1px); background-size: 56px 56px; }
+.pr-site-techno h1, .pr-site-techno h2 { font-weight: 700; letter-spacing: -0.04em; }
+.pr-site-techno .overline, .pr-site-techno [class*="uppercase"] { font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .1em; }
+.pr-site-techno .tcard { border-radius: 6px !important; border-color: color-mix(in srgb, var(--tp) 28%, var(--tbd)) !important; }
+.pr-site-techno .tbtn { border-radius: 6px !important; font-family: 'JetBrains Mono', ui-monospace, monospace; letter-spacing: .04em; }
+.pr-site-techno [data-testid="block-stats"] .tcard > div:first-child { text-shadow: 0 0 24px color-mix(in srgb, var(--tp) 55%, transparent); }
+
+/* 9. Nocturne Studios — pure black/purple, full-bleed portfolio, glassmorphism */
+.pr-site-noir h1, .pr-site-noir h2 { font-weight: 800; letter-spacing: -0.05em; }
+.pr-site-noir .tcard { border-radius: 0 !important; background: rgba(255,255,255,0.045) !important; backdrop-filter: blur(22px) !important; -webkit-backdrop-filter: blur(22px) !important; border-color: rgba(255,255,255,.12) !important; }
+.pr-site-noir .tbtn { border-radius: 0 !important; letter-spacing: .16em; text-transform: uppercase; font-size: .74rem; }
+.pr-site-noir .grid.sm\:grid-cols-2.md\:grid-cols-3 { gap: 2px; }
+.pr-site-noir img { border-radius: 0 !important; filter: contrast(1.06) saturate(.95); }
+
+/* 10. Northline Freight Systems — steel/amber, condensed industrial, ruled bars */
+.pr-site-freight h1, .pr-site-freight h2 { font-weight: 700; text-transform: uppercase; letter-spacing: .015em; }
+.pr-site-freight .tcard { border-radius: 2px !important; border-top: 4px solid var(--tp) !important; }
+.pr-site-freight .tbtn { border-radius: 2px !important; text-transform: uppercase; letter-spacing: .1em; }
+.pr-site-freight [data-testid="block-stats"] > div { border-block: 1px solid color-mix(in srgb, var(--tp) 40%, var(--tbd)); padding-block: 1.25rem; }
+.pr-site-freight .tsec-muted { background: repeating-linear-gradient(135deg, var(--tsf) 0 18px, color-mix(in srgb, var(--tsf) 88%, var(--tp)) 18px 36px); }
+
+/* 11. Orbit Customer Success — SaaS purple/green, soft product cards, pill buttons */
+.pr-site-saas h1, .pr-site-saas h2 { font-weight: 700; letter-spacing: -0.035em; }
+.pr-site-saas .tcard { border-radius: 18px !important; border-color: color-mix(in srgb, var(--ts) 20%, var(--tbd)) !important; }
+.pr-site-saas .tbtn { border-radius: 999px !important; }
+.pr-site-saas .tbtn-solid { background: linear-gradient(120deg, var(--tp), var(--ts)); }
+.pr-site-saas [data-testid="block-stats"] .tcard > div:first-child { color: var(--ts); }
+
+/* 12. Whitfield & Grant LLP — burgundy/cream legal, all-serif, ruled practice cards */
+.pr-site-counsel h1, .pr-site-counsel h2, .pr-site-counsel h3 { font-weight: 600; letter-spacing: 0; }
+.pr-site-counsel .tcard { border-radius: 2px !important; border-color: #E0D3BE !important; border-left: 3px solid var(--tp) !important; box-shadow: none !important; }
+.pr-site-counsel .tbtn { border-radius: 0 !important; letter-spacing: .12em; text-transform: uppercase; font-size: .74rem; }
+.pr-site-counsel .tsec-muted { background: linear-gradient(180deg, #F6F1E8, #FBF7F1); }
+.pr-site-counsel section + section { border-top: 1px solid #E7DCCB; }
+
+/* 13. Brightwater Academy — white/royal blue, rounded friendly, course cards */
+.pr-site-campus h1, .pr-site-campus h2 { font-weight: 800; letter-spacing: -0.02em; }
+.pr-site-campus .tcard { border-radius: 22px !important; border-color: #DCE5FB !important; box-shadow: 0 16px 36px -28px rgb(29 78 216 / .5) !important; }
+.pr-site-campus .tbtn { border-radius: 999px !important; font-weight: 800; }
+.pr-site-campus [data-testid="block-stats"] .tcard { background: linear-gradient(160deg, #F4F7FF, #FFFFFF) !important; }
+.pr-site-campus .tsec-muted { background: #F4F7FF; }
+
+/* 14. Harbour & Vale Realty — warm white/terracotta, listing cards, soft frames */
+.pr-site-realty h1, .pr-site-realty h2 { font-weight: 600; letter-spacing: -0.01em; }
+.pr-site-realty .tcard { border-radius: 14px !important; overflow: hidden; border-color: #EBDFD3 !important; }
+.pr-site-realty .tcard img { border-radius: 10px !important; }
+.pr-site-realty .tbtn { border-radius: 10px !important; letter-spacing: .04em; }
+.pr-site-realty .tsec-muted { background: linear-gradient(180deg, #FBF3EC, #FDFAF6); }
+
+/* 15. Ember & Oak — dark wood/ember, warm serif, candlelit glow */
+.pr-site-ember h1, .pr-site-ember h2 { font-weight: 600; letter-spacing: -0.01em; }
+.pr-site-ember .tcard { border-radius: 8px !important; background: color-mix(in srgb, var(--tsf) 88%, var(--tp)) !important; border-color: #3E2C1F !important; }
+.pr-site-ember .tbtn { border-radius: 999px !important; letter-spacing: .08em; }
+.pr-site-ember .tsec-muted { background: radial-gradient(900px 340px at 20% 0%, color-mix(in srgb, var(--tp) 16%, transparent), var(--tsf)); }
+.pr-site-ember img { filter: saturate(1.06) contrast(1.04); }
+
+/* 16. Lumen Events Co. — black/champagne gold, cinematic, mosaic gallery */
+.pr-site-cinematic h1, .pr-site-cinematic h2 { font-weight: 500; letter-spacing: .01em; }
+.pr-site-cinematic .overline, .pr-site-cinematic .t-small { letter-spacing: .34em; }
+.pr-site-cinematic .tcard { border-radius: 0 !important; background: rgba(255,255,255,.035) !important; border-color: color-mix(in srgb, var(--tp) 35%, #2A251C) !important; }
+.pr-site-cinematic .tbtn { border-radius: 0 !important; text-transform: uppercase; letter-spacing: .24em; font-size: .7rem; }
+.pr-site-cinematic .grid.sm\:grid-cols-2.md\:grid-cols-3 > *:nth-child(4n+1) { grid-column: span 2; }
+.pr-site-cinematic img { filter: grayscale(.15) contrast(1.08); }
+
+@media (max-width: 900px) {
+  .pr-site-cinematic .grid.sm\:grid-cols-2.md\:grid-cols-3 > *:nth-child(4n+1) { grid-column: auto; }
+  .pr-site-editoriallux .grid.sm\:grid-cols-2.md\:grid-cols-3 > * { margin-top: 0 !important; }
+}

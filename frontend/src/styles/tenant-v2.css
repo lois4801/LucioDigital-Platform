@@ -71,7 +71,9 @@
 .dsv2 .tlink:hover::after { transform: scaleX(1); }
 
 /* ---------- Staggered reveals (run when the section scrolls into view) ---------- */
-.dsv2 .tstagger > * { opacity: 0; transform: translateY(16px); }
+/* Part 3: reveals start at 0.3 opacity in the correct text colour — never invisible, never
+   white-on-white. If the observer never fires, content is still legible. */
+.dsv2 .tstagger > * { opacity: 0.3; transform: translateY(16px); }
 .dsv2 .tstagger-in .tstagger > *,
 .dsv2 .tstagger-in.tstagger > * { animation: tfadeup .65s cubic-bezier(.22,1,.36,1) both; }
 .dsv2 .tstagger > *:nth-child(1) { animation-delay: 0ms; }
@@ -81,7 +83,8 @@
 .dsv2 .tstagger > *:nth-child(5) { animation-delay: 320ms; }
 .dsv2 .tstagger > *:nth-child(6) { animation-delay: 400ms; }
 .dsv2 .tstagger > *:nth-child(n+7) { animation-delay: 460ms; }
-@keyframes tfadeup { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes tfadeup { from { opacity: 0.3; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dsv2 .tstagger > * { opacity: 1; transform: none; } }
 
 /* ---------- Media ---------- */
 .dsv2 img { max-width: 100%; }

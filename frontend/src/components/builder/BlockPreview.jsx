@@ -45,7 +45,9 @@ const cardCls = (v2) => v2
   : "tglass rounded-[var(--tr)] border border-[var(--tbd)] p-6 transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-1";
 const Btn = ({ children, ghost }) => {
   const v2 = useV2();
-  return <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "border border-[var(--tbd)] tglass" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
+  // Secondary buttons must always read against their background: outline + label follow --thead,
+  // which flips with the tenant's light/dark mode.
+  return <span className={`inline-block px-6 py-3 rounded-full font-semibold text-sm ${v2 ? `tbtn ${ghost ? "tbtn-ghost" : "tbtn-solid"}` : "transition-transform hover:-translate-y-0.5"} ${ghost ? "tbtn-ghost border-2 border-[var(--thead)] text-[var(--thead)] bg-transparent" : "bg-[var(--tp)] text-white shadow-[0_10px_30px_-12px_var(--tp)]"}`}>{children}</span>;
 };
 function BookingPicker({ token, mode = "period", value, onChange, inputCls }) {
   const [slots, setSlots] = useState(mode === "period" ? ["Morning", "Afternoon", "Evening"] : []);
@@ -161,7 +163,7 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       <div className={centered ? "mx-auto max-w-3xl" : "max-w-2xl"}>
         {p.badge && <T value={p.badge} {...E("badge")} className="inline-block text-xs font-bold uppercase tracking-[0.12em] text-[var(--ts)] bg-[var(--ts)]/10 border border-[var(--ts)]/30 px-3 py-1.5 rounded-full mb-6" />}
         <T as="h1" value={p.title} {...E("title")} className={`block font-[var(--tfh)] ${v2 ? "t-h1" : "text-4xl sm:text-5xl lg:text-6xl"} font-extrabold tracking-tight leading-[1.05]`} />
-        <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-6 ${v2 ? "t-lead" : "text-lg lg:text-xl"} ${cover ? "text-white/80" : m}`} />
+        <T as="p" value={p.subtitle} {...E("subtitle")} className={`block mt-6 ${v2 ? "t-lead" : "text-lg lg:text-xl"} ${cover ? "text-[var(--tbody)]" : m}`} />
         <div className="mt-8 flex flex-wrap gap-3" style={{ justifyContent: centered ? "center" : "flex-start" }}>
           <Btn><T value={p.cta || "Get started"} {...E("cta")} /></Btn>
           {String(p.cta2 || "").trim() && <Btn ghost><T value={p.cta2} {...E("cta2")} /></Btn>}
@@ -169,10 +171,10 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       </div>
     );
     if (cover) return (
-      <section data-testid="hero-cover" className={`relative overflow-hidden px-6 sm:px-8 lg:px-12 ${v2 ? "thero py-24" : "py-28 lg:py-36"} text-white ${centered ? "text-center" : ""}`}>
+      <section data-testid="hero-cover" className={`relative overflow-hidden px-6 sm:px-8 lg:px-12 ${v2 ? "thero py-24" : "py-28 lg:py-36"} text-[var(--thead)] ${centered ? "text-center" : ""}`}>
         <img src={p.image} alt="" decoding="async" fetchPriority="high" className={`absolute inset-0 w-full h-full object-cover ${v2 ? "scale-105" : ""}`} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(105deg, var(--tbg) 0%, color-mix(in srgb, var(--tbg) 82%, transparent) 45%, color-mix(in srgb, var(--tbg) 30%, transparent) 100%)" }} />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
+        <div className="absolute inset-0 hero-scrim" style={{ background: "linear-gradient(105deg, var(--tbg) 0%, color-mix(in srgb, var(--tbg) 82%, transparent) 45%, color-mix(in srgb, var(--tbg) 30%, transparent) 100%)" }} />
+        <div className="absolute inset-0 hero-scrim-b" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
         <div className="absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: "var(--tp)" }} />
         <div className="relative w-full">{inner}</div>
         {onImage && <div className="absolute top-4 right-4 z-20"><button type="button" data-testid="image-swap-image" onClick={(e) => { e.stopPropagation(); onImage("image", p.image); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/30 bg-black/60 backdrop-blur hover:bg-black/80"><Icons.ImagePlus size={12} /> Replace background</button></div>}

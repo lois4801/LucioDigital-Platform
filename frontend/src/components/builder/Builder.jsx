@@ -17,7 +17,7 @@ import { WebImportDialog } from "@/components/builder/WebImport";
 import { HistoryDialog } from "@/components/builder/PageHistory";
 import { DiffDialog } from "@/components/builder/VersionDiff";
 import { EditRequestDialog } from "@/components/builder/EditRequest";
-import { DEFAULT_THEME, themeVars, loadFonts, isV2 } from "@/lib/theme";
+import { DEFAULT_THEME, themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { LockToggle, MasterLockButton, useLocks } from "@/components/locks/LockContext";
 
 const IMG = "https://images.unsplash.com/photo-1497215728101-856f4ea42174?w=1200&q=80";
@@ -329,7 +329,7 @@ export default function Builder({ appId, appDoc, user }) {
       {nichePreview && (
         <div className="min-h-[600px]" data-testid="niche-preview-canvas">
           <div className="flex gap-1 mb-3">{nichePreview.pages.map((p, i) => <button key={p.slug} data-testid={`niche-preview-page-${i}`} onClick={() => setPreviewPage(i)} className={`px-3 py-1.5 rounded-full text-xs ${previewPage === i ? "bg-[var(--acc)] text-black font-semibold" : "text-[var(--mut)] hover:text-white"}`}>{p.name}</button>)}</div>
-          <div className={`rounded-2xl border border-[var(--acc)]/40 overflow-hidden shadow-2xl ${nichePreview.theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(nichePreview.theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }}>
+          <div className={`rounded-2xl border border-[var(--acc)]/40 overflow-hidden shadow-2xl ${modeCls(nichePreview.theme)} ${nichePreview.theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(nichePreview.theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
             <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">preview · {nichePreview.brand.toLowerCase().replace(/[^a-z0-9]+/g, "")}.com{nichePreview.pages[previewPage]?.slug}</span></div>
             <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">{(nichePreview.pages[previewPage]?.blocks || []).map(b => <EffectWrap key={b.id} effects={b.style?.effects} motionOn={true}><BlockPreview block={b} onNavigate={(href) => { const i = nichePreview.pages.findIndex(p => p.slug === href); if (i >= 0) setPreviewPage(i); }} /></EffectWrap>)}</div>
           </div>
@@ -358,7 +358,7 @@ export default function Builder({ appId, appDoc, user }) {
 
         <div className="min-h-[600px]">
           <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : device === "tablet" ? "max-w-[820px]" : "max-w-full"}`}>
-            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${isV2(theme) ? "dsv2" : ""} ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tfg)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
+            <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${isV2(theme) ? "dsv2" : ""} ${modeCls(theme)} ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
               <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
