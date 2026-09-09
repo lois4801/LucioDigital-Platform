@@ -5,7 +5,7 @@ import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, ChevronRight, MailCheck } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
-import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
+import { CursorFXBar, useCursorFX } from "@/components/CursorFX";
 import { swatchOf } from "@/lib/cursorEffects";
 import ScopedCursorFX from "@/components/ScopedCursorFX";
 
@@ -47,7 +47,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1">
+      <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1 min-w-0 overflow-hidden">
         <div className="w-full max-w-md fade-in" ref={panel}>
           <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
@@ -55,15 +55,13 @@ export default function Register() {
             </div>
             <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
           </div>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="overline mb-3">Create account</div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>
-              <p className="text-[var(--mut)] mt-2 text-sm">14-day free trial. No credit card.</p>
-            </div>
-            <div className="shrink-0" data-testid="register-cursor-picker" data-fx-skip>
-              <CursorFXPicker />
-            </div>
+          <div>
+            <div className="overline mb-3">Create account</div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>
+            <p className="text-[var(--mut)] mt-2 text-sm">14-day free trial. No credit card.</p>
+          </div>
+          <div className="mt-5" data-testid="register-cursor-picker" data-fx-skip>
+            <CursorFXBar />
           </div>
 
           <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-6 px-6 sm:-mx-12 sm:px-12 pb-2">

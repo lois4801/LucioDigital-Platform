@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
-import { Sparkles, Check, RotateCcw } from "lucide-react";
+import { Sparkles, Check, RotateCcw, Sliders } from "lucide-react";
 import api from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import CursorTrail from "@/components/CursorTrail";
@@ -89,6 +89,52 @@ export function CursorTrailThemed() {
   const e = CURSOR_EFFECTS.find(x => x.id === effect);
   const [dot] = e && e.id !== "none" ? e.swatch : ["#10B981"];
   return <CursorTrail color={dot} />;
+}
+
+// Horizontal top strip — fits mobile/tablet widths without any overflowing dropdown.
+export function CursorFXBar() {
+  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();
+  const [tune, setTune] = useState(false);
+  return (
+    <div data-testid="cursor-fx-bar" className="w-full rounded-2xl border border-[var(--line)] bg-[var(--card)]/70 backdrop-blur-md p-2">
+      <div className="flex items-center gap-2">
+        <Sparkles size={14} className={saved === "none" ? "text-[var(--mut)] shrink-0" : "text-[var(--acc)] shrink-0"} />
+        <div className="overline shrink-0 hidden sm:block">Cursor</div>
+        <div className="flex-1 min-w-0 flex items-center gap-1.5 overflow-x-auto scrollbar-thin py-0.5"
+          onMouseLeave={() => setPreview(null)}>
+          {CURSOR_EFFECTS.map(e => (
+            <button key={e.id} data-testid={`cursor-fx-option-${e.id}`} title={`${e.name} · ${e.hint}`}
+              onMouseEnter={() => setPreview(e.id === "none" ? null : e.id)}
+              onClick={() => choose(e.id)}
+              className={`relative shrink-0 w-8 h-8 rounded-full border transition-transform hover:scale-110 ${effect === e.id ? "border-[var(--acc)]" : "border-white/10"}`}
+              style={{ background: `linear-gradient(135deg, ${e.swatch[0]}, ${e.swatch[1]})` }}>
+              {saved === e.id && <Check size={12} className="absolute inset-0 m-auto text-black/80" />}
+            </button>
+          ))}
+        </div>
+        <button data-testid="cursor-fx-tune-btn" onClick={() => setTune(t => !t)} title="Intensity"
+          className="shrink-0 w-8 h-8 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">
+          <Sliders size={13} className="text-[var(--mut)]" />
+        </button>
+      </div>
+      {tune && (
+        <div className="grid grid-cols-2 gap-2 pt-2 mt-2 border-t border-[var(--line)]">
+          <label className="block">
+            <span className="flex justify-between text-[10px] text-[var(--mut)]"><span>Thickness</span><span className="font-mono">{density.toFixed(1)}×</span></span>
+            <input data-testid="cursor-fx-density-slider" type="range" min={0.2} max={3} step={0.1} value={density}
+              onChange={e => setIntensity(Number(e.target.value), speed)} className="w-full accent-[var(--acc)]" />
+          </label>
+          <label className="block">
+            <span className="flex justify-between text-[10px] text-[var(--mut)]"><span>Speed</span><span className="font-mono">{speed.toFixed(1)}×</span></span>
+            <input data-testid="cursor-fx-speed-slider" type="range" min={0.2} max={3} step={0.1} value={speed}
+              onChange={e => setIntensity(density, Number(e.target.value))} className="w-full accent-[var(--acc)]" />
+          </label>
+          <button data-testid="cursor-fx-intensity-reset-btn" onClick={() => setIntensity(1, 1)}
+            className="btn-ghost text-[11px] !py-1 !px-2.5 flex items-center gap-1.5 w-fit"><RotateCcw size={11} /> Reset</button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function CursorFXPicker({ up = false }) {  const { saved, effect, density, speed, choose, setIntensity, setPreview } = useCursorFX();

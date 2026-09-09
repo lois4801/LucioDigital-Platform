@@ -5,7 +5,7 @@ import { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, Mail, Lock, ChevronRight } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
-import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
+import { CursorFXBar, useCursorFX } from "@/components/CursorFX";
 import { swatchOf } from "@/lib/cursorEffects";
 import ScopedCursorFX from "@/components/ScopedCursorFX";
 
@@ -71,17 +71,15 @@ export default function Login() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-12">
+      <div className="flex items-center justify-center p-6 lg:p-12 min-w-0 overflow-hidden">
         <div className="w-full max-w-md fade-in" ref={panel}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <div className="overline mb-3">Sign in</div>
-              <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
-              <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
-            </div>
-            <div className="shrink-0" data-testid="login-cursor-picker" data-fx-skip>
-              <CursorFXPicker />
-            </div>
+          <div>
+            <div className="overline mb-3">Sign in</div>
+            <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
+            <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>
+          </div>
+          <div className="mt-5" data-testid="login-cursor-picker" data-fx-skip>
+            <CursorFXBar />
           </div>
 
           <ScopedCursorFX burstRef={fxBurst} className="mt-2 -mx-6 px-6 sm:-mx-12 sm:px-12 pb-2">
