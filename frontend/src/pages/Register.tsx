@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import api, { formatApiError } from "@/lib/api";
 import { toast } from "sonner";
 import { Layers, ChevronRight, MailCheck } from "lucide-react";
 import SocialSignIn from "@/components/SocialSignIn";
-import { CursorFXPicker } from "@/components/CursorFX";
+import { CursorFXPicker, useCursorFX } from "@/components/CursorFX";
+import { burstCursorFX, swatchOf } from "@/lib/cursorEffects";
+import { useAmbientCursorFX } from "@/hooks/useAmbientCursorFX";
 
 export default function Register() {
   const { register } = useAuth();
+  const { effect } = useCursorFX();
+  const [c1, c2] = swatchOf(effect);
+  const panel = useRef(null);
+  useAmbientCursorFX(panel, "button:not([data-fx-skip] *), input:not([data-fx-skip] *)", effect, { every: 200, per: 1 });
+  const burstAt = (el, n = 6) => {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    burstCursorFX(r.left + r.width / 2, r.top + r.height / 2, n);
+  };
   const nav = useNavigate();
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [busy, setBusy] = useState(false);
@@ -41,16 +52,23 @@ export default function Register() {
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="flex items-center justify-center p-6 lg:p-12 order-2 lg:order-1">
-        <div className="w-full max-w-md fade-in">
+        <div className="w-full max-w-md fade-in" ref={panel}>
           <div className="flex items-center gap-3 mb-8">
             <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center">
               <Layers size={18} className="text-[var(--acc)]" />
             </div>
             <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
           </div>
-          <div className="overline mb-3">Create account</div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>
-          <p className="text-[var(--mut)] mt-2 text-sm">14-day free trial. No credit card.</p>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="overline mb-3">Create account</div>
+              <h1 className="font-display text-3xl font-semibold tracking-tight">Start your agency workspace.</h1>
+              <p className="text-[var(--mut)] mt-2 text-sm">14-day free trial. No credit card.</p>
+            </div>
+            <div className="shrink-0" data-testid="register-cursor-picker" data-fx-skip>
+              <CursorFXPicker />
+            </div>
+          </div>
 
           <SocialSignIn mode="signup" />
       <div className="flex items-center gap-3 my-6">
@@ -59,12 +77,14 @@ export default function Register() {
             <div className="h-px flex-1 bg-[var(--line)]" />
           </div>
 
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} data-testid="register-form" className="space-y-4 rounded-2xl border p-5 transition-colors duration-500"
+            style={{ borderColor: `${c1}55`, background: `linear-gradient(160deg, ${c1}0f, ${c2}0a)`, boxShadow: `0 0 40px -18px ${c1}80` }}>
             {["name", "email", "password"].map((k) => (
               <label key={k} className="block">
                 <span className="overline block mb-2">{k}</span>
                 <input data-testid={`register-${k}-input`} type={k === "password" ? "password" : k === "email" ? "email" : "text"}
-                  value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} required
+                  value={form[k]} onChange={(e) => { setForm({ ...form, [k]: e.target.value }); burstAt(e.target, 3); }}
+                  onFocus={(e) => burstAt(e.target, 8)} required
                   className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-3 text-sm font-mono focus:border-[var(--acc)] outline-none" />
               </label>
             ))}
@@ -80,6 +100,7 @@ export default function Register() {
               </div>
             )}
             <button data-testid="register-submit-btn" disabled={busy} type="submit"
+              onMouseEnter={(e) => burstAt(e.currentTarget, 10)}
               className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-60">
               {busy ? "Creating…" : "Create workspace"} <ChevronRight size={16} />
             </button>
@@ -95,11 +116,6 @@ export default function Register() {
         <video src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
           autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover opacity-70" />
         <div className="absolute inset-0 bg-gradient-to-tl from-[var(--bg)]/80 via-transparent to-[var(--bg)]/60" />
-      </div>
-      <div className="fixed bottom-5 left-5 z-[60]" data-testid="register-cursor-picker">
-        <div className="rounded-full backdrop-blur-xl bg-[var(--bg)]/85 border border-white/10 shadow-2xl p-1">
-          <CursorFXPicker up />
-        </div>
       </div>
     </div>
   );
