@@ -5,7 +5,7 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -40,6 +40,7 @@ export default function Dashboard() {
   const [impReport, setImpReport] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [lockStates, setLockStates] = useState({});
+  const [showArchived, setShowArchived] = useState(false);
   const [upBusy, setUpBusy] = useState(false);
   const [pluginBusy, setPluginBusy] = useState(false);
   const legacyCount = apps.filter(a => !a.theme?.design_v2).length;
@@ -54,12 +55,23 @@ export default function Dashboard() {
   }
 
   useEffect(() => { load(); loadNotifs(); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); }, [showArchived]);
 
   async function load() {
     setLoading(true);
-    try { const { data } = await api.get("/apps"); setApps(data); }
+    try { const { data } = await api.get("/apps", { params: showArchived ? { archived: true } : {} }); setApps(data); }
     catch (e) { toast.error("Failed to load apps"); }
     finally { setLoading(false); }
+  }
+
+  async function toggleArchive(a) {
+    const archiving = !showArchived;
+    if (archiving && !window.confirm(`Archive ${a.name}? The site goes offline and disappears from your workspace. Its pages, leads, bookings, members and files are all kept and come back if you restore it — and every lead stays in your admin inbox.`)) return;
+    try {
+      const { data } = await api.post(`/apps/${a.app_id}/archive`, { archived: archiving });
+      setApps(list => list.filter(x => x.app_id !== a.app_id));
+      toast.success(archiving ? `${a.name} archived — ${data.leads_kept} lead(s) kept in your inbox` : `${a.name} restored`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not archive that tenant"); }
   }
   async function toggleFeatured(a) {
     try {
@@ -239,6 +251,11 @@ export default function Dashboard() {
               <button key={k} data-testid={`kind-filter-${k}-btn`} onClick={() => setKind(k)} className={`chip relative ${kind === k ? "!border-[var(--cyan)]/50 !text-[var(--cyan)]" : ""}`}>{kind === k && <motion.span layoutId="kind-pill" className="absolute inset-0 rounded-full bg-[var(--cyan)]/12" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></button>
             ))}
             <span className="w-px h-5 bg-[var(--line)] mx-1" />
+            <button data-testid="toggle-archived-btn" onClick={() => setShowArchived(v => !v)}
+              className={`chip cursor-pointer inline-flex items-center gap-1.5 ${showArchived ? "!border-[var(--acc)]/50 !text-[var(--acc)]" : ""}`}>
+              <Archive size={12} /> {showArchived ? "Viewing archived" : "Archived"}
+            </button>
+            <span className="w-px h-5 bg-[var(--line)] mx-1" />
             {INDUSTRIES.map((ind) => (
               <button key={ind} data-testid={`industry-filter-${ind.toLowerCase().replace(/\s+/g,'-')}-btn`}
                 onClick={() => setIndustry(ind)}
@@ -311,8 +328,8 @@ export default function Dashboard() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="card-surface p-12 text-center">
-            <div className="overline mb-2">No tenants match</div>
-            <div className="font-display text-xl">Try clearing filters or creating your first tenant.</div>
+            <div className="overline mb-2">{showArchived ? "Nothing archived" : "No tenants yet"}</div>
+            <div className="font-display text-xl">{showArchived ? "Archived tenants will appear here and can be restored any time." : "Click New project to create your first tenant — nothing is ever created automatically."}</div>
           </div>
         ) : view === "grid" ? (
           <motion.div variants={stagger} initial="hidden" animate="show" className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -338,6 +355,11 @@ export default function Dashboard() {
                       {!a.theme?.design_v2 && <span data-testid={`card-legacy-badge-${a.app_id}`} className="chip chip-maint">Legacy look</span>}
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                      <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
+                        onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                      </button>
                       <button data-testid={`feature-toggle-${a.app_id}`} title={a.featured ? "Remove from the landing showcase" : "Feature on the landing page"}
                         onClick={(e) => { e.stopPropagation(); toggleFeatured(a); }}
                         className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
@@ -378,6 +400,11 @@ export default function Dashboard() {
                     <div className="text-xs text-[var(--mut)]">{a.industry} · {a.description?.slice(0, 60)}</div>
                   </div>
                   <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
+                  <button data-testid={`archive-row-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
+                    onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
+                    className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-300 hover:bg-white/10">
+                    {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
+                  </button>
                   <LockStateBadge state={lockStates[a.app_id]?.state} testid={`row-lock-badge-${a.app_id}`} />
                   <div className="font-mono text-xs text-[var(--mut)] w-24 text-right">{a.metrics?.uptime}%</div>
                 </div>

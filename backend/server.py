@@ -376,17 +376,45 @@ def _serialize_app(doc: dict) -> dict:
 
 @api.get("/apps")
 async def list_apps(industry: Optional[str] = None, status_f: Optional[str] = None,
-                    user: dict = Depends(get_current_user)):
+                    archived: bool = False, user: dict = Depends(get_current_user)):
     # owner OR member
     memberships = await db.memberships.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(500)
     member_app_ids = [m["app_id"] for m in memberships]
     q = {"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": member_app_ids}}]}
+    q["archived"] = True if archived else {"$ne": True}
     if industry:
         q["industry"] = industry
     if status_f:
         q["status"] = status_f
     docs = await db.apps.find(q, {"_id": 0}).sort("created_at", -1).to_list(500)
     return docs
+
+
+class ArchiveIn(BaseModel):
+    archived: bool = True
+
+
+@api.post("/apps/{app_id}/archive")
+async def archive_app(app_id: str, body: ArchiveIn, user: dict = Depends(get_current_user)):
+    """Archiving hides a tenant from the workspace and takes its site offline. Pages, leads,
+    bookings, members and files are all kept, so restoring brings the tenant back intact."""
+    app = await get_user_app(app_id, user)
+    upd = {"archived": body.archived, "updated_at": now_utc().isoformat()}
+    if body.archived:
+        upd["preview_enabled"] = False
+        upd["featured"] = False
+    await db.apps.update_one({"app_id": app_id}, {"$set": upd})
+    await log_activity(app_id, user["user_id"], "app.archived" if body.archived else "app.restored",
+                       f"{'Archived' if body.archived else 'Restored'} {app['name']}")
+    leads = await db.messages.count_documents({"app_id": app_id})
+    return {"app_id": app_id, "archived": body.archived, "leads_kept": leads}
+
+
+def _new_tenant_theme(industry: Optional[str], name: str) -> dict:
+    """New tenants inherit the industry template's unique look (platform default)."""
+    from site_content import LOOKS, NICHES, theme_for, niche_for
+    key = niche_for({"industry": industry or "", "name": name or ""})
+    return theme_for(NICHES[key], key) if key in LOOKS else {**V2_THEME}
 
 
 @api.post("/apps")
@@ -406,7 +434,7 @@ async def create_app(body: AppCreateIn, user: dict = Depends(get_current_user)):
         "video_url": body.video_url,
         "live_url": body.live_url,
         "transfer_mode": False,
-        "theme": {**V2_THEME},
+        "theme": _new_tenant_theme(body.industry, body.name),
         "metrics": {
             "uptime": 99.9,
             "cpu": 24,
@@ -801,91 +829,6 @@ async def root():
     return {"service": "agency-platform", "ok": True}
 
 
-# ---------- Seed Data ----------
-SEED_APPS = [
-    {
-        "name": "Nexus Commerce",
-        "industry": "E-commerce",
-        "description": "Headless commerce dashboard with real-time inventory, AI product tagging and multi-currency checkout.",
-        "status": "active",
-        "tags": ["Stripe", "Next.js", "Postgres"],
-        "color": "#10B981",
-        "thumbnail": "https://images.unsplash.com/photo-1625838144804-300f3907c110?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-        "live_url": "https://nexus.example.com",
-        "metrics": {"uptime": 99.98, "cpu": 32, "ram": 61, "response_ms": 84, "visitors_24h": 12480},
-    },
-    {
-        "name": "Orbit SaaS Portal",
-        "industry": "SaaS Portals",
-        "description": "Workflow analytics + AI copilots for B2B customer success teams.",
-        "status": "active",
-        "tags": ["React", "FastAPI", "Redis"],
-        "color": "#06B6D4",
-        "thumbnail": "https://images.unsplash.com/photo-1675410202405-5ef270c857d3?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-        "live_url": "https://orbit.example.com",
-        "metrics": {"uptime": 99.92, "cpu": 41, "ram": 58, "response_ms": 112, "visitors_24h": 6284},
-    },
-    {
-        "name": "Fleet Command",
-        "industry": "Internal Tools",
-        "description": "Dispatch console for logistics operators with live map, driver telemetry and SLA alerts.",
-        "status": "maintenance",
-        "tags": ["Mapbox", "Websockets", "Mongo"],
-        "color": "#F59E0B",
-        "thumbnail": "https://images.unsplash.com/photo-1758626099012-2904337e9c60?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-        "live_url": "https://fleet.internal.example.com",
-        "metrics": {"uptime": 98.4, "cpu": 74, "ram": 82, "response_ms": 208, "visitors_24h": 812},
-    },
-    {
-        "name": "Aura Wellness",
-        "industry": "Service Booking",
-        "description": "Native iOS + Android booking flow for wellness studios with Stripe payments and Google Calendar sync.",
-        "status": "handover",
-        "tags": ["React Native", "Stripe", "Twilio"],
-        "color": "#A78BFA",
-        "thumbnail": "https://images.unsplash.com/photo-1558655146-6c222b05fce4?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoylikes.mp4",
-        "live_url": "https://aura.app",
-        "metrics": {"uptime": 99.7, "cpu": 22, "ram": 44, "response_ms": 96, "visitors_24h": 3120},
-    },
-    {
-        "name": "Ledger AI Portfolio",
-        "industry": "SaaS Portals",
-        "description": "Personal-finance copilot with LLM summaries, Plaid sync and multi-account budgeting.",
-        "status": "active",
-        "tags": ["Claude", "Plaid", "Recharts"],
-        "color": "#F472B6",
-        "thumbnail": "https://images.unsplash.com/photo-1625838144804-300f3907c110?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4",
-        "live_url": "https://ledger.ai",
-        "metrics": {"uptime": 99.99, "cpu": 18, "ram": 36, "response_ms": 68, "visitors_24h": 9200},
-    },
-    {
-        "name": "Studio Booking",
-        "industry": "Service Booking",
-        "description": "Multi-tenant booking widget for creative studios with tiered pricing and SMS reminders.",
-        "status": "active",
-        "tags": ["Twilio", "Vercel", "Stripe"],
-        "color": "#34D399",
-        "thumbnail": "https://images.unsplash.com/photo-1558655146-6c222b05fce4?crop=entropy&cs=srgb&fm=jpg&q=85",
-        "video_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-        "live_url": "https://studio.example.com",
-        "metrics": {"uptime": 99.6, "cpu": 27, "ram": 51, "response_ms": 132, "visitors_24h": 1740},
-    },
-]
-
-SEED_ACTIVITY = [
-    ("deploy.success", "info", "Deployed build 2.14.0 to production"),
-    ("error.report", "error", "Payment webhook retried 3× (transient)"),
-    ("member.invited", "info", "Invited an editor to the workspace"),
-    ("maintenance.window", "warning", "Scheduled maintenance window opened"),
-    ("ai.edit", "info", "AI rewrote hero copy with brand voice"),
-]
-
-
 @app.on_event("startup")
 async def startup():
     # indexes
@@ -942,43 +885,9 @@ async def startup():
             )
 
     admin_id = admin["user_id"]
-    existing_count = await db.apps.count_documents({"owner_id": admin_id})
-    if existing_count == 0:
-        for seed in SEED_APPS:
-            app_id = new_id("app")
-            doc = {
-                "app_id": app_id,
-                "owner_id": admin_id,
-                "transfer_mode": False,
-                "created_at": now_utc().isoformat(),
-                "updated_at": now_utc().isoformat(),
-                **seed,
-            }
-            await db.apps.insert_one(doc)
-            await db.pages.insert_one({
-                "page_id": new_id("pg"),
-                "app_id": app_id,
-                "name": "Home",
-                "slug": "/",
-                "blocks": _default_blocks(seed["name"]),
-                "updated_at": now_utc().isoformat(),
-            })
-            for i, (k, sev, msg) in enumerate(SEED_ACTIVITY):
-                await db.activity_logs.insert_one({
-                    "log_id": new_id("log"),
-                    "app_id": app_id,
-                    "user_id": admin_id,
-                    "kind": k,
-                    "severity": sev,
-                    "message": msg,
-                    "created_at": (now_utc() - timedelta(hours=i * 3 + 1)).isoformat(),
-                })
-        logger.info(f"Seeded {len(SEED_APPS)} demo apps for {admin_email}")
+    # Tenants are never created automatically. Templates, looks and platform defaults live in
+    # code and are applied the moment the admin creates a tenant from the dashboard.
     try:
-        await reseed_demo_sites(db, admin_id)
-        from seed_sites import ensure_editor_tenant, ensure_demo_tenants
-        await ensure_editor_tenant(db, admin_id, hash_password)
-        logger.info(f"Demo tenants restored: {await ensure_demo_tenants(db, admin_id)}")
         # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
         from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
         logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
@@ -987,7 +896,7 @@ async def startup():
         logger.info(f"Template look applied to {await retheme_all(db)} tenant(s)")
         await clear_synced_label_overrides(db)
     except Exception as e:
-        logger.error(f"demo site bootstrap skipped: {e}")
+        logger.error(f"startup maintenance skipped: {e}")
     try:
         init_storage()
         logger.info("Object storage initialized")
@@ -1005,7 +914,6 @@ from studio import register as register_studio
 from inbox import register as register_inbox
 from workflows import register as register_workflows
 from cms import register as register_cms
-from seed_sites import reseed_demo_sites
 register_extras(api, db, get_current_user, get_user_app, log_activity)
 WF_HOOKS = register_workflows(api, db, get_current_user, get_user_app, log_activity)
 CMS_HOOKS = register_cms(api, db, get_current_user, get_user_app, log_activity, WF_HOOKS)

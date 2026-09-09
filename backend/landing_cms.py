@@ -121,7 +121,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
         admin = await db.users.find_one({"email": (os.environ.get("ADMIN_EMAIL") or "").lower().strip()}, {"_id": 0, "user_id": 1})
         if not admin:
             return {"tenants": [], "count": 0, "live": 0}
-        apps = await db.apps.find({"owner_id": admin["user_id"], "is_deleted": {"$ne": True}},
+        apps = await db.apps.find({"owner_id": admin["user_id"], "is_deleted": {"$ne": True}, "archived": {"$ne": True}},
                                   {"_id": 0}).to_list(60)
         starred = [a for a in apps if a.get("featured")]
         if starred:

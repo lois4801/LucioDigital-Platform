@@ -509,7 +509,7 @@ class RebuildIn(BaseModel):
 def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/public/showcase")
     async def public_showcase():
-        apps = await db.apps.find({"preview_enabled": True, "preview_token": {"$ne": None}}, {"_id": 0, "name": 1, "industry": 1, "preview_token": 1, "thumbnail": 1, "video_url": 1, "site_niche": 1}).to_list(20)
+        apps = await db.apps.find({"preview_enabled": True, "archived": {"$ne": True}, "preview_token": {"$ne": None}}, {"_id": 0, "name": 1, "industry": 1, "preview_token": 1, "thumbnail": 1, "video_url": 1, "site_niche": 1}).to_list(20)
         out = []
         for a in apps:
             key = a.get("site_niche") or niche_for(a)

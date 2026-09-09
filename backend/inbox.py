@@ -180,18 +180,26 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     @api.get("/inbox")
     async def global_inbox(status: Optional[str] = None, user: dict = Depends(get_current_user)):
         memberships = await db.memberships.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(500)
-        apps = await db.apps.find({"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in memberships]}}]}, {"_id": 0, "app_id": 1, "name": 1, "color": 1}).to_list(500)
+        # The admin inbox is the single collection point for every lead on the platform, including
+        # leads that belong to archived tenants or to tenants that have since been removed.
+        admin = (user.get("email") or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
+        scope = {} if admin else {"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in memberships]}}]}
+        apps = await db.apps.find(scope, {"_id": 0, "app_id": 1, "name": 1, "color": 1, "archived": 1}).to_list(500)
         names = {a["app_id"]: a for a in apps}
         await _classify_pending()
-        q = {"app_id": {"$in": list(names)}}
+        q = {} if admin else {"app_id": {"$in": list(names)}}
         if status:
             q["status"] = status
         msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(300).to_list(300)
         for m in msgs:
-            m["app_name"] = names.get(m["app_id"], {}).get("name")
-            m["app_color"] = names.get(m["app_id"], {}).get("color")
-        unread = await db.messages.count_documents({"app_id": {"$in": list(names)}, "status": "unread",
-                                                    "lane": {"$ne": "test"}})
+            a = names.get(m["app_id"])
+            m["app_name"] = (a or {}).get("name") or "Removed tenant"
+            m["app_color"] = (a or {}).get("color")
+            m["app_archived"] = bool((a or {}).get("archived")) or a is None
+        uq = {"status": "unread", "lane": {"$ne": "test"}}
+        if not admin:
+            uq["app_id"] = {"$in": list(names)}
+        unread = await db.messages.count_documents(uq)
         return {"messages": msgs, "unread": unread}
 
     async def _classify_pending(app_id: Optional[str] = None) -> int:

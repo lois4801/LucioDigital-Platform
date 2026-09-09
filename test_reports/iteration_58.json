@@ -1,0 +1,40 @@
+{
+  "summary": "Iter58 — Full validation of the 'no auto-tenant creation + archive/restore + global inbox + empty landing' delivery. All 13 targeted backend tests in test_iter58_archive.py PASS (100%): (1) GET /api/apps returns 0 active tenants and stays at 0 across a `sudo supervisorctl restart backend` — new_ids diff is empty confirming no auto-seeding. (2) GET /api/apps?archived=true returns the 7 recoverable archived tenants (Nocturne Studios, Meridian Wealth Partners, Forge Athletic Club, Northline Freight Systems, Orbit Customer Success, Northwind Roofing, Maison Verde) plus any TEST_iter58_* throwaways I archived on cleanup. (3) POST /api/apps/{id}/archive {archived:true} correctly hides the tenant from active list, adds it to archived list, forces preview_enabled=false and featured=false, retains pages (GET /apps/{id}/pages still returns Home). (4) POST /api/apps/{id}/archive {archived:false} restores intact. (5) Admin GET /api/inbox returns 5 leads, every one carries app_archived=true and app_name in {Maison Verde, Orbit Customer Success, Northline Freight Systems, Forge Athletic Club, Meridian Wealth Partners} — matches the review spec exactly. Editor GET /api/inbox is scoped to their own membership (Northwind, archived) and does NOT leak other tenants. (6) GET /api/public/landing/tenants returns {tenants:[],count:0,live:0} and GET /api/public/showcase returns []. (7) POST /api/apps with industry Retail/Fitness/Finance each inherits the industry-unique theme (theme.site_preset+site_niche present, not the generic V2 default) via _new_tenant_theme→theme_for. Grep confirms only TWO code paths call db.apps.insert_one: POST /api/apps (server.py:448) and the plugin-zip import (export_pkg.py:636) — both are explicit admin actions. Startup event (server.py:832) contains ONLY index creation + admin seed + content_lock/overview/retheme maintenance; ensure_editor_tenant/ensure_demo_tenants/DEMO_TENANTS/SEED_APPS/SEED_ACTIVITY are all gone. Frontend Playwright pass on live URL: landing renders data-testid='showcase-empty' with 'No tenants in the workspace yet — create one and it appears here automatically'; admin Dashboard renders 'NO TENANTS YET / Click New project to create your first tenant — nothing is ever created automatically' with all 4 stat counters (TENANTS/ACTIVE/MAINT./HANDOVER) at 0; toggle-archived-btn switches the grid to archived view showing 11 cards each with data-testid='archive-toggle-{app_id}'; /leads page renders all 5 archived-tenant leads (Sarah Thompson→Maison Verde, Daniel Okafor→Orbit Customer Success, Priya Raman→Northline Freight Systems, Tom Beckett→Forge Athletic Club, Anna Whitfield→Meridian Wealth Partners), each tagged with the archived tenant name.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/inbox (admin path)", "issue": "inbox.py:183 fetches `apps` scoped to owner_id=user OR member — for admin this happens to include every tenant because admin owns them all, but if the platform ever has admin-owned + non-admin-owned tenants, non-owned tenants would fall into the 'Removed tenant' fallback (line 195) because their app_id would be missing from `names`. Recommend: for admin, run apps.find({}) (unscoped) so app_name/app_color/app_archived are always resolved correctly even if ownership moves."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter58_archive.py",
+    "/app/test_reports/pytest/iter58.xml"
+  ],
+  "action_items": [
+    "Optional: broaden inbox global admin path in inbox.py to resolve app metadata across ALL tenants (not just admin-owned) so tenant transfer scenarios don't mis-label leads as 'Removed tenant'."
+  ],
+  "critical_code_review_comments": [
+    "server.py startup() is clean: only indexes + admin seed + content_lock/overview/retheme maintenance. No auto-tenant creation path remains — verified by grep on db.apps.insert_one which returns exactly 2 hits (POST /api/apps and plugin-zip import). ensure_editor_tenant / ensure_demo_tenants / DEMO_TENANTS / SEED_APPS / SEED_ACTIVITY were fully removed from seed_sites.py (only reseed_demo_sites remains as an admin-invoked endpoint).",
+    "POST /api/apps/{app_id}/archive (server.py:397) is idempotent, correctly zeros preview_enabled+featured on archive, keeps pages/leads/members/files intact, and logs an activity event — good.",
+    "list_apps `archived` query flag (server.py:384) uses `{'$ne': True}` for the default path which correctly matches both {archived:false} and legacy docs with no `archived` field. Good.",
+    "_new_tenant_theme (server.py:413) correctly delegates to site_content.theme_for(NICHES[key], key) — verified across Retail (editoriallux), Fitness (energy), Finance (ledger).",
+    "inbox.py global_inbox is well-designed for the admin case with app_archived tagging and 'Removed tenant' fallback — minor scoping concern noted above but not a functional bug for current data.",
+    "Landing empty state uses data-testid='showcase-empty' consistently between public and admin surfaces — good testability.",
+    "Legacy /app/backend/tests/test_iter{11..52}*.py suites still hardcode long-dead tenant ids — per review agent-to-agent context they are legacy and left alone."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter58_archive.py (new — 13 focused regression tests for iter58: no-auto-create + archive/restore + inbox + landing empty + platform default look on manual create)"
+  ],
+  "success_rate": {"backend": "100% (13/13 iter58 targeted tests pass)", "frontend": "100% (empty landing, dashboard empty state, archived toggle grid, and global leads inbox all render correctly on the live preview URL)"},
+  "test_credentials": "Read from /app/memory/test_credentials.md; admin (jaybernabe@luciodigital.com/Lucio2026!) and editor (client.editor@example.com/ClientEdit2026!) both work.",
+  "seed_data_creation": "Four throwaway tenants (TEST_iter58_throwaway/Retail/Fitness/Finance) created via POST /api/apps during pytest. All were archived on teardown so the DB remains: 0 active tenants, 7 original archived (Nocturne/Meridian/Forge/Northline/Orbit/Northwind/Maison Verde) + 4 TEST_iter58_* archived tenants. 5 leads on the 5 archived demo tenants remain untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "iter58 delivery is production-clean. Zero auto-creation paths remain in the codebase (only POST /api/apps + plugin-zip import can insert into db.apps). If DB is reset the platform will boot to a fully empty workspace — admin must click 'New project' or import a plugin ZIP to get any tenants at all. The 7 archived demo tenants are the user's recoverable archive: do NOT un-archive, delete, or modify them. If you need write tests, create your own throwaway tenants and archive them on teardown (as test_iter58_archive.py does). 5 leads are pinned to those archived tenants and are the primary way to exercise the global inbox path.",
+  "rca of the issue": "N/A — no functional issue observed. The only note is the inbox admin app-scoping (inbox.py:183): it currently relies on the admin owning every tenant to correctly resolve app_name for every message; broadening that to apps.find({}) for admin would future-proof it against ownership transfer without changing today's behavior."
+}
