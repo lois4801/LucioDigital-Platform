@@ -29,8 +29,8 @@ export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggl
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   return (
-    <div className="flex-1 min-w-0" data-testid="pages-bar-wrap">
-      <div className="flex items-stretch gap-2 tenant-scroll pb-2.5" data-testid="pages-bar">
+    <div className="flex-1 min-w-0 py-1" data-testid="pages-bar-wrap">
+      <div className="flex items-stretch gap-2 tenant-scroll pb-2 pr-4" data-testid="pages-bar">
         {pages.map(p => {
           const on = current === p.page_id;
           const brand = brandOf(p, theme);
@@ -41,7 +41,7 @@ export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggl
           return (
             <div key={p.page_id} data-testid={`page-tab-${tid}`} onClick={() => onSelect(p.page_id)}
               aria-current={on ? "true" : undefined}
-              className="group shrink-0 max-w-[210px] rounded-xl px-3 py-2 cursor-pointer"
+              className="group shrink-0 w-[160px] min-w-[160px] max-w-[210px] h-[72px] rounded-xl px-3 py-2 cursor-pointer flex flex-col justify-between overflow-hidden"
               style={{
                 background: on ? rgba(brand, 0.85) : "var(--bg-2)",
                 border: on ? `2px solid ${brand}` : "1px solid var(--line)",
@@ -79,7 +79,7 @@ export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggl
           );
         })}
         <button data-testid="page-add-btn" onClick={() => setOpen(true)}
-          className="shrink-0 w-9 self-stretch rounded-xl border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--mut)] hover:text-white hover:border-white/40">
+          className="shrink-0 w-10 h-[72px] rounded-xl border border-dashed border-[var(--line)] flex items-center justify-center text-[var(--mut)] hover:text-white hover:border-white/40">
           <Plus size={13} />
         </button>
       </div>

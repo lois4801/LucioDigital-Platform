@@ -233,6 +233,21 @@ FastAPI/Mongo. No feature or UI changes.
   (`export-card-handoff`, `export-handoff-btn`, `export-download-handoff`), grid now 4-up.
 - Verified: 104 files / ~23 MB for a 4-page tenant; the other three kinds still build and download.
 
+## June 2026 — Builder header: three separated rows (permanent layout rule)
+- The builder header is exactly three stacked, non-overlapping full-width rows, each with a 1px
+  `--line` divider: **Row 1** nav tabs (`header-row-tabs`, horizontally scrollable, no wrap),
+  **Row 2** the page/tenant selector (`header-row-pages`, `min-h-[80px]`, its scrollbar contained by
+  `pb-2`), **Row 3** the toolbar (`header-row-toolbar`, `py-3` = 12px, `flex-wrap` so buttons wrap to a
+  second line instead of clipping).
+- Row 2 + 3 live in `Builder.jsx` and break out of `<main>`'s padding with `-mx-6 lg:-mx-10 -mt-8`, so
+  they span the viewport while keeping 24/40px side padding and ≥16px on the right (`pr-4` inside the
+  pages strip).
+- Page cards are fixed size — `w-[160px] min-w-[160px] h-[72px]` — so the row height can never collapse
+  and push the toolbar upward. The "+" button matches at `h-[72px]`.
+- `<header>` and `<main>` carry `w-full max-w-full` and no `overflow-hidden`, so nothing on the right
+  edge is clipped. Verified at 1600px and 1100px: rows at y=90 / 135.5 / 224.5, zero overlap.
+- Keep this structure for any new header control — add it inside Row 3, never beside the page cards.
+
 ## Remaining roadmap (updated)
 - P1: Supabase as the platform's own backend (Auth + Postgres + RLS) — still Mongo today
 - P1: Real ElevenLabs voice + real GitHub push (waiting on user PATs)

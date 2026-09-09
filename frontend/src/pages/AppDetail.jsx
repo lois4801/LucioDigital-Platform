@@ -105,7 +105,7 @@ export default function AppDetail() {
     <UiLabelsProvider appId={appId}>
     <LocksProvider appId={appId}>
     <div className="min-h-screen">
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)]">
+      <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)] w-full max-w-full" data-testid="builder-page-header">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <button data-testid="back-to-dashboard-btn" onClick={() => nav("/dashboard")}
@@ -149,18 +149,18 @@ export default function AppDetail() {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="px-6 lg:px-10 flex overflow-x-auto scrollbar-thin">
-          {TABS.map((t) => (
-            <button key={t.key} data-testid={`tab-${t.key}-btn`} onClick={() => setTab(t.key)}
-              data-active={tab === t.key} className="tab-underline">
-              <L k={`tab_${t.key}`} d={t.label} testid={`label-tab-${t.key}`} />
-            </button>
-          ))}
-        </div>
+      {/* Row 1 — main navigation tabs */}
+      <div className="px-6 lg:px-10 pr-6 lg:pr-10 flex tenant-scroll border-b border-[var(--line)]" data-testid="header-row-tabs">
+        {TABS.map((t) => (
+          <button key={t.key} data-testid={`tab-${t.key}-btn`} onClick={() => setTab(t.key)}
+            data-active={tab === t.key} className="tab-underline shrink-0">
+            <L k={`tab_${t.key}`} d={t.label} testid={`label-tab-${t.key}`} />
+          </button>
+        ))}
+      </div>
       </header>
 
-      <main className="px-6 lg:px-10 py-8 fade-in">
+      <main className="px-6 lg:px-10 pr-6 lg:pr-10 py-8 fade-in w-full max-w-full" data-testid="app-main">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && <Builder appId={appId} appDoc={appDoc} user={user} />}
         {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
