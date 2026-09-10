@@ -1,20 +1,26 @@
 import { useEffect } from "react";
-import { animForTemplate, teamAnimFor, durFor } from "@/lib/boxAnims";
+import { animForTemplate, teamAnimFor, durFor, sectionOfBlock, sectionAnimFor } from "@/lib/boxAnims";
 
 /** PowerPoint-style entrance animations for the CONTENT: every card, stat box, heading and
- *  paragraph group plays the template's (or the tenant's) chosen entrance each time it scrolls
- *  into view. One shared IntersectionObserver, CSS animations only, so the cursor stays smooth. */
+ *  paragraph group plays an entrance each time it scrolls into view. Per-section overrides win,
+ *  then the tenant's site-wide choice, then the template's own per-section defaults.
+ *  One shared IntersectionObserver, CSS animations only, so the cursor stays smooth. */
 export default function ContentMotion({
   scopeSelector = "[data-content-motion]",
   templateKey = "",
   anim = "",              // tenant override; falls back to the template's own entrance
   teamAnim = "",
+  speed = 1,              // 0.5x – 2x playback
+  stagger = 90,           // ms between boxes
+  sections = {} as Record<string, string>,
   deps = [] as any[],
 }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
+    const sp = Math.min(2, Math.max(0.5, Number(speed) || 1));
+    const st = Math.min(200, Math.max(0, Number(stagger) ?? 90));
     const main = anim || animForTemplate(templateKey);
     const team = teamAnim || (anim ? anim : teamAnimFor(templateKey));
     if (main === "none" && team === "none") return;
@@ -75,12 +81,18 @@ export default function ContentMotion({
       if (cs.position === "absolute" || cs.position === "fixed") return;
       if (!(el.textContent || "").trim() && !el.querySelector("img, svg, canvas")) return;
       const inTeam = !!el.closest('[data-testid="block-team"]');
-      const key = inTeam ? team : main;
+      const blockType = (el.closest("[data-block-type]") as HTMLElement | null)?.dataset.blockType || "";
+      const section = inTeam ? "team" : sectionOfBlock(blockType);
+      const key = sections[section]                              // per-section override wins
+        || (inTeam && !anim ? team : "")                          // team keeps its own default
+        || anim                                                   // then the site-wide choice
+        || (section ? sectionAnimFor(templateKey, section) : main); // then template defaults
       if (key === "none") return;
       el.dataset.cm = "1";
+      el.dataset.cmSection = section || "site";
       el.classList.add("cm-box", `cm-a-${key}`);
-      el.style.setProperty("--cm-dur", `${durFor(key)}ms`);
-      el.style.setProperty("--cm-delay", `${(i % 6) * 90}ms`);
+      el.style.setProperty("--cm-dur", `${Math.round(durFor(key) / sp)}ms`);
+      el.style.setProperty("--cm-delay", `${(i % 6) * st}ms`);
       io!.observe(el);
     };
 
@@ -123,7 +135,7 @@ export default function ContentMotion({
       });
     }, 1400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); io?.disconnect(); counters?.disconnect(); };
-  }, [scopeSelector, templateKey, anim, teamAnim, ...deps]);
+  }, [scopeSelector, templateKey, anim, teamAnim, speed, stagger, JSON.stringify(sections), ...deps]);
 
   return null;
 }

@@ -99,3 +99,34 @@ export const teamAnimFor = (key: string) => {
 };
 
 export const durFor = (key: string) => BOX_ANIMS.find(a => a.key === key)?.dur || 780;
+
+/** Sections that can carry their own entrance. */
+export const SECTIONS: [string, string][] = [
+  ["hero", "Hero"], ["services", "Services / Features"], ["testimonials", "Testimonials"],
+  ["team", "Team"], ["pricing", "Pricing"], ["stats", "Stats"], ["gallery", "Gallery"],
+  ["faq", "FAQ"], ["contact", "Contact"],
+];
+const SECTION_KEYS = SECTIONS.map(s => s[0]);
+
+const BLOCK_SECTION: Record<string, string> = {
+  hero: "hero", "hero-cover": "hero", cover: "hero",
+  features: "services", services: "services", cards: "services", steps: "services",
+  testimonials: "testimonials", quotes: "testimonials", logos: "testimonials",
+  team: "team", pricing: "pricing", plans: "pricing",
+  stats: "stats", metrics: "stats",
+  gallery: "gallery", media: "gallery",
+  faq: "faq", accordion: "faq",
+  contact: "contact", form: "contact", cta: "contact",
+};
+export const sectionOfBlock = (type: string) => BLOCK_SECTION[type || ""] || "";
+
+const TEMPLATE_ORDER = Object.keys(TEMPLATE_ANIM);
+
+/** Each template ships a distinct combination of per-section entrances. */
+export const sectionAnimFor = (templateKey: string, section: string) => {
+  if (!section) return animForTemplate(templateKey);
+  const ti = TEMPLATE_ORDER.indexOf(templateKey);
+  const base = ti >= 0 ? ti : hash(templateKey, 5) % PLAYABLE.length;
+  const si = Math.max(0, SECTION_KEYS.indexOf(section));
+  return PLAYABLE[(base * 7 + si * 3) % PLAYABLE.length];
+};

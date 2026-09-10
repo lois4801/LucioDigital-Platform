@@ -137,7 +137,10 @@ export default function PublicPreview() {
       {!iso && navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
       <ContentMotion deps={[slug, iso]}
         templateKey={site.app?.motion_profile?.template_key || site.app?.industry || ""}
-        anim={site.app?.site_mode?.box_anim || ""} />
+        anim={site.app?.site_mode?.box_anim || ""}
+        speed={site.app?.site_mode?.box_speed ?? 1}
+        stagger={site.app?.site_mode?.box_stagger ?? 90}
+        sections={site.app?.site_mode?.box_anim_sections || {}} />
       {!iso && <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
@@ -149,7 +152,7 @@ export default function PublicPreview() {
                 ? <Paywall token={token} jwt={member.jwt} user={member.user} paid={site.webapp.paid} pageName={page?.name}
                     signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} onPaid={() => setHasPaid(true)} />
                 : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
-                <EffectWrap key={b.id} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
+                <EffectWrap key={b.id} data-block-type={b.type} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
                   <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null} />
                 </EffectWrap>
               ))}

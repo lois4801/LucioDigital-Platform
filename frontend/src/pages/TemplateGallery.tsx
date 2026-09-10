@@ -68,7 +68,11 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
               </div>
             )}
             <div className="relative z-[2]">
-              {(page?.blocks || []).map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
+              {(page?.blocks || []).map((b, i) => (
+                <div key={b.block_id || i} data-block-type={b.type}>
+                  <BlockPreview block={b} collections={[]} />
+                </div>
+              ))}
               <IndustryVitals templateKey={detail.key} industry={detail.industry} vitals={detail.vitals}
                 accent={detail.theme?.primary} brand={detail.brand} address={detail.address} sampleAddress />
             </div>

@@ -7,28 +7,7 @@ import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionTuner from "@/components/editorial/MotionTuner";
 import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
-import { BOX_ANIMS, animForTemplate, durFor } from "@/lib/boxAnims";
-
-/** Replays the chosen entrance on three dummy boxes so the choice is obvious before saving. */
-function BoxAnimPreview({ anim, accent }) {
-  const [n, setN] = useState(0);
-  useEffect(() => { setN(v => v + 1); }, [anim]);
-  if (anim === "none") return <div className="mt-3 text-xs text-[var(--mut)]" data-testid="sm-boxanim-preview">Boxes appear instantly with no animation.</div>;
-  return (
-    <div className="mt-3" data-testid="sm-boxanim-preview" data-anim={anim}>
-      <div className="grid grid-cols-3 gap-2">
-        {[0, 1, 2].map(i => (
-          <div key={`${anim}-${n}-${i}`} className={`cm-box cm-in cm-a-${anim} h-16 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] flex items-center justify-center text-[10px] font-mono`}
-            style={{ ["--cm-dur" as any]: `${durFor(anim)}ms`, ["--cm-delay" as any]: `${i * 90}ms`, color: accent }}>
-            Box {i + 1}
-          </div>
-        ))}
-      </div>
-      <button data-testid="sm-boxanim-replay" onClick={() => setN(v => v + 1)}
-        className="mt-2 chip cursor-pointer hover:!text-white">Play again</button>
-    </div>
-  );
-}
+import AnimationControls from "@/components/AnimationControls";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -177,24 +156,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           </div>
         </div>
 
-        <div className="py-4 border-b border-[var(--line)]">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold">Box entrance animation</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">
-                How every card, heading and text group enters as visitors scroll. Each template has its own by default.
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <select data-testid="sm-boxanim-select" value={sm.box_anim || ""} onChange={e => patch({ box_anim: e.target.value })}
-                className="bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--acc)]">
-                <option value="">— inherit from template —</option>
-                {BOX_ANIMS.map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
-              </select>
-            </div>
-          </div>
-          <BoxAnimPreview anim={sm.box_anim || animForTemplate(sm.template_key || "")} accent={sm.accent || "#10B981"} />
-        </div>
+        <AnimationControls appId={appId} accent={sm.accent || "#10B981"} onSaved={() => setRenderV(v => v + 1)} />
 
         <LocationFields appId={appId} onSaved={() => setRenderV(v => v + 1)} />
 

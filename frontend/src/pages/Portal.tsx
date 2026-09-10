@@ -9,6 +9,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ExternalLink, Receipt, Inbox, MessageSquarePlus, Loader2, Layers, LogOut, Globe, BarChart3 } from "lucide-react";
 import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
+import AnimationControls from "@/components/AnimationControls";
 
 export default function Portal() {
   const nav = useNavigate();
@@ -57,6 +58,9 @@ export default function Portal() {
               Update the numbers shown on your website yourself, or drop in a spreadsheet — no need to send it to the agency.
             </div>
             <LocationFields appId={app.app_id} compact />
+            <div className="mt-3 pt-3 border-t border-[var(--line)]">
+              <AnimationControls appId={app.app_id} accent={app.color || "#10B981"} compact />
+            </div>
             <div className="mt-2 border-t border-[var(--line)]">
               <VitalsEditor appId={app.app_id} accent={app.color || "#10B981"} />
             </div>

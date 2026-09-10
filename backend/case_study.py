@@ -28,6 +28,8 @@ BOX_ANIMS = ("appear", "fade", "fly-in", "float-in", "split", "wipe", "shape", "
              "plus-in", "diamond", "peek-in", "rise-up", "stretch", "compress", "whip",
              "spiral-in", "darken", "lighten", "desaturate", "transparency", "wave",
              "bold-flash", "bold-reveal", "color-pulse", "credits", "none")
+BOX_SECTIONS = ("hero", "services", "testimonials", "team", "pricing", "stats",
+                "gallery", "faq", "contact")
 
 
 def _now() -> str:
@@ -106,6 +108,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         address: Optional[str] = None          # real business address: map + contact/footer blocks
         map_url: Optional[str] = None          # optional custom "Get directions" link
         box_anim: Optional[str] = None         # PowerPoint-style entrance for content boxes
+        box_speed: Optional[float] = None      # 0.5x (slow) – 2x (fast) entrance playback
+        box_stagger: Optional[int] = None      # 0 – 200ms between boxes
+        box_anim_sections: Optional[Dict[str, str]] = None   # per-section entrance overrides
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -240,11 +245,15 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "address": sm.get("address") or (app.get("brand_profile") or {}).get("address") or "",
             "map_url": sm.get("map_url") or "",
             "box_anim": sm.get("box_anim") or "",
+            "box_speed": float(sm.get("box_speed") or 1.0),
+            "box_stagger": int(sm.get("box_stagger") if sm.get("box_stagger") is not None else 90),
+            "box_anim_sections": sm.get("box_anim_sections") or {},
             "template_address": _template_address(sm.get("template_key") or app.get("site_niche") or ""),
             "preview_token": app.get("preview_token") or "",
             "preview_enabled": bool(app.get("preview_enabled")),
             "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS),
-                        "publish": list(PUBLISH_STATES), "box_anims": list(BOX_ANIMS)},
+                        "publish": list(PUBLISH_STATES), "box_anims": list(BOX_ANIMS),
+                        "box_sections": list(BOX_SECTIONS)},
         }
 
     @api.put("/apps/{app_id}/site-mode")
@@ -271,6 +280,20 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Motion intensity must be between 0.2 and 1.5")
         if patch.get("box_anim") and patch["box_anim"] not in BOX_ANIMS:
             raise HTTPException(400, "Unknown box entrance animation")
+        if patch.get("box_speed") is not None and not 0.5 <= patch["box_speed"] <= 2.0:
+            raise HTTPException(400, "Entrance speed must be between 0.5x and 2x")
+        if patch.get("box_stagger") is not None and not 0 <= patch["box_stagger"] <= 200:
+            raise HTTPException(400, "Stagger must be between 0 and 200ms")
+        if patch.get("box_anim_sections") is not None:
+            secs = {}
+            for k, v in patch["box_anim_sections"].items():
+                if k not in BOX_SECTIONS:
+                    raise HTTPException(400, f"Unknown section: {k}")
+                if v and v not in BOX_ANIMS:
+                    raise HTTPException(400, "Unknown box entrance animation")
+                if v:
+                    secs[k] = v
+            patch["box_anim_sections"] = secs
         if "address" in patch:
             patch["address"] = patch["address"].strip()[:160]
         if "map_url" in patch:

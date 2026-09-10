@@ -834,3 +834,22 @@ FastAPI/Mongo. No feature or UI changes.
   (`sm-boxanim-preview`, `sm-boxanim-replay`); `patch()` now retries once after 1.3s on a 429.
 - Not verified live: the team-section override (app_testlab renders no `block-team` block) — logic is
   confirmed in code and by review.
+
+## 2026-06 · Entrance speed / stagger + per-section animations (iter85, backend 24/24 + 43/43 regression, frontend 100%)
+- `site_mode.box_speed` (0.5x-2x, default 1.0), `site_mode.box_stagger` (0-200ms, default 90) and
+  `site_mode.box_anim_sections` (map of 9 section keys -> any of the 39 animations; empty value clears
+  it) are validated in `case_study.py` against `BOX_SECTIONS` and `BOX_ANIMS`, returned by
+  `GET /apps/{id}/site-mode` (plus `options.box_sections`) and exposed on the public site payload.
+- `boxAnims.ts`: `SECTIONS` (hero, services, testimonials, team, pricing, stats, gallery, faq,
+  contact), `sectionOfBlock()` block-type map and `sectionAnimFor(templateKey, section)` using
+  coprime multipliers (base*7 + si*3 mod 38) so every template ships a distinct combination and no
+  two sections inside one template share an entrance.
+- `ContentMotion` resolution order: per-section override > tenant site-wide `box_anim` > the
+  template's per-section default. It stamps `data-cm-section`, sets `--cm-dur = durFor(key)/speed`
+  and `--cm-delay = (i % 6) * stagger`. Blocks are identified by `data-block-type`, added to
+  `EffectWrap` in PublicPreview and to the block wrapper in TemplateGallery.
+- NEW `components/AnimationControls.tsx` (shared by Site Mode AND the client portal):
+  `animation-controls`, `sm-boxanim-select`, `sm-box-speed`, `sm-box-stagger` (save on release),
+  `sm-boxanim-preview` / `sm-boxanim-replay` reacting to speed + stagger, and 9
+  `sm-section-anim-<key>` selects whose "inherit" label names the effective fallback. One-shot 429
+  retry retained. SiteModePanel's inline picker was replaced by this component.
