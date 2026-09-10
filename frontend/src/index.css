@@ -157,6 +157,12 @@ body {
 /* LucioDigital landing reviews — lime is reserved for the platform page and luciodigital.ca only. */
 .lois-reviews { --tbg: #08090a; --tbody: #f4f4f5; --tfg: #ffffff; --tfh: inherit; --tr: 16px; }
 
+/* Cursor effects panel — smooth fade-in and slide-down when it opens. */
+.cursor-fx-panel-in { animation: cursor-fx-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes cursor-fx-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cursor-fx-panel-in { animation: none; } }
+
+
 .marquee-track { animation-name: marquee-slide; animation-timing-function: linear; animation-iteration-count: infinite; }
 @keyframes marquee-slide { from { transform: translate3d(-50%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
 @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; transform: none; } }

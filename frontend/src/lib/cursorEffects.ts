@@ -15,7 +15,9 @@ export const CURSOR_EFFECTS = [
 
 export const EFFECT_IDS = CURSOR_EFFECTS.map(e => e.id);
 export const isEffect = (v) => EFFECT_IDS.includes(v);
-export const DEFAULT_EFFECT = "bubbles";
+export const DEFAULT_EFFECT = "fairy";        // platform default: glowing rotating stardust
+export const DEFAULT_DENSITY = 0.9;
+export const DEFAULT_SPEED = 0.4;
 export const swatchOf = (id) => (CURSOR_EFFECTS.find(e => e.id === id) || CURSOR_EFFECTS[0]).swatch;
 
 // Lets UI (e.g. auth forms) emit the active effect at a point. Set by startCursorFX.

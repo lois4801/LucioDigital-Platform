@@ -16,7 +16,7 @@ import SiteAdmin from "@/pages/SiteAdmin";
 import Compare from "@/pages/Compare";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 import ChatEmbed from "@/pages/ChatEmbed";
-import { CursorFXProvider, CursorTrailThemed } from "@/components/CursorFX";
+import { CursorFXProvider, CursorTrailThemed, GlobalCursorFX } from "@/components/CursorFX";
 import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 import DeployHub from "@/pages/DeployHub";
@@ -104,6 +104,8 @@ export default function App() {
             <AppRouter />
             <Toaster theme="dark" position="top-right" richColors closeButton />
             <CursorTrailThemed />
+            {/* CORE PLATFORM UI — DO NOT REMOVE: root-level cursor effects control, immune to page edits. */}
+            <GlobalCursorFX />
           </CursorFXProvider>
           </MembershipProvider>
         </AuthProvider>

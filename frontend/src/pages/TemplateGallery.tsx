@@ -1,3 +1,4 @@
+import { CursorFXPicker } from "@/components/CursorFX";
 import Logo from "@/components/Logo";
 import { useMembership } from "@/lib/membership";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -55,6 +56,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
           ))}
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <CursorFXPicker label testid="preview-cursor-fx-btn" />
           {[detail.theme.primary, detail.theme.secondary, detail.theme.bg].map(c => (
             <span key={c} className="w-5 h-5 rounded-full border border-white/15" style={{ background: c }} />
           ))}

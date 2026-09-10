@@ -1,3 +1,4 @@
+import { CursorFXPicker } from "@/components/CursorFX";
 import { useMembership } from "@/lib/membership";
 import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
@@ -57,6 +58,7 @@ export default function TestLabLanding() {
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
+          <CursorFXPicker label testid="landing-cursor-fx-btn" />
           <Link to="/templates" data-testid="nav-templates-link" className="hover:text-white transition-colors">Projects</Link>
           {member?.full_access
             ? <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>

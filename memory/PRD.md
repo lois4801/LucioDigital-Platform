@@ -1063,3 +1063,28 @@ links, tests or integrations break.
   and reachable (public slug is `luciodigital-test-lab`).
 - Fixed two stale iter69 assertions: the sandbox brand string, and a non-admin push now answering 402
   (membership gate) before 403.
+
+## 2026-06 · Cursor effects: Fairy Dust default + landing nav selector (iter97)
+- `lib/cursorEffects.ts`: `DEFAULT_EFFECT = "fairy"`, `DEFAULT_DENSITY = 0.9`, `DEFAULT_SPEED = 0.4`.
+- `CursorFXProvider` is now SESSION-ONLY by design (per the user's latest brief): every page load starts on
+  Fairy Dust · 0.9× · 0.4×, the pick survives in-app navigation (provider sits at the App root so the
+  canvas never remounts), and a browser refresh resets to the defaults. The old localStorage cache and
+  the `/me/preferences` cursor read/write were removed — do not reintroduce them without asking, they
+  contradict "settings reset to default on page refresh".
+- `CursorFXPicker` gained a `label` variant: a nav-bar pill with the sparkle icon plus the active effect
+  name (`cursor-fx-active-name`), dropdown below the button, panel matching the dashboard exactly —
+  "CURSOR EFFECTS" header, "Hover to try · click to keep", all 11 options with swatch/name/hint and a
+  green check on the active one, hover previews live and reverts on mouse-out, then Thickness and Speed
+  sliders (range 0–2, green accent). Panel animates in via `.cursor-fx-panel-in` (fade + slide-down) and
+  closes on outside click. Mounted in the landing nav as `landing-cursor-fx-btn`.
+- `GlobalCursorFX` (CORE PLATFORM UI — DO NOT REMOVE) renders the round picker as a fixed
+  bottom-right overlay at the App root, so no landing/page edit can drop it. It is suppressed on the two
+  landing routes (which carry the nav pill) and on client-facing routes `/p/`, `/site/`, `/compare/`
+  so client sites keep their own branding.
+- The effect canvas moved from `z-0` to `z-[45]` so the dust reads above page content on every view,
+  including modals and drawers, and it never pauses between route changes.
+- Project preview coverage (same iteration): the full-preview modal is `z-[70]`, so the effect canvas was
+  raised to `z-[105]` to draw above modals, drawers and overlays, and a `CursorFXPicker label` was added
+  to the preview header (`preview-cursor-fx-btn`) next to the palette swatches. Verified: Fairy Dust is
+  live inside a project preview by default and switching effects (e.g. Fire & Embers) applies instantly
+  without closing the preview.
