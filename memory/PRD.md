@@ -984,3 +984,25 @@ FastAPI/Mongo. No feature or UI changes.
   remounts whenever a save fires (`onSaved` -> version bump), so clients see their change immediately.
 - MarqueeEditor now flips the source dropdown optimistically before the save round-trip and refetches
   the resolved payload afterwards.
+
+## 2026-06 · Platform rebrand: Lois-Tech -> LucioDigital (iter94, backend 7/7, frontend verified)
+- **Logo** (`components/Logo.tsx`, NEW): hand-drawn SVG. `LogoMark` = three forward-leaning blades
+  (100%/62%/34% opacity) suggesting digital layers in motion; `Logo` = mark + "Lucio**Digital**"
+  wordmark with variants `white` (dark surfaces), `lime` (#84FF00 wordmark + white mark, hero/landing)
+  and `dark` (all black, light surfaces); `LogoSplash` for loading. Favicon/app icon =
+  `public/favicon.svg` (mark only, lime on #080808 rounded square), declared in `index.html`.
+- **Names**: perl pass over 33 files replaced Lois-Tech / Lois Tech / LoisTech / lois-tech everywhere
+  (nav, meta, footers, email shells, auth screens, Site Mode labels, templates, backend copy) and
+  lois-tech.ca -> luciodigital.ca. `.lois-reviews` CSS class kept (internal, not user-visible).
+- **Placement**: nav top-left (-> "/"), landing hero lime lockup (`hero-logo`), footer bottom-left with
+  "© 2026 LucioDigital. All rights reserved." (`footer-brand`), login/register card logos, Site Mode
+  header (`builder-logo-home-btn` -> /dashboard), portal header, template full-preview header
+  (`template-admin-logo`, admin view only — public client sites keep their own branding), splash mark in
+  `PageSkeleton` + public preview loading, and a table-drawn brand row at the top of every automated
+  email (`auth_extra._brand_row`, SVG-free so all mail clients render it).
+- **Tab titles**: `components/DocumentTitle.tsx` mounted in `App.tsx` sets "LucioDigital — <page>" on
+  every route from a prefix map.
+- **Data-side rebrand**: persisted Mongo copy also carried the old name. `scripts/rebrand_luciodigital.py`
+  rewrote 5 documents (site_settings landing CMS + chat_messages), and `landing_cms._get()` now rewrites
+  any residual legacy brand string on read. Lesson: a rename needs a data migration, not just source.
+- Lime #84FF00 remains reserved for the platform site (client accent PUT still 400s).

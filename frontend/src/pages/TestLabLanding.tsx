@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Layers, Play } from "lucide-react";
@@ -49,11 +50,8 @@ export default function TestLabLanding() {
       )}
 
       <header className="relative z-30 px-4 sm:px-10 py-6 flex items-center gap-2 sm:gap-4">
-        <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="inline-flex items-center gap-3 cursor-pointer group">
-          <span className="w-9 h-9 rounded-lg border border-white/12 bg-white/[0.04] flex items-center justify-center group-hover:border-[var(--ed-lime)]/60 transition-colors">
-            <Layers size={18} className="text-[var(--ed-lime)]" />
-          </span>
-          <span className="font-display font-semibold tracking-tight text-lg whitespace-nowrap">Lois-<span className="text-[var(--ed-lime)]">Tech</span></span>
+        <Link to="/" data-testid="brand-home-link" title="Back to the LucioDigital home page" className="inline-flex items-center gap-3 cursor-pointer group">
+          <Logo variant="lime" size={19} />
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
@@ -85,6 +83,9 @@ export default function TestLabLanding() {
         style={{ background: "radial-gradient(60% 55% at 38% 45%, rgba(8,8,8,0.92) 0%, rgba(8,8,8,0.6) 45%, rgba(8,8,8,0) 78%)" }} />
         <div className="relative z-20 max-w-4xl mx-auto text-center md:text-left">
           <span className="ed-pill">Master workspace · v2.4</span>
+          <div className="mt-7 flex justify-center md:justify-start" data-testid="hero-logo">
+            <Logo variant="lime" size={34} />
+          </div>
           <OvershootWords testid="hero-headline" accentFrom={mobile ? 99 : 8}
             text="Ship, showcase and hand off every client app from one master workspace."
             className="mt-6 font-display font-extrabold tracking-[-0.03em] leading-[1.02] text-[2.6rem] sm:text-6xl lg:text-7xl" />
@@ -185,9 +186,12 @@ export default function TestLabLanding() {
         </Reveal>
       </section>
 
-      <footer className="relative z-10 px-6 sm:px-10 py-10 border-t border-white/[0.07] text-white/35 text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span>© 2026 Lois-Tech · lois-tech.ca</span>
-        <span>Editorial motion system · platform identity</span>
+      <footer className="relative z-10 px-6 sm:px-10 py-10 border-t border-white/[0.07] text-white/35 text-xs font-mono flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+        <span className="flex items-center gap-3" data-testid="footer-brand">
+          <Logo variant="white" size={15} />
+          © 2026 LucioDigital. All rights reserved.
+        </span>
+        <span>luciodigital.ca · Editorial motion system</span>
       </footer>
     </div>
   );

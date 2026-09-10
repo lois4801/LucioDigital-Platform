@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -183,9 +184,8 @@ export default function Landing() {
       {/* Floating pill nav */}
       <header className={`fixed inset-x-0 z-50 flex justify-center px-4 ${isAdmin ? "top-12" : "top-5"}`}>
         <nav data-testid="landing-nav-pill" className="max-w-[calc(100vw-2rem)] flex items-center gap-1 rounded-full backdrop-blur-xl bg-[var(--bg)]/80 border border-white/10 shadow-2xl pl-4 pr-2 py-2">
-          <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10 cursor-pointer">
-            <Layers size={16} className="text-[var(--acc)]" />
-            <span className="font-display font-semibold tracking-tight"><Tx k="brand_name" f="Lois-" /><span className="text-[var(--acc)]"><Tx k="brand_suffix" f="Tech" /></span></span>
+          <Link to="/" data-testid="brand-home-link" title="Back to the LucioDigital home page" className="flex items-center gap-2 pr-3 mr-1 border-r border-white/10 cursor-pointer">
+            <Logo variant="white" size={17} />
           </Link>
           {[["Showcase", "#showcase"], ["Platform", "#platform"], ["Pricing", "#pricing"]].map(([l, h]) => (
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
@@ -323,7 +323,7 @@ export default function Landing() {
         <motion.div initial="hidden" whileInView="show" viewport={{ once: true, margin: "-80px" }} className="max-w-7xl mx-auto">
           <motion.div variants={fade} className="mb-12 max-w-2xl">
             <AdminText admin={admin} value={tx("demos_overline", "See it in action")} onSave={saveText("demos_overline")} as="div" className="overline mb-3" testid="text-demos-overline" />
-            <AdminText admin={admin} value={tx("demos_heading", "Watch Lois-Tech build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
+            <AdminText admin={admin} value={tx("demos_heading", "Watch LucioDigital build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
             <p className="text-[var(--mut)] mt-3"><Tx k="demos_sub" f="Three short walkthroughs: Site Mode, App Mode with industry templates, and the export & handoff pipeline." /></p>
           </motion.div>
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
@@ -392,11 +392,14 @@ export default function Landing() {
         </motion.div>
       </section>
 
-      <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span><Tx k="footer_copy" f="© 2026 Lois-Tech · Agency Multi-Client Platform" /></span>
+      <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
+        <span className="flex items-center gap-3" data-testid="footer-brand">
+          <Logo variant="white" size={15} />
+          <Tx k="footer_copy" f="© 2026 LucioDigital. All rights reserved." />
+        </span>
         <span>Built for Emergent</span>
       </footer>
-      <ChatWidget token="studio" brand="Lois-Tech" accent="#10B981" lift={56} textColor={tx("chat_text_color", "#000000")} admin={admin}
+      <ChatWidget token="studio" brand="LucioDigital" accent="#10B981" lift={56} textColor={tx("chat_text_color", "#000000")} admin={admin}
         onTextColor={(v) => {
           setCms(c => ({ ...c, texts: { ...c.texts, chat_text_color: v } }));
           clearTimeout(chatColorTimer.current);

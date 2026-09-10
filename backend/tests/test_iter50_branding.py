@@ -1,9 +1,9 @@
-"""Iteration 50 — Branding rename (OmniStack -> Lois-Tech) + plugin export/import round-trip.
+"""Iteration 50 — Branding rename (OmniStack -> LucioDigital) + plugin export/import round-trip.
 
 Covers:
-- served <title>/<meta description> use Lois-Tech
-- GET /api/settings/email reports from_name == 'Lois-Tech'
-- Plugin export ZIP on app_6663b5de0007 contains 'Lois-Tech' and does NOT contain
+- served <title>/<meta description> use LucioDigital
+- GET /api/settings/email reports from_name == 'LucioDigital'
+- Plugin export ZIP on app_6663b5de0007 contains 'LucioDigital' and does NOT contain
   the user-visible 'OmniStack' string (the internal 'omnistack.plugin' format id
   and 'omnistack' storage prefix are intentionally kept)
 - Plugin import of the freshly-exported ZIP still restores as a new tenant
@@ -47,8 +47,8 @@ class TestServedHtml:
         r = requests.get(f"{BASE_URL}/", timeout=30)
         assert r.status_code == 200
         html = r.text
-        assert "<title>Lois-Tech</title>" in html, "title missing Lois-Tech"
-        assert 'content="Lois-Tech' in html, "meta description missing Lois-Tech"
+        assert "<title>LucioDigital</title>" in html, "title missing LucioDigital"
+        assert 'content="LucioDigital' in html, "meta description missing LucioDigital"
         assert "OmniStack" not in html, "raw HTML head still contains 'OmniStack'"
 
 
@@ -58,7 +58,7 @@ class TestEmailSettings:
         r = owner.get(f"{BASE_URL}/api/settings/email", timeout=30)
         assert r.status_code == 200, r.text[:200]
         data = r.json()
-        assert data.get("from_name") == "Lois-Tech", f"from_name={data.get('from_name')!r}"
+        assert data.get("from_name") == "LucioDigital", f"from_name={data.get('from_name')!r}"
 
 
 # ---------- Plugin export round-trip ----------
@@ -106,13 +106,13 @@ class TestPluginExportImport:
                 content = zf.read(n).decode("utf-8", errors="ignore")
             except Exception:
                 continue
-            if "Lois-Tech" in content:
+            if "LucioDigital" in content:
                 found_lois = True
             # allow the intentional format id and storage prefix
             # (case-sensitive 'OmniStack' is user-visible branding)
             for m in re.finditer(r"OmniStack", content):
                 offending.append((n, content[max(0, m.start() - 30): m.end() + 30]))
-        assert found_lois, "no file in plugin ZIP contains 'Lois-Tech'"
+        assert found_lois, "no file in plugin ZIP contains 'LucioDigital'"
         assert not offending, f"user-visible 'OmniStack' found in ZIP: {offending[:3]}"
 
     def test_import_zip_restores_new_tenant(self, owner):

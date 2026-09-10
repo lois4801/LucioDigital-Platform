@@ -26,7 +26,7 @@ def test_email_settings(sess):
     assert r.status_code == 200, r.text
     j = r.json()
     assert j["configured"] is True
-    assert j["from_name"] == "Lois-Tech"
+    assert j["from_name"] == "LucioDigital"
     assert j.get("reply_to")
 
 

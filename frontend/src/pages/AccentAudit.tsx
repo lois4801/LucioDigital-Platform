@@ -104,7 +104,7 @@ export default function AccentAudit() {
           ))}
         </div>
         <p className="mt-6 text-xs text-[var(--dim)]">
-          Under 3:1 reads dull on the near-black base, 3–4.5:1 is comfortable, above 4.5:1 is vivid. Lime is reserved for lois-tech.ca and is rejected here.
+          Under 3:1 reads dull on the near-black base, 3–4.5:1 is comfortable, above 4.5:1 is vivid. Lime is reserved for luciodigital.ca and is rejected here.
         </p>
       </main>
     </div>

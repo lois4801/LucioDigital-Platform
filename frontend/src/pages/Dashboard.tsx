@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -228,11 +229,8 @@ export default function Dashboard() {
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
           <button data-testid="dashboard-logo-home-btn" onClick={() => nav("/")} title="View your landing page"
             className="flex items-center gap-3 group cursor-pointer text-left">
-            <div className="w-9 h-9 rounded-lg bg-[var(--card)] border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
-              <Layers size={18} className="text-[var(--acc)]" />
-            </div>
             <div>
-              <div className="font-display font-semibold tracking-tight text-lg leading-none">Lois-<span className="text-[var(--acc)]">Tech</span></div>
+              <div className="leading-none"><Logo variant="white" size={18} /></div>
               <div className="overline mt-1">Agency Workspace</div>
             </div>
           </button>

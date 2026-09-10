@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import api from "@/lib/api";
@@ -54,10 +55,10 @@ export default function PublicPreview() {
   if (err) return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-6">
       <Eye size={28} className="text-[var(--mut)]" /><div className="font-display text-2xl">{err}</div>
-      <Link to="/" className="btn-ghost text-sm">Back to Lois-Tech</Link>
+      <Link to="/" className="btn-ghost text-sm">Back to LucioDigital</Link>
     </div>
   );
-  if (!site) return <div className="min-h-screen flex items-center justify-center"><div className="overline">Loading preview…</div></div>;
+  if (!site) return <div className="min-h-screen flex flex-col items-center justify-center gap-4" data-testid="preview-splash" style={{ background: "#080808" }}><LogoMark size={40} color="#FFFFFF" className="opacity-70 animate-pulse" /><div className="overline">Loading preview…</div></div>;
 
   const page = site.pages.find(p => p.slug === slug) || site.pages[0];
   const navbar = (page?.blocks || []).find(b => b.type === "navbar");
@@ -121,7 +122,7 @@ export default function PublicPreview() {
             </>
             : <span data-testid="member-status" className="chip">Members area</span>)}
           <span className="chip chip-handover" data-testid="public-live-badge"><Eye size={11} /> Live</span>
-          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">Lois-Tech</span></Link>
+          <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><LogoMark size={14} color="currentColor" /> <span className="hidden sm:inline">LucioDigital</span></Link>
         </div>
       </div>}
       {!embed && (

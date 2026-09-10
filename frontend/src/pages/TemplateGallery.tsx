@@ -1,3 +1,4 @@
+import Logo from "@/components/Logo";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -39,6 +40,9 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
     <div className="fixed inset-0 z-[70] bg-[var(--bg)] flex flex-col" data-testid="template-full-preview" data-content-motion>
       <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--line)] shrink-0 flex-wrap">
         <button data-testid="template-preview-close" onClick={onClose} className="btn-ghost text-sm !py-1.5 !px-3 flex items-center gap-1"><X size={14} /> Close</button>
+        <span className="hidden sm:flex items-center pr-3 border-r border-[var(--line)]" data-testid="template-admin-logo">
+          <Logo variant="white" size={15} />
+        </span>
         <div>
           <div className="font-display text-lg font-semibold leading-tight">{detail.brand}</div>
           <div className="overline">{detail.category} · {detail.theme.mode} mode · {detail.theme.font_heading}</div>

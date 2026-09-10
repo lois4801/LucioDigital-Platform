@@ -154,7 +154,7 @@ body {
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
 /* Client navigation strip — a scrollbar you can actually grab, always visible when it overflows. */
-/* LucioDigital landing reviews — lime is reserved for the platform page and lois-tech.ca only. */
+/* LucioDigital landing reviews — lime is reserved for the platform page and luciodigital.ca only. */
 .lois-reviews { --tbg: #08090a; --tbody: #f4f4f5; --tfg: #ffffff; --tfh: inherit; --tr: 16px; }
 
 .marquee-track { animation-name: marquee-slide; animation-timing-function: linear; animation-iteration-count: infinite; }
@@ -259,7 +259,7 @@ html { scroll-behavior: smooth; }
 /* ── Editorial motion system (Test Lab landing only) ───────────────────── */
 .ed-scope {
   --ed-bg: #080808;
-  --ed-lime: #84FF00;   /* exclusive to lois-tech.ca */
+  --ed-lime: #84FF00;   /* exclusive to luciodigital.ca */
   --ed-teal: #2BE8D6;
   --ed-orange: #FF6A2B;
   background: var(--ed-bg);

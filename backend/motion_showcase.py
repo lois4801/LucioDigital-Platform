@@ -81,14 +81,14 @@ def register(api, db, get_current_user):
             platform = h == PLATFORM_PROFILE["hero"]
             rows.append({
                 "hero": h, "template_key": "" if not platform else "platform",
-                "industry": "lois-tech.ca (platform)" if platform else "Unassigned",
+                "industry": "luciodigital.ca (platform)" if platform else "Unassigned",
                 "industry_slug": "platform" if platform else "unassigned",
                 "accent": LIME if platform else "#10B981", "reserved": not platform,
                 "layout": PLATFORM_PROFILE["layout"] if platform else "",
                 "reveal": PLATFORM_PROFILE["reveal"] if platform else "",
                 "counter": PLATFORM_PROFILE["counter"] if platform else "",
                 "status": "active" if platform else "reserved",
-                "tenants": ["lois-tech.ca"] if platform else [], "tenant_count": 1 if platform else 0,
+                "tenants": ["luciodigital.ca"] if platform else [], "tenant_count": 1 if platform else 0,
             })
         rows.sort(key=lambda r: (r["status"] != "active", r["hero"]))
         return rows
@@ -116,9 +116,9 @@ def register(api, db, get_current_user):
         if not prof:
             raise HTTPException(404, "Unknown template")
         live = await _live_by_template()
-        clients = live.get(key) or (["lois-tech.ca"] if key == "platform" else [])
+        clients = live.get(key) or (["luciodigital.ca"] if key == "platform" else [])
         return {
-            "template_key": key, "industry": label_for(key) if key != "platform" else "lois-tech.ca (platform)",
+            "template_key": key, "industry": label_for(key) if key != "platform" else "luciodigital.ca (platform)",
             "profile": {**prof, "template_key": key, "speed": 1.0, "intensity": 1.0},
             "status": "active" if clients else "reserved", "tenants": clients,
         }

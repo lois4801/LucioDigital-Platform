@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Layers } from "lucide-react";
@@ -25,7 +26,7 @@ export default function Showcase() {
           <span className="w-9 h-9 rounded-lg border border-white/12 bg-white/[0.04] flex items-center justify-center">
             <Layers size={18} className="text-[var(--ed-lime)]" />
           </span>
-          <span className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--ed-lime)]">Tech</span></span>
+          <span className="font-display font-semibold tracking-tight text-lg"><Logo variant="lime" size={17} /></span>
         </Link>
         <button data-testid="showcase-cta" onClick={() => nav("/register")} className="ed-cta rounded-full bg-white text-black font-semibold text-sm py-2">Start free</button>
       </header>

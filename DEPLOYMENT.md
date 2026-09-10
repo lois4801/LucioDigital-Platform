@@ -1,4 +1,4 @@
-# Self-hosting Lois-Tech
+# Self-hosting LucioDigital
 
 ## Option A — Docker Compose (fastest)
 

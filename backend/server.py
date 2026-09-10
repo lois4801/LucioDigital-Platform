@@ -809,7 +809,7 @@ async def build_export_files(app_doc: dict) -> dict:
     files["site/pages.json"] = json.dumps(pages, indent=2)
     files["site/theme.json"] = json.dumps(theme, indent=2)
     files["site/vercel.json"] = json.dumps({"cleanUrls": True}, indent=2)
-    readme = f"# {app_doc['name']}\n\nExported from Lois-Tech.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
+    readme = f"# {app_doc['name']}\n\nExported from LucioDigital.\n\n## site/\nStatic multi-page website ({len(pages)} pages). Deploy to Vercel / Netlify / any static host. Includes the AI chat widget embed.\n"
     if app_doc.get("app_spec"):
         for path, content in starter_app_files(app_doc["app_spec"], {**theme, "logo": (f"/{logo_asset}" if logo_asset else (f"{FRONTEND_URL}{logo}" if logo else None))}).items():
             files[f"app/{path}"] = content
@@ -820,7 +820,7 @@ async def build_export_files(app_doc: dict) -> dict:
     files["mobile/README.md"] = (f"# {app_doc['name']} — App Store & Google Play\n\nThis folder wraps the exported site as a native app with Capacitor.\n\n"
                                 "1. `cd mobile && npm i`\n2. `npm run add:ios` / `npm run add:android`\n3. `npm run sync`\n4. `npm run open:ios` → Xcode → Archive → App Store Connect\n"
                                 "5. `npm run open:android` → Android Studio → Build → Generate Signed Bundle (.aab) → Google Play Console\n\n"
-                                "Icons/splash: `npx @capacitor/assets generate`. Store listing images: use the AI Media Studio in Lois-Tech.\n")
+                                "Icons/splash: `npx @capacitor/assets generate`. Store listing images: use the AI Media Studio in LucioDigital.\n")
     files["README.md"] = readme + "\n## mobile/\nCapacitor wrapper for publishing to the Apple App Store and Google Play (see mobile/README.md).\n"
     return files
 

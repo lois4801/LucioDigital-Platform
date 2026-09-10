@@ -16,7 +16,7 @@ DEFAULTS = {
     "texts": {
         "hero_caption_overline": "Live · Orbit SaaS Portal", "hero_caption_title": "B2B Success Analytics",
         "products_overline": "Products we ship", "products_heading": "Every client, on-brand and always live.",
-        "demos_overline": "See it in action", "demos_heading": "Watch Lois-Tech build, brand and ship a product.",
+        "demos_overline": "See it in action", "demos_heading": "Watch LucioDigital build, brand and ship a product.",
         "platform_overline": "The platform", "platform_heading": "Everything between “kickoff” and “handoff”.",
         "cta_heading": "Launch your agency workspace today.",
     },
@@ -57,9 +57,21 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
     def _now():
         return datetime.now(timezone.utc).isoformat()
 
+    def _rebrand(v):
+        """Legacy DB copy still carrying the old platform name is rewritten on read."""
+        if isinstance(v, str):
+            for old in ("Lois-Tech", "Lois Tech", "LoisTech"):
+                v = v.replace(old, "LucioDigital")
+            return v.replace("lois-tech.ca", "luciodigital.ca").replace("lois-tech", "luciodigital")
+        if isinstance(v, list):
+            return [_rebrand(x) for x in v]
+        if isinstance(v, dict):
+            return {k: _rebrand(x) for k, x in v.items()}
+        return v
+
     async def _get():
         doc = await db.site_settings.find_one({"key": "landing"}, {"_id": 0}) or {}
-        return {"cards": doc.get("cards", DEFAULTS["cards"]), "marquee": doc.get("marquee", DEFAULTS["marquee"]), "texts": {**DEFAULTS["texts"], **doc.get("texts", {})}}
+        return _rebrand({"cards": doc.get("cards", DEFAULTS["cards"]), "marquee": doc.get("marquee", DEFAULTS["marquee"]), "texts": {**DEFAULTS["texts"], **doc.get("texts", {})}})
 
     @api.get("/public/landing")
     async def public_landing():

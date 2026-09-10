@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -59,12 +60,9 @@ export default function Login() {
 
       {/* Brand, top-left of the whole page */}
       <header className="relative z-10 px-6 sm:px-10 pt-7">
-        <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page"
+        <Link to="/" data-testid="brand-home-link" title="Back to the LucioDigital home page"
           className="inline-flex items-center gap-3 cursor-pointer group w-fit">
-          <div className="w-9 h-9 rounded-lg bg-[var(--card)]/80 border border-[var(--line)] flex items-center justify-center group-hover:border-[var(--acc)]/50 transition-colors">
-            <Layers size={18} className="text-[var(--acc)]" />
-          </div>
-          <div className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--acc)]">Tech</span></div>
+          <Logo variant="white" size={19} />
         </Link>
       </header>
 
@@ -72,6 +70,7 @@ export default function Login() {
       <main className="relative z-10 flex-1 flex items-center justify-center px-6 py-10">
         <div className="w-full max-w-md fade-in relative z-10" ref={panel} data-fx-content>
           <div className="rounded-3xl border border-white/10 bg-[#080b10]/80 backdrop-blur-xl shadow-[0_40px_120px_-40px_rgba(0,0,0,0.9)] p-6 sm:p-8">
+            <div className="flex justify-center mb-5" data-testid="login-card-logo"><Logo variant="white" size={20} /></div>
             <div className="overline mb-2">Sign in</div>
             <h1 className="font-display text-3xl font-semibold tracking-tight">Welcome back.</h1>
             <p className="text-[var(--mut)] mt-2 text-sm">Access your agency control center.</p>

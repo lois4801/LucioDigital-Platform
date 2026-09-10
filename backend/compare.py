@@ -1,4 +1,4 @@
-"""Before/after share links: the prospect's current site next to their Lois-Tech rebuild.
+"""Before/after share links: the prospect's current site next to their LucioDigital rebuild.
 The "before" is an automatic screenshot of the old URL; the "after" is the live rebuilt site."""
 import logging
 import secrets

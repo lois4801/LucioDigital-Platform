@@ -1,3 +1,4 @@
+import Logo from "@/components/Logo";
 import { PageSkeleton } from "@/components/PageTransition";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -109,6 +110,10 @@ export default function AppDetail() {
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)] w-full max-w-full" data-testid="builder-page-header">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            <button data-testid="builder-logo-home-btn" onClick={() => nav("/dashboard")} title="Back to your dashboard"
+              className="hidden sm:flex items-center cursor-pointer pr-3 mr-1 border-r border-[var(--line)]">
+              <Logo variant="white" size={16} />
+            </button>
             <button data-testid="back-to-dashboard-btn" onClick={() => nav("/dashboard")}
               className="w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5">
               <ArrowLeft size={16} />

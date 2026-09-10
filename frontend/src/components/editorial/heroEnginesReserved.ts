@@ -232,7 +232,7 @@ const architecturalFlyThrough: Engine = (accent, mobile) => {
   };
 };
 
-/** lois-tech.ca ONLY — drifting product cards with parallax depth. */
+/** luciodigital.ca ONLY — drifting product cards with parallax depth. */
 const platformDriftCards: Engine = (accent, mobile) => {
   const n = dens(10, mobile);
   const r = rng(2026);

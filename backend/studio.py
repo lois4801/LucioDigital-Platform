@@ -464,7 +464,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
     @api.get("/public/site/{token}")
     async def public_site(token: str):
         if token == "studio":
-            return {"app": {"name": "Lois-Tech", "industry": "Agency platform", "color": "#10B981"}, "theme": DEFAULT_THEME, "pages": []}
+            return {"app": {"name": "LucioDigital", "industry": "Agency platform", "color": "#10B981"}, "theme": DEFAULT_THEME, "pages": []}
         doc = await db.apps.find_one({"preview_token": token, "preview_enabled": True}, {"_id": 0})
         if not doc:
             raise HTTPException(404, "Preview link is invalid or has been revoked")
@@ -526,7 +526,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
                            "signup_mode": (doc.get("webapp") or {}).get("signup_mode", "open")}}
 
     # ===== PUBLIC AI CHATBOT (text + voice) =====
-    STUDIO_CONTEXT = ("Lois-Tech is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "
+    STUDIO_CONTEXT = ("LucioDigital is an agency platform to build client websites (Framer-style drag-and-drop + AI prompt-to-site), "
                       "generate app blueprints and starter code (Lovable-style), create AI images/video/voice, bill clients via Stripe "
                       "(Starter $29, Pro $99, Scale $299 per month), connect custom domains and share live preview links.")
 
@@ -535,7 +535,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if not EMERGENT_LLM_KEY:
             raise HTTPException(500, "LLM key missing")
         if token == "studio":
-            name, context = "Lois-Tech", STUDIO_CONTEXT
+            name, context = "LucioDigital", STUDIO_CONTEXT
         else:
             doc = await db.apps.find_one({"preview_token": token, "preview_enabled": True}, {"_id": 0})
             if not doc:

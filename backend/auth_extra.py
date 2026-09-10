@@ -66,7 +66,7 @@ async def send_email(*, to: str, subject: str, html: str):
     if not key:
         raise HTTPException(500, "Email is not configured")
     payload = {"to": [to], "subject": subject, "html": html,
-               "from_name": _env("EMAIL_FROM_NAME") or "Lois-Tech"}
+               "from_name": _env("EMAIL_FROM_NAME") or "LucioDigital"}
     async with httpx.AsyncClient(timeout=30) as client:
         res = await client.post(f"{EMAIL_BASE_URL}/api/v1/email/send",
                                 headers={"X-Email-Key": key}, json=payload)
@@ -76,13 +76,26 @@ async def send_email(*, to: str, subject: str, html: str):
     return res.json().get("id")
 
 
+def _brand_row(brand: str) -> str:
+    """Icon mark (three lime blades, table-drawn so every email client renders it) + wordmark."""
+    bar = ('<td width="4" style="background:#84FF00;font-size:0;line-height:0">&nbsp;</td>'
+           '<td width="3" style="font-size:0;line-height:0">&nbsp;</td>')
+    return (
+        f'<a href="{_frontend() or "#"}" style="color:#e8eaf0;text-decoration:none">'
+        '<table role="presentation" cellpadding="0" cellspacing="0"><tr>'
+        f'{bar}{bar.replace("#84FF00", "#84FF00;opacity:0.6")}{bar.replace("#84FF00", "#5aa800")}'
+        '<td style="padding-left:6px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;'
+        f'font-size:17px;font-weight:700;letter-spacing:-0.4px">{escape(brand)}</td>'
+        '</tr></table></a>'
+    )
+
+
 def _shell(heading: str, body: str, cta_label: str, cta_url: str, brand: str) -> str:
     return (
         '<table role="presentation" width="100%" style="background:#0b0d12;padding:32px 0">'
         '<tr><td align="center"><table role="presentation" width="520" style="max-width:520px;'
         'background:#12151d;border:1px solid #232734;border-radius:16px;font-family:Arial,Helvetica,sans-serif">'
-        f'<tr><td style="padding:24px 28px 0"><a href="{_frontend() or "#"}" style="color:#e8eaf0;text-decoration:none;'
-        f'font-size:16px;font-weight:700">{escape(brand)}</a></td></tr>'
+        f'<tr><td style="padding:24px 28px 0">{_brand_row(brand)}</td></tr>'
         f'<tr><td style="padding:16px 28px 8px;color:#e8eaf0;font-size:20px;font-weight:700">{escape(heading)}</td></tr>'
         f'<tr><td style="padding:0 28px;color:#a2a9bb;font-size:14px;line-height:22px">{body}</td></tr>'
         f'<tr><td style="padding:24px 28px"><a href="{cta_url}" style="display:inline-block;'
@@ -103,7 +116,7 @@ async def send_verification_email(db, email: str, name: str = "") -> str:
         "token_hash": _hash(token), "kind": "verify", "email": email,
         "expires_at": (_now() + timedelta(minutes=TOKEN_TTL_MIN)).isoformat(),
         "used": False, "created_at": _now().isoformat()})
-    brand = _env("EMAIL_FROM_NAME") or "Lois-Tech"
+    brand = _env("EMAIL_FROM_NAME") or "LucioDigital"
     await send_email(to=email, subject=f"Confirm your {brand} email address",
                      html=_shell("Confirm your email address",
                                  f"Hi {escape(name or 'there')}, confirm this address to finish "
@@ -182,7 +195,7 @@ def register(api, db, get_current_user, create_access_token, create_refresh_toke
             return {"ok": True, "already_verified": True}
         await _throttle("verify", email)
         token = await _issue("verify", email)
-        brand = _env("EMAIL_FROM_NAME") or "Lois-Tech"
+        brand = _env("EMAIL_FROM_NAME") or "LucioDigital"
         await send_email(to=email, subject=f"Confirm your {brand} email address",
                          html=_shell("Confirm your email address",
                                      f"Hi {escape(user.get('name') or 'there')}, confirm this address to "
@@ -203,7 +216,7 @@ def register(api, db, get_current_user, create_access_token, create_refresh_toke
         email = body.email.lower().strip()
         await _throttle("magic", email)
         token = await _issue("magic", email)
-        brand = _env("EMAIL_FROM_NAME") or "Lois-Tech"
+        brand = _env("EMAIL_FROM_NAME") or "LucioDigital"
         exists = await db.users.find_one({"email": email}, {"_id": 0, "user_id": 1})
         await send_email(to=email, subject=f"Your {brand} sign-in link",
                          html=_shell("Your sign-in link",

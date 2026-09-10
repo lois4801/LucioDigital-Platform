@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { PageSkeleton } from "@/components/PageTransition";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -38,7 +39,7 @@ export default function Portal() {
   return (
     <div className="min-h-screen" data-testid="client-portal">
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)] px-6 lg:px-10 py-4 flex items-center justify-between">
-        <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="flex items-center gap-3 cursor-pointer group"><Layers size={18} className="text-[var(--acc)]" /><div><div className="overline">Client Portal</div><div className="font-display text-lg font-semibold group-hover:text-[var(--acc)] transition-colors">Welcome, {data.user.name || data.user.email}</div></div></Link>
+        <Link to="/" data-testid="brand-home-link" title="Back to the LucioDigital home page" className="flex items-center gap-3 cursor-pointer group"><LogoMark size={22} color="#FFFFFF" /><div><div className="overline">Client Portal</div><div className="font-display text-lg font-semibold group-hover:text-[var(--acc)] transition-colors">Welcome, {data.user.name || data.user.email}</div></div></Link>
         <div className="flex items-center gap-2">{app?.role === "owner" && <button data-testid="portal-to-dashboard-btn" onClick={() => nav("/dashboard")} className="btn-ghost text-sm !py-2 !px-4">Agency dashboard</button>}<button data-testid="portal-logout-btn" onClick={logout} className="w-10 h-10 rounded-full border border-[var(--line)] flex items-center justify-center hover:bg-white/5"><LogOut size={14} /></button></div>
       </header>
       <main className="px-6 lg:px-10 py-8 grid lg:grid-cols-[260px_1fr] gap-6">

@@ -1,4 +1,4 @@
-# Lois-Tech — Client Handoff Guide
+# LucioDigital — Client Handoff Guide
 
 Everything a new owner needs to run this platform on their own infrastructure. No Emergent account is required.
 
@@ -53,7 +53,7 @@ Admin rights are granted to the address in `ADMIN_EMAIL`.
 |---|---|---|
 | Payments | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Billing/checkout unavailable, rest of app unaffected |
 | Voiceovers | `ELEVENLABS_API_KEY` (or in-app setting) | Falls back to OpenAI TTS, else hidden |
-| Custom tenant domains | `DNS_CNAME_TARGET` | ⚠️ **Must be overridden** when self-hosting — it defaults to a Lois-Tech hostname, so the DNS instructions shown to your tenants would otherwise point at the original agency's infrastructure. Set it to your own ingress hostname. |
+| Custom tenant domains | `DNS_CNAME_TARGET` | ⚠️ **Must be overridden** when self-hosting — it defaults to a LucioDigital hostname, so the DNS instructions shown to your tenants would otherwise point at the original agency's infrastructure. Set it to your own ingress hostname. |
 
 ## 7. Data ownership
 

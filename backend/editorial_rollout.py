@@ -8,7 +8,7 @@ Flow enforced here:
   4. store platform Site Mode defaults so FUTURE clients inherit everything automatically
 
 Colour rule: each client/template keeps its OWN accent. Lime (#B6FF3B) is reserved for
-lois-tech.ca and is never written to a client or template.
+luciodigital.ca and is never written to a client or template.
 """
 import asyncio
 import logging
@@ -21,7 +21,7 @@ from pydantic import BaseModel
 
 logger = logging.getLogger("agency.editorial_rollout")
 
-LIME = "#84FF00"                 # platform-only accent (lois-tech.ca)
+LIME = "#84FF00"                 # platform-only accent (luciodigital.ca)
 RESERVED_ACCENTS = {"#84FF00", "#B6FF3B"}   # never applied to a client or template
 TEST_LAB_ID = "app_testlab"
 DEFAULTS_DOC = "site_mode_defaults"
@@ -84,7 +84,7 @@ RESERVED_PROFILES: Dict[str, Dict[str, str]] = {
     "property_mgmt":  P("architectural-fly-through", "diagonal-split", "depth-push-in", "depth-stagger", "#64748B"),
 }
 
-PLATFORM_PROFILE = {   # lois-tech.ca only — shares nothing with the 42 templates
+PLATFORM_PROFILE = {   # luciodigital.ca only — shares nothing with the 42 templates
     "hero": "platform-drift-cards", "layout": "platform-bento",
     "reveal": "platform-fade-rise", "counter": "platform-odometer", "accent": LIME,
 }
@@ -238,7 +238,7 @@ def register(api, db, get_current_user):
     async def heroes(user: dict = Depends(get_current_user)):
         by_template = {v["hero"]: k for k, v in MOTION_PROFILES.items()}
         by_template.update({v["hero"]: f"reserved · {k}" for k, v in RESERVED_PROFILES.items()})
-        by_template[PLATFORM_PROFILE["hero"]] = "lois-tech.ca (platform only)"
+        by_template[PLATFORM_PROFILE["hero"]] = "luciodigital.ca (platform only)"
         return {"heroes": [{"hero": h, "used_by": by_template.get(h, "")} for h in HERO_NAMES],
                 "total": len(HERO_NAMES)}
 

@@ -501,7 +501,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         doc = {k: v for k, v in app_doc.items() if k not in ("_id", "owner_id", "app_id", "preview_token", "github", "metrics")}
         manifest = {
             "format": "omnistack.plugin", "version": 1, "exported_at": _iso(),
-            "source_app_id": app_id, "platform": "Lois-Tech",
+            "source_app_id": app_id, "platform": "LucioDigital",
             "app": doc,
             "theme": app_doc.get("theme") or {},
             "pages": pages,
@@ -525,10 +525,10 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
                   "submissions": len(manifest["submissions"]), "members": len(manifest["site_users"])}
         files["manifest-summary.json"] = json.dumps(counts, indent=2)
         files["README.md"] = (
-            f"# {app_doc.get('name')} — Lois-Tech plugin package\n\n"
+            f"# {app_doc.get('name')} — LucioDigital plugin package\n\n"
             "Plug-and-play backup / clone bundle for this platform.\n\n"
             "## Restore it\n"
-            "1. Open Lois-Tech → **Dashboard**\n"
+            "1. Open LucioDigital → **Dashboard**\n"
             "2. Either open any client → **Site Mode → Import → Import a .zip** and drop this file in, "
             "or use **Import plugin package** on the dashboard to restore it as a brand-new client.\n"
             "3. The importer detects `plugin.json` and restores pages, blocks, design, CMS, forms, workflows, "
@@ -749,7 +749,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         return counts
 
     def read_manifest(raw: bytes):
-        """Returns (manifest, zipfile) when the ZIP is a Lois-Tech plugin package, else (None, None)."""
+        """Returns (manifest, zipfile) when the ZIP is a LucioDigital plugin package, else (None, None)."""
         try:
             zf = zipfile.ZipFile(io.BytesIO(raw))
         except zipfile.BadZipFile:
@@ -775,7 +775,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
             raise HTTPException(413, "That ZIP is larger than the 200 MB limit")
         manifest, zf = read_manifest(raw)
         if not manifest:
-            raise HTTPException(400, "That ZIP is not a Lois-Tech plugin package (no plugin.json found)")
+            raise HTTPException(400, "That ZIP is not a LucioDigital plugin package (no plugin.json found)")
         src = manifest.get("app") or {}
         app_id = _uid("app")
         title = (name or src.get("name") or "Restored project")[:120]
@@ -803,7 +803,7 @@ def _website_readme(app_doc, pages, cols, bundler) -> str:
     skipped = "\n".join(f"- {s}" for s in bundler.skipped[:20]) or "- none, everything was bundled"
     return f"""# {app_doc.get('name')} — website package
 
-Exported from Lois-Tech. Everything is local: images, video, fonts and CSS. No hotlinks, no CDN
+Exported from LucioDigital. Everything is local: images, video, fonts and CSS. No hotlinks, no CDN
 dependency, nothing to fetch at runtime.
 
 ```

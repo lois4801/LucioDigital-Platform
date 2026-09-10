@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowRight, Layers } from "lucide-react";
@@ -39,7 +40,7 @@ export default function CaseStudy() {
           <span className="w-9 h-9 rounded-lg border border-white/12 bg-white/[0.04] flex items-center justify-center">
             <Layers size={18} style={{ color: accent }} />
           </span>
-          <span className="font-display font-semibold tracking-tight text-lg">Lois-<span style={{ color: accent }}>Tech</span></span>
+          <span className="font-display font-semibold tracking-tight text-lg"><Logo variant="white" size={17} /></span>
         </Link>
         <Link to="/work" data-testid="case-study-back" className="text-sm text-white/50 hover:text-white transition-colors">All client work</Link>
       </header>

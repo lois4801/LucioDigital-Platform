@@ -148,7 +148,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold">Accent colour</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">Drives every motion layer on this client. Lime is reserved for lois-tech.ca.</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Drives every motion layer on this client. Lime is reserved for luciodigital.ca.</div>
             </div>
             <div className="flex items-center gap-2">
               <input type="color" data-testid="sm-accent-picker" value={sm.accent || "#10B981"}

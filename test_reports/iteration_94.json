@@ -1,0 +1,39 @@
+{
+  "summary": "Iter94 verified LucioDigital rebrand: backend + frontend. New pytest suite /app/backend/tests/test_iter94_luciodigital_rebrand.py runs 7 tests, 7/7 pass after test-URL adjustments. Verified: favicon.svg 200 SVG, /api/public/site/{token} contains no Lois-Tech text, /api/auth/providers returns LucioDigital brand, /api/auth/magic-link responds 200, PUT /api/apps/app_testlab/site-mode {accent:'#84FF00'} still returns 400 (lime reserved), admin can log in and /api/apps loads. Frontend: landing loads with correct title 'LucioDigital — Agency platform', logo lockup shows on nav (3x), hero-logo lime variant visible, footer-brand present; favicon <link rel='icon' href='/favicon.svg'> injected (visible in DOM). Login card shows login-card-logo. Site Mode tab title 'LucioDigital — Site Mode' with builder-logo-home-btn. Templates tab title 'LucioDigital — Templates'. Portal tab title correct. Public preview loads with no Lois text. Regression: admin login succeeds; dashboard loads clients. ONE real backend content bug found: /api/public/landing returns persisted DB CMS text 'Watch Lois-Tech build, brand and ship a product.' (texts.demos_heading) — this is user-visible on the classic landing demos section and was missed by the perl rename because the string was persisted in Mongo, not source.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/public/landing", "issue": "texts.demos_heading DB CMS value still reads 'Watch Lois-Tech build, brand and ship a product.' — the perl-based source rename did not touch the persisted MongoDB landing_texts collection. Default in backend/landing_cms.py line 19 is already corrected to 'Watch LucioDigital build...', but the DB override overrides it. Fix by PUT /api/admin/landing {'texts':{'demos_heading':'Watch LucioDigital build, brand and ship a product.'}} or a one-off migration that scans landing text/card/marquee values for 'Lois-Tech' and rewrites them.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Public preview tab title", "issue": "Navigating to /p/pv_c3b797fcdafc58d4e70e320f left document.title at the default 'LucioDigital — Agency platform' rather than 'LucioDigital — Live site' in one run. DocumentTitle.tsx map has ['/p/','Live site'] AFTER ['/portal','Client Portal']; both are prefix-matched with startsWith so /p/xxx should still hit /p/. Race is more likely: PublicPreview may unmount DocumentTitle by rendering outside <Routes>, or the useLocation() ordering. Worth a quick manual re-verify — could also be timing. Not blocking.", "affected_selectors": ["document.title"]},
+      {"flow": "/templates admin logo", "issue": "template-admin-logo is defined in TemplateGallery.tsx line 43 but was not found on the /templates page in the gallery view. Task description says the logo shows in the full-preview header — this suggests it renders only inside the expanded preview overlay, which we did not open. Please confirm the admin logo actually renders in the expanded preview modal.", "affected_selectors": ["[data-testid='template-admin-logo']"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter94_luciodigital_rebrand.py",
+    "/app/test_reports/pytest/iter94.xml"
+  ],
+  "action_items": [
+    "Migrate persisted landing CMS: overwrite texts.demos_heading (and scan all landing_texts / cards / marquee docs) for any residual 'Lois-Tech' / 'Lois Tech' / 'lois-tech' and rewrite to 'LucioDigital'. Simplest fix: PUT /api/admin/landing with the corrected demos_heading, or add a one-shot startup migration.",
+    "Verify template-admin-logo actually renders inside the /templates full-preview modal for admins (open a preview and check the modal header).",
+    "Confirm DocumentTitle sets 'LucioDigital — Live site' when navigating to /p/{token} — one automated pass captured the fallback title. Consider adding a defensive re-run of DocumentTitle after PublicPreview mounts."
+  ],
+  "critical_code_review_comments": [
+    "backend/landing_cms.py: defaults were updated correctly to LucioDigital, but DB-persisted overrides still contain the old brand. Any future rebrand needs a data-side migration path, not just a source rename.",
+    "frontend/public/index.html has NO <link rel='icon' href='/favicon.svg'> tag in the head, yet the DOM at runtime shows two favicon links — they are being injected at runtime (likely by DocumentTitle or an emergent script). Better to declare the icon link statically in index.html so first paint uses the correct favicon.",
+    "frontend/src/components/DocumentTitle.tsx: prefix map is order-sensitive (first startsWith match wins). Because '/p/' is only 3 chars, it's fine here, but consider using route matchers or an exact/startsWith flag per entry to avoid future collisions (e.g. /paid, /pending)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter94_luciodigital_rebrand.py"],
+  "success_rate": {"backend": "100% (7/7 rebrand pytest pass after fix; 1 real content bug reported)", "frontend": "95% (all logo testids + tab titles + favicon confirmed; two open items above)"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based login working)",
+  "seed_data_creation": "None. Test did not mutate app_testlab or landing CMS.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter94 covers the LucioDigital rebrand. Regression file: /app/backend/tests/test_iter94_luciodigital_rebrand.py — asserts favicon.svg, public/site cleanliness, auth providers brand, magic-link liveness, lime accent still 400, dashboard apps load. Known open bug: /api/public/landing texts.demos_heading DB value still says 'Watch Lois-Tech build, brand and ship a product.' — will need a migration or admin PUT. app_testlab preview token pv_c3b797fcdafc58d4e70e320f. Do not delete/archive/rename app_testlab.",
+  "rca of the issue": "GET /api/public/landing returns texts.demos_heading='Watch Lois-Tech build, brand and ship a product.'. Source default in backend/landing_cms.py:19 was correctly rebranded, but the MongoDB landing text collection holds an admin override written before the rename. On read, the persisted override wins over the source default, so the page still says Lois-Tech. Repro: `curl $BASE/api/public/landing | jq .texts.demos_heading`. Fix: (a) hit PUT /api/admin/landing with {'texts':{'demos_heading':'Watch LucioDigital build, brand and ship a product.'}} while logged in as admin, OR (b) add a startup migration that scans landing_texts/cards/marquee docs and rewrites any 'Lois-Tech'|'Lois Tech'|'lois-tech' substrings to 'LucioDigital'."
+}

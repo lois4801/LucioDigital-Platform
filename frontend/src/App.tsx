@@ -1,3 +1,4 @@
+import DocumentTitle from "@/components/DocumentTitle";
 import { useEffect } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
@@ -52,6 +53,7 @@ function AppRouter() {
   }
   return (
     <AnimatePresence mode="wait" initial={false}>
+    <DocumentTitle />
     <Routes location={location} key={location.pathname}>
       <Route path="/" element={<TestLabLanding />} />
       <Route path="/classic-landing" element={<Landing />} />

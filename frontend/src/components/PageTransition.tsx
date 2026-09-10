@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { LogoMark } from "@/components/Logo";
 
 export function PageTransition({ children, testid }) {
   return (
@@ -15,6 +16,9 @@ export function Skeleton({ className = "" }) {
 export function PageSkeleton({ testid = "page-skeleton" }) {
   return (
     <div data-testid={testid} className="min-h-screen px-6 lg:px-10 py-6 space-y-6">
+      <div className="flex justify-center py-6" data-testid="splash-mark">
+        <LogoMark size={40} color="#FFFFFF" className="opacity-70 animate-pulse" />
+      </div>
       <div className="flex items-center justify-between"><Skeleton className="h-10 w-56 rounded-full" /><Skeleton className="h-10 w-40 rounded-full" /></div>
       <Skeleton className="h-48 w-full rounded-2xl" />
       <div className="grid md:grid-cols-3 gap-5">{[0, 1, 2].map(i => <Skeleton key={i} className="h-40 rounded-2xl" />)}</div>

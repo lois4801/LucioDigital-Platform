@@ -1,3 +1,4 @@
+import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -148,7 +149,7 @@ export default function HeroGallery() {
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[#080808]/92 border-b border-white/10 px-5 sm:px-10 py-4">
         <div className="flex flex-wrap items-center gap-3">
           <Link to="/" data-testid="motion-home-link" className="font-display text-lg font-semibold tracking-tight cursor-pointer">
-            Lois<span className="text-[#84FF00]">-Tech</span>
+            <Logo variant="lime" size={17} />
           </Link>
           <div className="min-w-0">
             <div className="overline">Signature motion systems</div>
