@@ -644,3 +644,11 @@ FastAPI/Mongo. No feature or UI changes.
 - Every template card and full preview runs its own live motion engine (33 unique engines,
   `template-motion-badge-<key>`, intensity dialled to 0.55-0.6 so photography still reads).
 - Broken Unsplash ids replaced (hvac hero + one gallery photo); 0 broken images on /templates.
+
+## 2026-06 · Delete active tenants from the dashboard
+- `Dashboard.tsx` `deleteTenant()`: archives (snapshotting leads) then purges in one step.
+- Trash button on every tenant card (`delete-tenant-<app_id>`) and list row (`delete-row-<app_id>`),
+  two confirmations, spinner while working. Hidden for `is_test_lab` / `protected` tenants, and the
+  backend `DELETE /apps/{id}/purge` still refuses the master workspace.
+- Verified live: deleted tenant `app_9786b860d753` ("sadfsadfasdf"); master workspace shows no
+  delete control.

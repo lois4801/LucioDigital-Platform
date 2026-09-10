@@ -58,6 +58,7 @@ export default function Dashboard() {
 
   async function runTest() { /* Run Test removed from the Test Lab UI. */ }
   const [archived, setArchived] = useState([]);
+  const [deleting, setDeleting] = useState("");
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
   const [pluginBusy, setPluginBusy] = useState(false);
@@ -98,6 +99,24 @@ export default function Dashboard() {
       setArchived(list => list.filter(x => x.app_id !== a.app_id));
       toast.success(`${a.name} permanently deleted`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not delete that tenant"); }
+  }
+  /** Delete an ACTIVE tenant straight from the dashboard: archives it (so leads are snapshotted)
+   *  and then purges it in one step. The master workspace stays protected. */
+  async function deleteTenant(a) {
+    if (a.is_test_lab || a.protected) return toast.error("The master workspace cannot be deleted");
+    if (!window.confirm(`Permanently delete ${a.name}? This erases its pages, leads, bookings and files. This cannot be undone.`)) return;
+    if (!window.confirm(`Last check — delete ${a.name} forever?`)) return;
+    setDeleting(a.app_id);
+    try {
+      if (!a.archived) await api.post(`/apps/${a.app_id}/archive`, { archived: true });
+      await api.delete(`/apps/${a.app_id}/purge`);
+      setApps(list => list.filter(x => x.app_id !== a.app_id));
+      setArchived(list => list.filter(x => x.app_id !== a.app_id));
+      toast.success(`${a.name} permanently deleted`);
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Could not delete that tenant");
+    } finally { setDeleting(""); }
   }
   async function ackPick(p) {
     try { await api.post(`/template-shares/${p.token}/ack`); setPicks(list => list.filter(x => x.token !== p.token)); }
@@ -448,6 +467,14 @@ export default function Dashboard() {
                         {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                       </button>
                       )}
+                      {!a.is_test_lab && !a.protected && (
+                      <button data-testid={`delete-tenant-${a.app_id}`} title="Permanently delete this tenant"
+                        disabled={deleting === a.app_id}
+                        onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-400 hover:border-red-400/50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60">
+                        {deleting === a.app_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                      </button>
+                      )}
                       <button data-testid={`feature-toggle-${a.app_id}`} title={a.featured ? "Remove from the landing showcase" : "Feature on the landing page"}
                         onClick={(e) => { e.stopPropagation(); toggleFeatured(a); }}
                         className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
@@ -497,6 +524,14 @@ export default function Dashboard() {
                     className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-300 hover:bg-white/10">
                     {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                   </button>
+                  {!a.is_test_lab && !a.protected && (
+                    <button data-testid={`delete-row-${a.app_id}`} title="Permanently delete this tenant"
+                      disabled={deleting === a.app_id}
+                      onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
+                      className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-400 hover:bg-white/10 disabled:opacity-60">
+                      {deleting === a.app_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                    </button>
+                  )}
                   <LockStateBadge state={lockStates[a.app_id]?.state} testid={`row-lock-badge-${a.app_id}`} />
                   <div className="font-mono text-xs text-[var(--mut)] w-24 text-right">{a.metrics?.uptime}%</div>
                 </div>
