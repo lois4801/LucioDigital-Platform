@@ -667,3 +667,6 @@ FastAPI/Mongo. No feature or UI changes.
 - Verified live end to end: created a tenant, deleted it (29 days left chip, removed from grid,
   4 pages kept), restored it back into the grid, then erased it permanently; master workspace
   delete correctly refused.
+- Follow-up: the delete (trash) button on tenant cards is now ALWAYS visible (no longer hover-only),
+  outlined in red; on the master workspace it renders greyed out and disabled with a tooltip
+  explaining it is permanent. Verified visible without hover on both cards.

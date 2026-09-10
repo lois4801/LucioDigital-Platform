@@ -481,15 +481,22 @@ export default function Dashboard() {
                       {!a.is_test_lab && !a.is_staging && (
                       <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
                         onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
-                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 transition-colors">
                         {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                       </button>
                       )}
-                      {!a.is_test_lab && !a.protected && (
+                      {a.is_test_lab || a.protected ? (
+                      <button data-testid={`delete-tenant-${a.app_id}`} disabled
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/25 cursor-not-allowed"
+                        title="The master workspace is permanent and cannot be deleted">
+                        <Trash2 size={13} />
+                      </button>
+                      ) : (
                       <button data-testid={`delete-tenant-${a.app_id}`}
                         disabled={deleting === a.app_id}
                         onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
-                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-400 hover:border-red-400/50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60"
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-red-400/25 flex items-center justify-center text-red-300/80 hover:text-red-300 hover:border-red-400/60 hover:bg-red-500/10 transition-all disabled:opacity-60"
                         title="Delete this tenant — restorable for 30 days">
                         {deleting === a.app_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                       </button>
