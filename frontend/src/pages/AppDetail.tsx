@@ -127,12 +127,7 @@ export default function AppDetail() {
           </div>
           <div className="flex items-center gap-2">
             <ConvertToWebApp appId={appId} appName={appDoc?.name} inline />
-            {appDoc.is_test_lab && (
-              <button data-testid="push-to-all-tenants-btn" onClick={() => setRolloutOpen(true)}
-                className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2">
-                <Rocket size={14} /> Push to All Tenants
-              </button>
-            )}
+            {/* Test Lab action buttons removed permanently. */}
             <LockStateBadge />
             <MasterLockButton />
             <CursorFXPicker />

@@ -56,16 +56,7 @@ export default function Dashboard() {
   const [caseStudyApp, setCaseStudyApp] = useState(null);
   const [redesign, setRedesign] = useState(null);
 
-  async function runTest() {
-    setTesting(true);
-    try {
-      const { data } = await api.post("/test-lab/run-test");
-      setTestResult(data);
-      toast.success(`Test Lab check: ${data.passed}/${data.total} passed`);
-    } catch (e) {
-      toast.error(e.response?.data?.detail || "Could not run the test");
-    } finally { setTesting(false); }
-  }
+  async function runTest() { /* Run Test removed from the Test Lab UI. */ }
   const [archived, setArchived] = useState([]);
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
@@ -81,7 +72,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/staging-tenant").then(r => setStaging(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -488,40 +479,7 @@ export default function Dashboard() {
                   <div className="p-5">
                     <div className="font-display text-xl font-semibold">{a.name}</div>
                     <p className="text-sm text-[var(--mut)] mt-1 line-clamp-2">{a.description}</p>
-                    {a.is_test_lab && (
-                      <div className="mt-4 space-y-2">
-                        <button data-testid="push-to-all-tenants-card-btn"
-                          onClick={(e) => { e.stopPropagation(); setRolloutTarget(null); setRolloutOpen(true); }}
-                          className="w-full btn-primary text-xs !py-2.5 flex items-center justify-center gap-2">
-                          <Rocket size={13} /> Push to All Tenants
-                        </button>
-                        <PushToOnePicker testid="push-to-one-tenant" label="Push to One Tenant"
-                          options={apps.filter((x) => !x.is_test_lab).map((x) => ({
-                            value: x.app_id, label: x.name,
-                            badge: pendingMap[x.app_id] > 0 ? `${pendingMap[x.app_id]}` : null,
-                          }))}
-                          onPick={(id) => {
-                            setRolloutTarget(apps.find((x) => x.app_id === id) || null);
-                            setRolloutOpen(true);
-                          }} />
-                        <button data-testid="push-to-staging-btn" disabled={!staging}
-                          onClick={(e) => { e.stopPropagation(); setRolloutTarget(staging); setRolloutOpen(true); }}
-                          className="w-full btn-ghost text-xs !py-2 flex items-center justify-center gap-1.5 disabled:opacity-40"
-                          style={{ borderColor: "rgba(249,115,22,0.5)", color: "#FB923C" }}>
-                          <Rocket size={11} /> Push to Staging
-                        </button>
-                        <button data-testid="run-test-btn" disabled={testing}
-                          onClick={(e) => { e.stopPropagation(); runTest(); }}
-                          className="w-full btn-ghost text-xs !py-2 flex items-center justify-center gap-1.5 disabled:opacity-50">
-                          {testing ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} />} {testing ? "Running test…" : "Run Test"}
-                        </button>
-                        {testResult && (
-                          <div data-testid="run-test-result" className="text-[10px] font-mono text-[var(--dim)] text-center">
-                            {testResult.passed}/{testResult.total} checks passed · Test Lab only
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Test Lab action panel removed permanently — no action buttons in Test Lab UI. */}
                     <div className="mt-4 grid grid-cols-4 gap-2 font-mono text-[11px]">
                       <div><div className="text-[var(--dim)] uppercase">Uptime</div><div className="text-[var(--fg)]">{a.metrics?.uptime}%</div></div>
                       <div><div className="text-[var(--dim)] uppercase">CPU</div><div className="text-[var(--fg)]">{a.metrics?.cpu}%</div></div>

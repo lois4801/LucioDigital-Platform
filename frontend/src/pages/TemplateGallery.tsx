@@ -118,12 +118,6 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onT
               className="w-full btn-primary text-[11px] !py-2 flex items-center justify-center gap-1.5">
               <Rocket size={11} /> Push to All Templates
             </button>
-            <button data-testid="push-template-to-staging-btn"
-              onClick={(e) => { e.stopPropagation(); onTemplatePush({ staging: true }); }}
-              className="w-full btn-ghost text-[11px] !py-2 flex items-center justify-center gap-1.5"
-              style={{ borderColor: "rgba(249,115,22,0.5)", color: "#FB923C" }}>
-              <Rocket size={11} /> Push to Staging
-            </button>
             <PushToOnePicker testid="push-to-one-template" label="Push to One Template"
               options={(allKeys || []).map((k) => ({ value: k, label: k.replace(/_/g, " ") }))}
               onPick={(k) => onTemplatePush({ targetKey: k })} />

@@ -461,3 +461,17 @@ FastAPI/Mongo. No feature or UI changes.
 - P0: Admin must review `/redesign-review`, Generate Diff and choose a rollout target. Until then
   no live tenant or template is touched.
 - P0: testing_agent regression still paused per the Credit-Safe rule.
+
+## 2026-06 · Single-sandbox rule + Test Lab action panel removal (auto-applied)
+- `backend/sandbox_guard.py`: purges every test/staging/demo site except `app_testlab`.
+  Runs on EVERY startup (so it applies to all current tenants and any future one at creation)
+  plus `GET /api/sandbox/audit` and `POST /api/sandbox/enforce`. Deactivates then hard-deletes
+  the app and its rows across 20+ dependent collections. Removed: "Rollout Target Demo" (staging).
+- `ensure_staging_tenant()` is no longer called at startup — the staging tenant can never come back.
+  Name matching is narrow ("test lab", "staging", "sandbox", "rollout target") so a real client
+  named e.g. "Demo Agency" is never deleted; tags/flags (test, staging, demo, sandbox, is_staging)
+  are the primary signal.
+- Test Lab action panel deleted permanently: Push to All Tenants (dashboard card + tenant header),
+  Push to One Tenant, Push to Staging (dashboard + template gallery) and Run Test. Verified all
+  four test IDs return count 0. Rollout still reachable through the approval workflow at
+  `/redesign-review` and the Test Template card.

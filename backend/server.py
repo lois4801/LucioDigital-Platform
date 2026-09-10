@@ -987,9 +987,12 @@ async def startup():
         import test_template
         test_template.install()
         logger.info(f"Template look overrides loaded: {await test_template.load_overrides(db)}")
-        from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states, ensure_staging_tenant
+        from test_lab import ensure_test_lab, retheme_test_lab_only, mark_template_states, ensure_staging_tenant  # noqa: F401
         await ensure_test_lab(db, admin_id)
-        await ensure_staging_tenant(db, admin_id)
+        # Single-sandbox rule: LucioDigital Test Lab is the only test/staging/demo site allowed.
+        from sandbox_guard import purge_other_sandboxes
+        _purged = await purge_other_sandboxes(db)
+        logger.info(f"Extra sandbox sites removed: {len(_purged)} {[p['name'] for p in _purged]}")
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
         logger.info(f"Templates pending rollout: {await mark_template_states(db)}")
         from case_study import ensure_seed as ensure_case_study_seed
@@ -1076,6 +1079,8 @@ from test_lab import register as register_test_lab
 register_test_lab(api, db, get_current_user, get_user_app, log_activity)
 from case_study import register as register_case_study
 register_case_study(api, db, get_current_user, get_user_app, log_activity)
+from sandbox_guard import register as register_sandbox_guard
+register_sandbox_guard(api, db, get_current_user)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra
