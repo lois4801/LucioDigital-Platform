@@ -773,3 +773,20 @@ FastAPI/Mongo. No feature or UI changes.
 - Figures are deliberately NOT auto-propagated from the master workspace — they are client data, so
   a master edit must never overwrite a tenant's imported numbers. Design/motion propagation is
   unchanged.
+
+## 2026-06 · Tenant business address + chart source labels (iter81, backend 7/7, frontend 100%)
+- `case_study.py`: `site_mode.address` is a real per-tenant field. `PUT /apps/{id}/site-mode {address}`
+  trims + caps at 160 chars, writes `brand_profile.address` and (user-requested) updates the address
+  prop on every `contact` / `footer` block of that tenant's pages via `_write_address()`.
+  `GET /apps/{id}/site-mode` also returns `template_address` (the template's sample) so the UI can
+  say what is being shown in the meantime.
+- `studio.public_site()` resolves `app.address` in order: site_mode -> brand_profile -> contact/footer
+  block scan (<90 chars) -> `NICHES[template].address` -> "Address on request" in the UI.
+- Site Mode panel: Business address row (`sm-address-input`, `sm-address-save`, Save disabled until the
+  value changes, Enter also saves). Template gallery previews pass `sampleAddress` so the map card
+  carries a small "Sample address" tag (`industry-map-sample-tag`) over the template's dummy address.
+- Chart source labels: `vitals.source_label` / `source_label2` (empty by default) edited in the Live
+  figures editor (`vitals-source-1|2`) and rendered under each chart as
+  "Source: X · Updated <date>" (`industry-chart-source`, `industry-chart-2-source`). The date comes
+  from `imported_at`/`updated_at` automatically and the whole line is hidden when no source is set.
+- Known nit (non-blocking): pressing Enter in the address field fires a PUT even when unchanged.

@@ -445,10 +445,25 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         from industry_vitals import spec_for
         _vk = prof.get("template_key") or doc.get("site_niche") or ""
         vitals = {**spec_for(_vk, doc.get("industry") or ""), **(doc.get("vitals") or {})}
+        # Address: the tenant's own field wins, then its contact/footer copy, then the template sample.
+        _addr = (sm.get("address") or (doc.get("brand_profile") or {}).get("address") or "").strip()
+        if not _addr:
+            for _p in pages:
+                for _b in _p.get("blocks") or []:
+                    _a = (_b.get("props") or {}).get("address")
+                    if isinstance(_a, str) and _a.strip() and len(_a) < 90:
+                        _addr = _a.strip()
+                        break
+                if _addr:
+                    break
+        if not _addr:
+            from site_content import NICHES as _NICHES
+            _addr = (_NICHES.get(_vk) or {}).get("address") or ""
         return {"app": {**{k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
                         "app_id": doc["app_id"],
                         "site_mode": sm,
                         "vitals": vitals,
+                        "address": _addr,
                         "motion_profile": prof},
                 "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True,
                 "webapp": {"converted": bool((doc.get("webapp") or {}).get("converted")),

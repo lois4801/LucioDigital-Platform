@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 81 — Tenant business address (Site Mode → map + contact/footer + fallback chain) and chart Source labels (source_label / source_label2). Backend 7/7 pytest PASS on the new suite, iter80 regression 11/11 PASS. Frontend flows all verified: template gallery preview shows the 'Sample address' tag with the template dummy address and no source line; the tenant public site shows the real address (no sample tag) and 'Source: X · Updated <date>' under both charts when set, and NEITHER industry-chart-source nor industry-chart-2-source exists in the DOM when both labels are blank. Site Mode UI: Save disabled until value changes, hint mentions the template sample when address is empty, live-site iframe re-renders with new address + source lines after save. Address trimmed and capped at 160 chars; contact + footer block addresses are updated in place on PUT. Fallback chain confirmed: site_mode.address → contact/footer block → template sample (never blank).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter81_address_source.py",
+    "/app/test_reports/pytest/iter81.xml",
+    "/app/backend/tests/test_iter80_vitals.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "case_study._write_address correctly iterates pages and only touches blocks whose type is contact/footer AND already carry an address prop — safe, idempotent.",
+    "PUT /apps/{id}/site-mode trims and clamps address to 160 chars before persist and propagation (case_study.py:261). Empty-string branch is handled: brand_profile.address is set to '' but blocks are intentionally NOT overwritten, so the fallback chain in studio.py can still find a block address (matches the spec).",
+    "studio.public_site() resolves address in the exact fallback order: site_mode → brand_profile → block scan → NICHES[template].address. Only blocks shorter than 90 chars are picked to avoid promoting long contact copy — reasonable guard.",
+    "industry_vitals.spec_for now always includes source_label/source_label2 as '' so the frontend can rely on their presence; reset endpoint fully removes the tenant vitals doc which correctly clears any custom source labels.",
+    "IndustryVitals.LiveChart renders `{testid}-source` only when `source` truthy — clean conditional and formats the date via toLocaleDateString('day/month/year'). Matches spec.",
+    "SiteModePanel Save-address button is disabled based on `addr === (sm.address || '')` — works, but also drops the hint 'Showing the template sample for now: …' as soon as sm.address is truthy (verified). One tiny nit (non-blocking): pressing Enter fires patch() but the disabled-check isn't applied so an unchanged Enter still triggers a PUT — harmless because backend is idempotent."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter81_address_source.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026!. Preview token pv_c3b797fcdafc58d4e70e320f.",
+  "seed_data_creation": "None. Teardown ran POST /apps/app_testlab/vitals/reset (source==demo, source_label/2 empty) and PUT /apps/app_testlab/site-mode {address:''}. NOTE: because saving an address writes into contact/footer block props, the public site's app.address now falls back to a contact-block value ('88 King St W, Toronto, ON') — this is the documented fallback behaviour, not stray state.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests: /app/backend/tests/test_iter81_address_source.py (7 tests) — run with `pytest -o addopts= backend/tests/test_iter81_address_source.py`. Key testids exercised: sm-address-input, sm-address-save, vitals-source-1, vitals-source-2, vitals-save-btn, sm-live-site-frame, industry-map-address, industry-map-sample-tag, industry-chart-source, industry-chart-2-source, template-card-{key}, template-full-preview. To verify the fallback chain end-to-end, remember that once an address has been saved, the contact/footer blocks retain it even after PUT address:'' — you'll only see the template sample as fallback on a tenant that has never had an address saved.",
+  "rca of the issue": "N/A — no regressions or defects observed in this iteration."
+}

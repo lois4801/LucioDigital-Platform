@@ -27,6 +27,7 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
         title: v.title, metrics: v.metrics,
         series_label: v.series_label, labels: v.labels, series: v.series.map(Number),
         series2_label: v.series2_label, labels2: v.labels2, series2: v.series2.map(Number),
+        source_label: v.source_label || "", source_label2: v.source_label2 || "",
       });
       setV((s: any) => ({ ...s, ...data }));
       toast.success("Figures saved — the live site is already showing them");
@@ -89,15 +90,19 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
     </div>
   );
 
-  const Series = ({ which, label, labels, series, variant, lkKey }: any) => (
+  const Series = ({ which, label, labels, series, variant, lkKey, srcKey, source }: any) => (
     <div className="rounded-xl border border-[var(--line)] p-4" data-testid={`vitals-series-${which}`}>
       <input data-testid={`vitals-series-label-${which}`} value={label || ""}
         onChange={e => set({ [lkKey]: e.target.value })}
         className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm font-semibold outline-none focus:border-[var(--acc)]" />
       <div className="mt-3 rounded-lg overflow-hidden border border-[var(--line)] bg-[#080808]">
         <LiveChart variant={variant} accent={accent} label={label} values={series} labels={labels}
-          testid={`vitals-chart-${which}`} />
+          testid={`vitals-chart-${which}`} source={source} updated={v.imported_at || v.updated_at || ""} />
       </div>
+      <input data-testid={`vitals-source-${which}`} value={source || ""}
+        onChange={e => set({ [srcKey]: e.target.value })}
+        placeholder="Source — e.g. Internal CRM (leave blank to hide)"
+        className="mt-3 w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2.5 py-1.5 text-xs outline-none focus:border-[var(--acc)]" />
       <div className="mt-3 max-h-[220px] overflow-y-auto tenant-scroll pr-1 space-y-1.5">
         {(labels || []).map((l: string, i: number) => (
           <div key={i} className="flex items-center gap-2">
@@ -182,8 +187,10 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
       </div>
 
       <div className="mt-4 grid md:grid-cols-2 gap-3">
-        <Series which="1" label={v.series_label} lkKey="series_label" labels={v.labels} series={v.series} variant={(v.variants || [])[0] || "area"} />
-        <Series which="2" label={v.series2_label} lkKey="series2_label" labels={v.labels2} series={v.series2} variant={(v.variants || [])[1] || "donut"} />
+        <Series which="1" label={v.series_label} lkKey="series_label" srcKey="source_label" source={v.source_label}
+          labels={v.labels} series={v.series} variant={(v.variants || [])[0] || "area"} />
+        <Series which="2" label={v.series2_label} lkKey="series2_label" srcKey="source_label2" source={v.source_label2}
+          labels={v.labels2} series={v.series2} variant={(v.variants || [])[1] || "donut"} />
       </div>
     </div>
   );

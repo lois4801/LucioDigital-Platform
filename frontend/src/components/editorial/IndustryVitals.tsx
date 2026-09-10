@@ -43,7 +43,7 @@ const fmt = (n: number) => {
 };
 
 /** One chart, drawn from real numbers. `variant` keeps every industry visually distinct. */
-export function LiveChart({ variant, accent, label, values = [], labels = [], testid = "industry-chart" }) {
+export function LiveChart({ variant, accent, label, values = [], labels = [], testid = "industry-chart", source = "", updated = "" }) {
   const ref = useRef(null);
   const nums = (values || []).map(Number).filter(n => Number.isFinite(n));
   const max = Math.max(...nums, 1), min = Math.min(...nums, 0);
@@ -148,11 +148,16 @@ export function LiveChart({ variant, accent, label, values = [], labels = [], te
         <div className="text-[10px] font-mono opacity-45">{nums.length} pts</div>
       </div>
       <canvas ref={ref} className="w-full h-[190px] block mt-2" data-testid={`${testid}-canvas`} />
+      {source ? (
+        <div className="mt-2 text-[10px] opacity-55" data-testid={`${testid}-source`}>
+          Source: {source}{updated ? ` · Updated ${new Date(updated).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}` : ""}
+        </div>
+      ) : null}
     </div>
   );
 }
 
-function LocationMap({ accent, address, brand }) {
+function LocationMap({ accent, address, brand, sample = false }) {
   const ref = useRef(null);
   const seed = seedOf(address || brand);
   useLoop(ref, (ctx, w, h, t) => {
@@ -193,14 +198,19 @@ function LocationMap({ accent, address, brand }) {
       <canvas ref={ref} className="w-full h-[190px] block mt-2" data-testid="industry-map-canvas" />
       <div className="mt-3 text-sm font-semibold">{brand}</div>
       <div className="text-xs opacity-70 pb-12 sm:pb-0" data-testid="industry-map-address">{address || "Address on request"}</div>
+      {sample && address ? (
+        <div className="mt-1.5 inline-block text-[9px] uppercase tracking-[0.16em] rounded-full border border-current px-2 py-0.5 opacity-55"
+          data-testid="industry-map-sample-tag">Sample address</div>
+      ) : null}
     </div>
   );
 }
 
-export default function IndustryVitals({ templateKey = "", industry = "", accent = "#10B981", brand = "", address = "", vitals = null }) {
+export default function IndustryVitals({ templateKey = "", industry = "", accent = "#10B981", brand = "", address = "", vitals = null, sampleAddress = false }) {
   const v = vitals || {};
   const metrics = (v.metrics || []).slice(0, 3);
   const variants = v.variants || ["area", "donut"];
+  const updated = v.imported_at || v.updated_at || "";
   return (
     <section className="px-6 sm:px-10 py-14 border-t border-[var(--tbd)]" data-testid="industry-vitals"
       data-industry={industry} data-template={templateKey} data-vitals-source={v.source || "demo"}
@@ -227,10 +237,12 @@ export default function IndustryVitals({ templateKey = "", industry = "", accent
 
       <div className="mt-4 grid md:grid-cols-3 gap-4">
         <LiveChart variant={variants[0]} accent={accent} label={v.series_label || "Trend"}
-          values={v.series || []} labels={v.labels || []} testid="industry-chart" />
+          values={v.series || []} labels={v.labels || []} testid="industry-chart"
+          source={v.source_label || ""} updated={updated} />
         <LiveChart variant={variants[1]} accent={accent} label={v.series2_label || "Service mix"}
-          values={v.series2 || []} labels={v.labels2 || []} testid="industry-chart-2" />
-        <LocationMap accent={accent} address={address} brand={brand} />
+          values={v.series2 || []} labels={v.labels2 || []} testid="industry-chart-2"
+          source={v.source_label2 || ""} updated={updated} />
+        <LocationMap accent={accent} address={address} brand={brand} sample={sampleAddress} />
       </div>
     </section>
   );

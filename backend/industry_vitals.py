@@ -217,6 +217,8 @@ def spec_for(key: str, industry: str = "") -> Dict[str, Any]:
         "series2_label": c2[0],
         "labels2": _labels(c2[1], len(c2[2])) if c2[1] else [f"Part {i + 1}" for i in range(len(c2[2]))],
         "series2": list(c2[2]),
+        "source_label": "",
+        "source_label2": "",
         "variants": list(variants),
         "source": "demo",
     }
@@ -232,6 +234,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         series2_label: Optional[str] = None
         labels2: Optional[List[str]] = None
         series2: Optional[List[float]] = None
+        source_label: Optional[str] = None
+        source_label2: Optional[str] = None
         metrics: Optional[List[Dict[str, Any]]] = None
 
     def _key(app: Dict[str, Any]) -> str:

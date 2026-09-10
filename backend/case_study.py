@@ -96,6 +96,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         accent: Optional[str] = None           # tenant accent used by every motion layer
         motion_speed: Optional[float] = None       # 0.25x – 2x playback of the hero engine
         motion_intensity: Optional[float] = None   # 0.2 (subtle) – 1.5 (bold) presence
+        address: Optional[str] = None          # real business address: map + contact/footer blocks
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -108,6 +109,24 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if not doc:
             raise HTTPException(404, "Tenant not found")
         return doc
+
+    def _template_address(key: str) -> str:
+        from site_content import NICHES
+        return (NICHES.get(key) or {}).get("address") or ""
+
+    async def _write_address(app_id: str, address: str):
+        """The real address drives the map AND the site's own contact / footer blocks."""
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"brand_profile.address": address}})
+        if not address:
+            return
+        async for pg in db.pages.find({"app_id": app_id}, {"_id": 0, "page_id": 1, "blocks": 1}):
+            blocks, touched = pg.get("blocks") or [], False
+            for b in blocks:
+                if b.get("type") in ("contact", "footer") and "address" in (b.get("props") or {}):
+                    b["props"]["address"] = address
+                    touched = True
+            if touched:
+                await db.pages.update_one({"app_id": app_id, "page_id": pg["page_id"]}, {"$set": {"blocks": blocks}})
 
     async def _load(app: dict) -> dict:
         doc = await db.case_studies.find_one({"app_id": app["app_id"]}, {"_id": 0})
@@ -209,6 +228,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "accent": sm.get("accent") or (app.get("motion_profile") or {}).get("accent") or theme.get("primary") or "",
             "motion_speed": float(sm.get("motion_speed") or 1.0),
             "motion_intensity": float(sm.get("motion_intensity") or 1.0),
+            "address": sm.get("address") or (app.get("brand_profile") or {}).get("address") or "",
+            "template_address": _template_address(sm.get("template_key") or app.get("site_niche") or ""),
             "preview_token": app.get("preview_token") or "",
             "preview_enabled": bool(app.get("preview_enabled")),
             "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS), "publish": list(PUBLISH_STATES)},
@@ -236,8 +257,12 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Motion speed must be between 0.25x and 2x")
         if patch.get("motion_intensity") is not None and not 0.2 <= patch["motion_intensity"] <= 1.5:
             raise HTTPException(400, "Motion intensity must be between 0.2 and 1.5")
+        if "address" in patch:
+            patch["address"] = patch["address"].strip()[:160]
         cur.update(patch)
         cur["updated_at"] = _now()
+        if "address" in patch:
+            await _write_address(app_id, patch["address"])
         prof = dict(app.get("motion_profile") or {})
         if patch.get("hero"):
             prof["hero"] = patch["hero"]
