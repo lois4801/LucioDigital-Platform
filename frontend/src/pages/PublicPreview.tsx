@@ -10,6 +10,7 @@ import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionSwitcher from "@/components/editorial/MotionSwitcher";
 import MotionStage from "@/components/editorial/MotionStage";
 import ContentMotion from "@/components/editorial/ContentMotion";
+import IndustryVitals from "@/components/editorial/IndustryVitals";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
@@ -152,6 +153,21 @@ export default function PublicPreview() {
               ))}
         </motion.div>
       </AnimatePresence>}
+      {!iso && site.app?.motion_profile?.hero && (
+        <IndustryVitals templateKey={site.app.motion_profile.template_key || site.app.industry}
+          industry={site.app.industry} accent={site.theme?.primary}
+          brand={site.app.name}
+          address={(() => {
+            // the real address lives in the tenant's own contact / footer block
+            for (const p of site.pages || []) {
+              for (const b of p.blocks || []) {
+                const a = b?.props?.address;
+                if (typeof a === "string" && a.trim() && a.length < 90) return a;
+              }
+            }
+            return "";
+          })()} />
+      )}
       {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
       {openForm && <CtaFormModal form={openForm} theme={site.theme} onClose={() => setOpenForm(null)}

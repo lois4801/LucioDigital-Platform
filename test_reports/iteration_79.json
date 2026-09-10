@@ -1,0 +1,26 @@
+{
+  "summary": "RETEST of the two critical iteration_78 findings + full chart-variant matrix. BOTH previous CRITICALS FIXED. (1) Counter re-animation on tenant /p/pv_c3b797fcdafc58d4e70e320f now fires on EVERY re-entry — verified 3 full scroll-out/in cycles on the '18,400+' stat: cycle 1 progressed 1,155+ → 17,225+ over ~1.1s, cycle 2 802+ → 17,166+, cycle 3 2,254+ → 17,403+, all preserving comma-grouping and '+' suffix, settled value equals raw '18,400+'. data-cm-out flag correctly toggles to '1' when scrolled away and clears on re-entry. (2) industry-map-address on tenant site now reads 'Address on request' (18 chars) instead of the workspace description — fix confirmed on desktop 1440 and mobile 390. (3) Logged in as admin and opened the FULL PREVIEW for all 8 required industries; captured [data-chart-variant] pairs and industry-map-address per template, plus two ImageData samples ~600ms apart per canvas to prove liveness. Ambient-backdrop=0 on tenant. Mobile 390x780 has no horizontal overflow (scrollWidth=clientWidth=390).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Tenant site mobile 390 — footer overlap", "issues": ["'Sign in' floating pill overlaps 'LucioDigital Test Lab / Address on request' text inside the WHERE-TO-FIND-US card at 390 width. Cosmetic — pre-existing, not caused by this iteration's fix. Consider bottom padding on that card or moving the pill."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ContentMotion.tsx re-run gate now works correctly: threshold [0, 0.3] + data-cm-out/data-cm-ran hysteresis fires runCount on every re-entry. Verified by JS-side polling (Playwright wait_for_timeout was too slow to observe intermediate values — future testers should sample via page.evaluate() inside a while loop to catch the 950ms animation window).",
+    "IndustryVitals chart pairs are unique per template but two duplicate pairs exist across the 8 tested industries (legal=restaurant=[step,bubble], saas=fitness=[bars,candles]). Requirement 'not all identical across industries' is satisfied (6 unique pairs / 8 templates). If stronger uniqueness is desired the hash space (currently 10 variants, seed % 10 and (seed+4) % 10) can be widened or the offset can be industry-specific.",
+    "PublicPreview.tsx industry-map-address fallback to 'Address on request' is clean; description leak is fully gone."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026! used at /login. Session cookie carried through to /templates.",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration_79 verified both iteration_78 CRITICALS as FIXED and closed the chart-variant matrix that iteration_78 could not reach. Per-template results (variants, address, canvases_live): dental=[wave,radar]/'410 Queen Street West'/3 live; hvac=[candles,wave]/'215 Industrial Pkwy N, Toronto, ON'/3 live; legal=[step,bubble]/'181 Bay St, Suite 4400, Toronto, ON'/3 live; saas=[bars,candles]/'500 Howard St, San Francisco, CA'/3 live; healthcare=[gauge,area]/'4410 Northgate Blvd, Suite 200, Portland, OR'/3 live; restaurant=[step,bubble]/'622 Queen St W, Toronto, ON'/3 live; fitness=[bars,candles]/'2200 E 6th St, Austin, TX'/3 live; retail=[bubble,donut]/'142 Wythe Ave, Brooklyn, NY'/3 live. TESTING TIP: to observe the counter mid-animation, drive the scroll AND the polling inside a single page.evaluate() with a while(performance.now()-t0<1400) loop sampling every 40ms — Playwright's Python-side wait_for_timeout(150) misses the window and yields only the settled value. Ambient-backdrop=0 on tenant, mobile 390 has no horizontal overflow.",
+  "rca of the issue": "N/A — both iteration_78 bugs verified as resolved. Note that iteration_78's report of the counter bug was correct at the time (missing re-run gate); the current fix (data-cm-out hysteresis + threshold [0, 0.3]) properly restores the required behaviour. My initial iteration_79 sampling gave a false negative because Python-side page.wait_for_timeout adds ~40-80ms overhead per call plus a full CDP roundtrip, so my '150ms' sample landed after the 950ms animation had actually completed; switching to an in-page async polling loop immediately showed the correct 800→17,400+ progression on all 3 cycles."
+}

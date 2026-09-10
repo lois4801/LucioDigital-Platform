@@ -731,3 +731,25 @@ FastAPI/Mongo. No feature or UI changes.
 - Test report iteration_77: 0 ambient nodes anywhere, boxes reveal with stagger, 30fps cap and
   off-screen/hidden pause confirmed, 0 permanently hidden boxes, reduced-motion clean, mobile clean,
   no regressions. No open issues.
+
+## 2026-06 · Counting stats, live industry charts, located map (iter78 + iter79 verified)
+- `ContentMotion.tsx` also drives COUNTING NUMBERS: a second IntersectionObserver (threshold [0, 0.3]
+  with a `data-cm-out` / `data-cm-ran` hysteresis gate) re-runs a 950ms ease-out count-up EVERY time a
+  stat re-enters the viewport, in both scroll directions. Original text is stored in `data-cm-raw` and
+  prefixes/suffixes/decimals/comma grouping are preserved. Only elements with no children and
+  font-size >= 20px qualify, so body copy and phone numbers are never counted.
+- `IndustryVitals.tsx` (NEW) appended to every template full preview and every tenant site:
+  * `LiveChart` — 10 canvas designs (area/bars/donut/radar/step/candles/gauge/stacked/bubble/wave)
+    picked by a hash of the template key (two per template, offset by 4 so the pair differs per
+    industry), deterministic dummy data with sine drift plus a 0.9s draw-in.
+  * `LocationMap` — stylised canvas map (no SDK, no API key) whose street grid is seeded from the
+    address string, with pulsing service-radius rings and a route marker driving to the pin, plus the
+    brand and address beneath.
+  * Shared `useLoop`: 30fps cap, ResizeObserver, IntersectionObserver pause, `document.hidden` pause,
+    single static frame under `prefers-reduced-motion`.
+- `backend/templates_gallery.py` now returns `address` + `phone` on `/public/templates/{key}`;
+  PublicPreview reads the tenant's real address from its own contact/footer block props.
+- iteration_78 found 2 CRITICALs (counter only fired on first entry; tenant map showed the workspace
+  description) — both fixed and confirmed in iteration_79 (3 scroll cycles all re-count; address now
+  correct). iteration_79 has no open bugs; only a pre-existing cosmetic overlap of the floating
+  "Sign in" pill over the map card on 390px, mitigated with bottom padding on that card.

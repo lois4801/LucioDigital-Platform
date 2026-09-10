@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 /** Live, scaled render of a template's real pages — same renderer the tenant sites use. */
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import ContentMotion from "@/components/editorial/ContentMotion";
+import IndustryVitals from "@/components/editorial/IndustryVitals";
 
 function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260, motion: mo = null }) {
   const vars = themeVars(detail.theme);
@@ -68,6 +69,8 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
             )}
             <div className="relative z-[2]">
               {(page?.blocks || []).map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
+              <IndustryVitals templateKey={detail.key} industry={detail.industry}
+                accent={detail.theme?.primary} brand={detail.brand} address={detail.address} />
             </div>
           </div>
         </DesignCtx.Provider>

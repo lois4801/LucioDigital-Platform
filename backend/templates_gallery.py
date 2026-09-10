@@ -63,6 +63,7 @@ def build_template_site(key: str):
     return {
         "key": key, "brand": n["brand"], "industry": n["industry"], "category": category_of(key, n["industry"]),
         "tagline": n["title"], "summary": n["sub"], "thumbnail": n["hero"], "video": n["video"],
+        "address": n.get("address", ""), "phone": n.get("phone", ""),
         "theme": theme,
         "pages": [{"name": p[0], "slug": p[1], "blocks": p[2]} for p in pages],
     }
