@@ -696,3 +696,13 @@ FastAPI/Mongo. No feature or UI changes.
   fallback used by the tenant site, Site Mode panel and MotionStage. Result on /templates:
   14 light / 19 dark auto-tuned; light templates (Northgate calm-pulse-wave, Maison Verde
   product-orbit-carousel, Brightline precision-slide-in, Ledgerhouse ledger-line-reveal) now visible.
+- Stroke rhythm + contrast guard (HeroMotionLayer):
+  * `rhythmFor(hero)` picks one of 6 weight signatures (e.g. [0.55,1,1.8,2.8]) hashed from the hero
+    name; the ctx Proxy cycles it through every `lineWidth` assignment (min 0.5) so each motion mixes
+    hairlines, mid strokes and bold accents instead of one flat width. Base boost 1.15 dark / 1.9 light.
+  * The same Proxy intercepts `arc()` and cycles radii through [0.82,1.18,0.94,1.4], giving dots,
+    rings and glows varied sizes.
+  * `guardAccent(accent, bgLuma)` measures the real background luminance and iteratively brightens
+    (dark pages) or deepens (light pages) the accent until the contrast ratio reaches 2.6, so no
+    accent can wash out against its own background.
+  * `measured` now stores the luminance value (not a boolean) to feed the guard.

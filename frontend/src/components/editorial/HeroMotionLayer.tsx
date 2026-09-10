@@ -30,16 +30,51 @@ const darken = (hex: string, amount: number) => {
   return "#" + [r, g, b].map(c => Math.round(c * k).toString(16).padStart(2, "0")).join("");
 };
 
-/** Engines set ctx.lineWidth freely; on light pages every stroke needs more weight to be seen. */
-const withStrokeBoost = (ctx: CanvasRenderingContext2D, boost: number) => {
-  if (boost === 1) return ctx;
+const rgb = (hex: string) => {
+  const h = (hex || "#10B981").replace("#", "").slice(0, 6);
+  return h.length === 6 ? [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)) : [16, 185, 129];
+};
+const hex = (c: number[]) => "#" + c.map(v => Math.round(clamp(v, 0, 255)).toString(16).padStart(2, "0")).join("");
+const luma = (c: number[]) => (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255;
+const ratio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/** Contrast guard: lift (or deepen) the accent until it separates from its own background. */
+const guardAccent = (accent: string, bg: number, target = 2.6) => {
+  let c = rgb(accent);
+  for (let i = 0; i < 14 && ratio(luma(c), bg) < target; i++) {
+    c = bg > 0.45
+      ? c.map(v => v * 0.82)                       // light page → deepen
+      : c.map(v => v + (255 - v) * 0.16);          // dark page → brighten
+  }
+  return hex(c);
+};
+
+/** Per-hero stroke rhythm: each engine gets its own weight signature so lines read as
+ *  hairlines, mid strokes and bold accents instead of one flat width. */
+const RHYTHMS = [
+  [0.55, 1, 1.8, 2.8], [0.7, 1.5, 1, 2.3], [1, 0.6, 2.4, 1.4],
+  [0.5, 1.2, 2.1, 3.2], [0.85, 1.9, 0.6, 1.35], [1.1, 0.65, 1.6, 2.6],
+];
+const rhythmFor = (hero: string) =>
+  RHYTHMS[Math.abs([...(hero || "x")].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7)) % RHYTHMS.length];
+
+/** Engines set ctx.lineWidth freely; we scale it for legibility and vary it for depth. */
+const withStrokeRhythm = (ctx: CanvasRenderingContext2D, boost: number, weights: number[]) => {
+  let i = 0, j = 0;
+  const radii = [0.82, 1.18, 0.94, 1.4];      // gentle size variation on dots, rings and glows
   return new Proxy(ctx, {
     get(t, k) {
+      if (k === "arc") {
+        return (x: number, y: number, r: number, a0: number, a1: number, ccw?: boolean) =>
+          t.arc(x, y, Math.max(0.4, r * radii[j++ % radii.length]), a0, a1, ccw);
+      }
       const v = (t as any)[k];
       return typeof v === "function" ? v.bind(t) : v;
     },
     set(t, k, v) {
-      (t as any)[k] = k === "lineWidth" ? (v as number) * boost : v;
+      (t as any)[k] = k === "lineWidth"
+        ? Math.max(0.5, (v as number) * boost * weights[i++ % weights.length])
+        : v;
       return true;
     },
   }) as CanvasRenderingContext2D;
@@ -60,19 +95,20 @@ export default function HeroMotionLayer({
 }: Props) {
   const cvs = useRef<HTMLCanvasElement | null>(null);
   // An explicit mode (a template's own theme) wins; otherwise measure the real backdrop.
-  const [measured, setMeasured] = useState<boolean | null>(null);
-  const light = mode === "light" || mode === "dark" ? mode === "light" : (measured ?? false);
+  const [measured, setMeasured] = useState<number | null>(null);
+  const light = mode === "light" || mode === "dark" ? mode === "light" : ((measured ?? 0) > 0.45);
+  const bgLuma = measured ?? (light ? 0.96 : 0.05);
   const sp = clamp(speed, 0.25, 2);
   const it = clamp(intensity, 0.2, 1.5) * (light ? 1.45 : 1);
   const isNarrow = mobile ?? (typeof window !== "undefined" && window.innerWidth < 768);
   const baseOpacity = isNarrow ? (light ? 0.55 : 0.42) : (light ? 0.8 : 0.62);
-  const tint = light ? darken(accent, 0.35) : accent;
+  const tint = guardAccent(light ? darken(accent, 0.3) : accent, bgLuma);
 
   useEffect(() => {
     let el: HTMLElement | null = cvs.current?.parentElement || null;
     for (let i = 0; i < 12 && el; i++, el = el.parentElement) {
       const l = lumaOf(getComputedStyle(el).backgroundColor);
-      if (l !== null) { setMeasured(l > 0.45); return; }
+      if (l !== null) { setMeasured(l); return; }
     }
     setMeasured(null);
   }, [hero, mode]);
@@ -87,7 +123,7 @@ export default function HeroMotionLayer({
       && matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isMobile = mobile ?? (typeof innerWidth === "number" && innerWidth < 768);
     const draw = engineFor(hero)(tint, isMobile);
-    const paint = withStrokeBoost(ctx, light ? 1.9 : 1);
+    const paint = withStrokeRhythm(ctx, light ? 1.9 : 1.15, rhythmFor(hero));
 
     let w = 0, h = 0, raf = 0, start = 0, visible = true;
     const dpr = Math.min(devicePixelRatio || 1, 2);
