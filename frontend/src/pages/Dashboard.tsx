@@ -59,6 +59,7 @@ export default function Dashboard() {
   async function runTest() { /* Run Test removed from the Test Lab UI. */ }
   const [archived, setArchived] = useState([]);
   const [deleting, setDeleting] = useState("");
+  const [trash, setTrash] = useState([]);
   const [picks, setPicks] = useState([]);
   const [upBusy, setUpBusy] = useState(false);
   const [pluginBusy, setPluginBusy] = useState(false);
@@ -73,7 +74,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadTrash(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -100,23 +101,40 @@ export default function Dashboard() {
       toast.success(`${a.name} permanently deleted`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not delete that tenant"); }
   }
-  /** Delete an ACTIVE tenant straight from the dashboard: archives it (so leads are snapshotted)
-   *  and then purges it in one step. The master workspace stays protected. */
+  /** Delete = move to the 30-day trash. Nothing is erased: the site goes offline and everything
+   *  (pages, leads, bookings, files) stays restorable for 30 days. */
   async function deleteTenant(a) {
     if (a.is_test_lab || a.protected) return toast.error("The master workspace cannot be deleted");
-    if (!window.confirm(`Permanently delete ${a.name}? This erases its pages, leads, bookings and files. This cannot be undone.`)) return;
-    if (!window.confirm(`Last check — delete ${a.name} forever?`)) return;
+    if (!window.confirm(`Delete ${a.name}? Its site goes offline now and you can restore it any time in the next 30 days.`)) return;
     setDeleting(a.app_id);
     try {
-      if (!a.archived) await api.post(`/apps/${a.app_id}/archive`, { archived: true });
-      await api.delete(`/apps/${a.app_id}/purge`);
+      const { data } = await api.post(`/apps/${a.app_id}/trash`);
       setApps(list => list.filter(x => x.app_id !== a.app_id));
-      setArchived(list => list.filter(x => x.app_id !== a.app_id));
-      toast.success(`${a.name} permanently deleted`);
+      toast.success(`${a.name} deleted — restorable for ${data.days_left} days`);
+      loadTrash();
       load();
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not delete that tenant");
     } finally { setDeleting(""); }
+  }
+  async function loadTrash() {
+    try { const { data } = await api.get("/apps-trash"); setTrash(data.tenants || []); } catch { /* non-blocking */ }
+  }
+  async function untrash(t) {
+    try {
+      await api.post(`/apps/${t.app_id}/untrash`);
+      setTrash(list => list.filter(x => x.app_id !== t.app_id));
+      toast.success(`${t.name} restored with all its pages and leads`);
+      load();
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that tenant"); }
+  }
+  async function eraseNow(t) {
+    if (!window.confirm(`Erase ${t.name} forever? This removes ${t.pages || 0} page(s) and ${t.leads || 0} lead(s) and cannot be undone.`)) return;
+    try {
+      await api.delete(`/apps/${t.app_id}/trash`);
+      setTrash(list => list.filter(x => x.app_id !== t.app_id));
+      toast.success(`${t.name} erased permanently`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not erase that tenant"); }
   }
   async function ackPick(p) {
     try { await api.post(`/template-shares/${p.token}/ack`); setPicks(list => list.filter(x => x.token !== p.token)); }
@@ -468,10 +486,11 @@ export default function Dashboard() {
                       </button>
                       )}
                       {!a.is_test_lab && !a.protected && (
-                      <button data-testid={`delete-tenant-${a.app_id}`} title="Permanently delete this tenant"
+                      <button data-testid={`delete-tenant-${a.app_id}`}
                         disabled={deleting === a.app_id}
                         onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
-                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-400 hover:border-red-400/50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60">
+                        className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-400 hover:border-red-400/50 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-60"
+                        title="Delete this tenant — restorable for 30 days">
                         {deleting === a.app_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                       </button>
                       )}
@@ -525,7 +544,7 @@ export default function Dashboard() {
                     {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                   </button>
                   {!a.is_test_lab && !a.protected && (
-                    <button data-testid={`delete-row-${a.app_id}`} title="Permanently delete this tenant"
+                    <button data-testid={`delete-row-${a.app_id}`} title="Delete this tenant — restorable for 30 days"
                       disabled={deleting === a.app_id}
                       onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
                       className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-400 hover:bg-white/10 disabled:opacity-60">
@@ -538,6 +557,39 @@ export default function Dashboard() {
               );
             })}
           </div>
+        )}
+
+        {/* Recently deleted — 30-day restore window before anything is erased */}
+        {trash.length > 0 && (
+          <section className="mt-12" data-testid="trash-section">
+            <div className="flex flex-wrap items-end justify-between gap-3 mb-4 border-b border-[var(--line)] pb-3">
+              <div>
+                <div className="overline mb-1 flex items-center gap-2"><Trash2 size={12} className="text-red-400/80" /> Recently deleted</div>
+                <h2 className="font-display text-2xl font-semibold tracking-tight">{trash.length} tenant{trash.length === 1 ? "" : "s"} restorable</h2>
+              </div>
+              <p className="text-xs text-[var(--mut)] max-w-sm">Deleted tenants stay here for 30 days with every page, lead, booking and file intact. Restore any time inside the window — after that they are erased automatically.</p>
+            </div>
+            <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {trash.map(t => (
+                <div key={t.app_id} data-testid={`trash-card-${t.app_id}`} className="card-surface p-5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: t.color }} />
+                    <div className="font-display text-lg font-semibold truncate">{t.name}</div>
+                    <span data-testid={`trash-days-${t.app_id}`}
+                      className={`chip ml-auto ${t.days_left <= 5 ? "chip-maint" : ""}`}>{t.days_left} day{t.days_left === 1 ? "" : "s"} left</span>
+                  </div>
+                  <div className="text-xs text-[var(--mut)] mt-2 line-clamp-2">{t.description}</div>
+                  <div className="mt-3 font-mono text-[11px] text-[var(--dim)]">{t.pages || 0} page(s) · {t.leads || 0} lead(s) kept</div>
+                  <div className="mt-4 flex items-center gap-2">
+                    <button data-testid={`trash-restore-${t.app_id}`} onClick={() => untrash(t)}
+                      className="btn-primary text-xs !py-2 !px-3 inline-flex items-center gap-1.5"><RotateCcw size={12} /> Restore</button>
+                    <button data-testid={`trash-erase-${t.app_id}`} onClick={() => eraseNow(t)}
+                      className="chip cursor-pointer hover:!text-red-300">Erase now</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Archived tenants — recoverable, and not counted as active */}

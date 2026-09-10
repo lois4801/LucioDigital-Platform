@@ -401,6 +401,7 @@ async def list_apps(industry: Optional[str] = None, status_f: Optional[str] = No
     member_app_ids = [m["app_id"] for m in memberships]
     q = {"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": member_app_ids}}]}
     q["archived"] = True if archived else {"$ne": True}
+    q["trashed"] = {"$ne": True}          # deleted tenants live in the 30-day trash, not the workspace
     if industry:
         q["industry"] = industry
     if status_f:
@@ -996,6 +997,10 @@ async def startup():
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
         await mark_template_states(db)
         # Always-live: every template design is pushed to its tenants on every boot. No pending state.
+        from tenant_trash import sweep_expired
+        _swept = await sweep_expired(db)
+        if _swept:
+            logger.info(f"Trash sweep: purged {_swept} tenant(s) past their 30-day window")
         from auto_propagate import run as auto_propagate_run
         _ap = await auto_propagate_run(db)
         logger.info(f"Auto-propagated {_ap['templates']} template(s) to {_ap['tenants']} tenant(s)")
@@ -1094,6 +1099,8 @@ from motion_showcase import register as register_motion_showcase
 register_motion_showcase(api, db, get_current_user)
 from auto_propagate import register as register_auto_propagate
 register_auto_propagate(api, db, get_current_user)
+from tenant_trash import register as register_tenant_trash
+register_tenant_trash(api, db, get_current_user, get_user_app, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

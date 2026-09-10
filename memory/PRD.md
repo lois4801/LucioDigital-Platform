@@ -652,3 +652,18 @@ FastAPI/Mongo. No feature or UI changes.
   backend `DELETE /apps/{id}/purge` still refuses the master workspace.
 - Verified live: deleted tenant `app_9786b860d753` ("sadfsadfasdf"); master workspace shows no
   delete control.
+
+## 2026-06 · 30-day undo window for deleted tenants
+- `backend/tenant_trash.py`: delete is now a SOFT delete. `POST /apps/{id}/trash` takes the site
+  offline and stamps `trashed / trashed_at / purge_after (+30d)`; `GET /apps-trash` lists trashed
+  tenants with `days_left`, page and lead counts; `POST /apps/{id}/untrash` restores everything
+  intact; `DELETE /apps/{id}/trash` erases immediately. `sweep_expired()` runs on every boot and
+  purges only tenants past their window. Master workspace can never be trashed.
+  NOTE: the list route is `/apps-trash` (not `/apps/trash`) because `/apps/{app_id}` would shadow it.
+- `GET /apps` now excludes `trashed` tenants from both the active and archived views.
+- Dashboard: the trash button moves a tenant to the window with a single confirm, and a new
+  "Recently deleted" section (`trash-section`, `trash-card-*`, `trash-days-*`, `trash-restore-*`,
+  `trash-erase-*`) shows the countdown with Restore / Erase now.
+- Verified live end to end: created a tenant, deleted it (29 days left chip, removed from grid,
+  4 pages kept), restored it back into the grid, then erased it permanently; master workspace
+  delete correctly refused.
