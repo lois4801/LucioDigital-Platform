@@ -16,6 +16,7 @@ import { CursorFXPicker } from "@/components/CursorFX";
 import { pollImport, ImportProgress, ImportReport } from "@/components/builder/WebImport";
 import { LockStateBadge } from "@/components/locks/LockContext";
 import SkinToggle from "@/components/SkinToggle";
+import CaseStudyEditor from "@/components/CaseStudyEditor";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -52,6 +53,8 @@ export default function Dashboard() {
   const [landingEditor, setLandingEditor] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null);
+  const [caseStudyApp, setCaseStudyApp] = useState(null);
+  const [redesign, setRedesign] = useState(null);
 
   async function runTest() {
     setTesting(true);
@@ -78,7 +81,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/staging-tenant").then(r => setStaging(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/staging-tenant").then(r => setStaging(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -299,8 +302,21 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Client template picks */}
-        {picks.length > 0 && (
+        {/* Mandatory redesign approval banner */}
+        {redesign?.pending && (
+          <div data-testid="redesign-banner" className="card-surface p-4 mb-6 flex flex-wrap items-center gap-3 !border-[var(--acc)]/50">
+            <FlaskConical size={16} className="text-[var(--acc)] shrink-0" />
+            <div className="min-w-0">
+              <div className="font-display text-base">A new redesign is ready for review in Test Lab.</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Open Preview to inspect it before approving. {redesign.note}</div>
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button data-testid="redesign-open-preview" onClick={() => nav("/redesign-review")} className="btn-primary text-xs !py-1.5 !px-3">Open Preview</button>
+            </div>
+          </div>
+        )}
+
+        {/* Client template picks */}        {picks.length > 0 && (
           <div className="space-y-2 mb-6" data-testid="client-picks">
             {picks.map(p => (
               <div key={p.token} data-testid={`client-pick-${p.token}`} className="card-surface p-4 flex flex-wrap items-center gap-3 !border-[var(--acc)]/40">
@@ -459,6 +475,9 @@ export default function Dashboard() {
                         className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
                         <Star size={13} fill={a.featured ? "currentColor" : "none"} />
                       </button>
+                      <button data-testid={`case-study-edit-${a.app_id}`} title="Edit this tenant's case study page"
+                        onClick={(e) => { e.stopPropagation(); setCaseStudyApp(a); }}
+                        className="chip cursor-pointer hover:!text-white transition-colors">Edit Case Study</button>
                       <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
                       <LockStateBadge state={lockStates[a.app_id]?.state} testid={`card-lock-badge-${a.app_id}`} />
                     </div>
@@ -583,6 +602,8 @@ export default function Dashboard() {
       <LandingTextEditor open={landingEditor} onClose={() => setLandingEditor(false)} />
       <RolloutModal open={rolloutOpen} onClose={() => { setRolloutOpen(false); setRolloutTarget(null); }}
         targetAppId={rolloutTarget?.app_id || null} targetName={rolloutTarget?.name || ""} />
+      <CaseStudyEditor open={!!caseStudyApp} appId={caseStudyApp?.app_id} appName={caseStudyApp?.name}
+        onClose={() => setCaseStudyApp(null)} />
     </div>
   );
 }

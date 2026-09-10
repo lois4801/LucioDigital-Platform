@@ -992,6 +992,9 @@ async def startup():
         await ensure_staging_tenant(db, admin_id)
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
         logger.info(f"Templates pending rollout: {await mark_template_states(db)}")
+        from case_study import ensure_seed as ensure_case_study_seed
+        await ensure_case_study_seed(db)
+        logger.info(f"Editorial layer staged on Test Template: {await test_template.apply_editorial_to_test_template(db)}")
         await clear_synced_label_overrides(db)
     except Exception as e:
         logger.error(f"startup maintenance skipped: {e}")
@@ -1071,6 +1074,8 @@ from supabase_export import register as register_supabase_export
 register_supabase_export(api, db, get_current_user, get_user_app, log_activity)
 from test_lab import register as register_test_lab
 register_test_lab(api, db, get_current_user, get_user_app, log_activity)
+from case_study import register as register_case_study
+register_case_study(api, db, get_current_user, get_user_app, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

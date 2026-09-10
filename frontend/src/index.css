@@ -347,3 +347,6 @@ html { scroll-behavior: smooth; }
   }
   .ed-scope .ed-card-in, .ed-scope .ed-word, .ed-scope .ed-child { opacity: 1 !important; transform: none !important; }
 }
+
+/* Site Mode: animation intensity "none" freezes every motion on a tenant's public site. */
+.ed-static, .ed-static * { animation: none !important; transition: none !important; }

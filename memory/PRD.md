@@ -434,3 +434,30 @@ FastAPI/Mongo. No feature or UI changes.
 - P0: Regression run (testing_agent) is PAUSED per the Credit-Safe rule until admin replies NO.
 - P1: Microsoft/Yahoo OAuth are built and env-gated; buttons render dimmed until keys are supplied.
 - P1: ElevenLabs + GitHub push integrations still awaiting PATs.
+
+## 2026-06 · Case studies + approval workflow + per-tenant Site Mode + template revision
+
+### Implemented (Test Lab / Test Template scoped; nothing pushed live)
+- `backend/case_study.py`: per-tenant case studies (`case_studies` collection), public index
+  `GET /api/public/case-studies`, single `GET /api/public/case-studies/{slug}`, admin
+  `GET|PUT /api/apps/{id}/case-study` (draft/published), seeded for Test Lab only.
+- Per-tenant Site Mode `GET|PUT /api/apps/{id}/site-mode` → {style: original|editorial,
+  mode: light|dark, animation: full|reduced|none, publish: draft|preview|live, template_key}.
+  Writes are scoped to one app_id; PublicPreview applies `.ed-scope` / `.ed-static` from it.
+- Redesign approval workflow: `GET /api/redesign/pending`, `POST /api/redesign/flag|reviewed|dismiss`,
+  flag auto-raised at startup for `editorial-motion-v1`. Dashboard banner → `/redesign-review`
+  (`pages/RedesignReview.tsx`): side-by-side live vs Test Lab iframes, desktop/tablet/mobile toggles,
+  approval prompt, Generate Diff → existing RolloutModal/DiffViewer, then Push to One Tenant /
+  One Template / All with the existing confirmation modal.
+- Frontend: `pages/CaseStudy.tsx` (`/work/:slug`), `pages/Showcase.tsx` (`/work`, bento index),
+  `components/CaseStudyEditor.tsx` (dashboard "Edit Case Study" per tenant card),
+  `components/SiteModePanel.tsx` (in the tenant Site Mode tab). Landing nav + mobile menu gained
+  a "Client work" link.
+- `backend/test_template.py`: EDITORIAL_LAYER staged on the Test Template only
+  (editorial, dark base, bento, floating gallery, ribbon, reveals, counters, glow paths, parallax)
+  and added to LOOK_FIELDS so every flag is diffable/pushable/undoable.
+
+### Pending (blocked on admin)
+- P0: Admin must review `/redesign-review`, Generate Diff and choose a rollout target. Until then
+  no live tenant or template is touched.
+- P0: testing_agent regression still paused per the Credit-Safe rule.

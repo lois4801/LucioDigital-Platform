@@ -38,7 +38,48 @@ LOOK_FIELDS = [
     ("grain", "Animations", "Grain / noise overlay"),
     ("studio", "Features", "Studio 2026 component set"),
     ("look_v", "Features", "Look version"),
+    # Editorial motion design system — the new default standard, staged on the Test Template first.
+    ("editorial", "Design", "Editorial motion design layer"),
+    ("ed_dark_base", "Design", "Dark near-black base option"),
+    ("ed_bento", "Layout", "Bento grid features section"),
+    ("ed_float_gallery", "Layout", "Floating scattered gallery cards"),
+    ("ed_ribbon", "Layout", "Scrolling ribbon after the hero"),
+    ("ed_reveal", "Animations", "Scroll reveal (fade + translate + stagger)"),
+    ("ed_counters", "Animations", "Rolling number counters on stats"),
+    ("ed_glow_paths", "Animations", "Glowing hero path lines"),
+    ("ed_parallax", "Animations", "Cursor parallax on hero images"),
 ]
+
+# Applied to the Test Template only. The original values stay in template_looks history so the
+# existing rollout undo can revert this in one click.
+EDITORIAL_LAYER = {
+    "editorial": True,
+    "ed_dark_base": True,
+    "ed_bento": True,
+    "ed_float_gallery": True,
+    "ed_ribbon": True,
+    "ed_reveal": True,
+    "ed_counters": True,
+    "ed_glow_paths": True,
+    "ed_parallax": True,
+}
+
+
+async def apply_editorial_to_test_template(db) -> bool:
+    """Stages the editorial motion system on the sandbox template. Never touches a live template."""
+    from site_content import LOOKS
+    look = LOOKS.get(TEST_TEMPLATE_KEY)
+    if look is None:
+        return False
+    if all(look.get(k) == v for k, v in EDITORIAL_LAYER.items()):
+        return False
+    look.update(EDITORIAL_LAYER)
+    await db.template_looks.update_one(
+        {"key": TEST_TEMPLATE_KEY},
+        {"$set": {"key": TEST_TEMPLATE_KEY, "look": look, "editorial_staged": True}},
+        upsert=True)
+    logger.info("Editorial motion layer staged on the Test Template")
+    return True
 
 
 def install():

@@ -29,6 +29,7 @@ import BookingsCalendar from "@/components/BookingsCalendar";
 import ProSettings from "@/components/ProSettings";
 import CtaFormsPanel from "@/components/CtaFormsPanel";
 import RolloutModal from "@/components/RolloutModal";
+import SiteModePanel from "@/components/SiteModePanel";
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "builder", label: "Site Mode" },
@@ -162,7 +163,12 @@ export default function AppDetail() {
 
       <main className="px-6 lg:px-10 pr-6 lg:pr-10 py-8 fade-in w-full max-w-full" data-testid="app-main">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
-        {tab === "builder" && <Builder appId={appId} appDoc={appDoc} user={user} />}
+        {tab === "builder" && (
+          <div className="space-y-6">
+            <SiteModePanel appId={appId} appName={appDoc?.name || ""} />
+            <Builder appId={appId} appDoc={appDoc} user={user} />
+          </div>
+        )}
         {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
         {tab === "cms" && <CmsPanel appId={appId} />}
         {tab === "workflows" && <WorkflowsPanel appId={appId} />}

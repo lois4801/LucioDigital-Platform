@@ -25,6 +25,9 @@ import { applySkin, getSkin } from "@/components/SkinToggle";
 import TemplateGallery from "@/pages/TemplateGallery";
 import RolloutHistory from "@/pages/RolloutHistory";
 import TestLabLanding from "@/pages/TestLabLanding";
+import CaseStudy from "@/pages/CaseStudy";
+import Showcase from "@/pages/Showcase";
+import RedesignReview from "@/pages/RedesignReview";
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -58,6 +61,9 @@ function AppRouter() {
       <Route path="/templates" element={<ProtectedRoute><PageTransition testid="page-templates"><TemplateGallery /></PageTransition></ProtectedRoute>} />
       <Route path="/rollout-history" element={<ProtectedRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></ProtectedRoute>} />
       <Route path="/test-lab/landing" element={<ProtectedRoute><TestLabLanding /></ProtectedRoute>} />
+      <Route path="/redesign-review" element={<ProtectedRoute><RedesignReview /></ProtectedRoute>} />
+      <Route path="/work" element={<Showcase />} />
+      <Route path="/work/:slug" element={<CaseStudy />} />
       <Route path="/choose/:token" element={<TemplateGallery clientMode />} />
       <Route path="/portal" element={<ProtectedRoute><PageTransition testid="page-portal"><Portal /></PageTransition></ProtectedRoute>} />
       <Route path="/p/:token" element={<PublicPreview />} />

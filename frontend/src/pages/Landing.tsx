@@ -178,6 +178,7 @@ export default function Landing() {
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
               {activeNav === l && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-white/10" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></a>
           ))}
+          <Link data-testid="nav-client-work" to="/work" className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Client work</Link>
           {/* Identical for owners, users and visitors — admin controls live in the slim bar above. */}
           <Link data-testid="nav-login" to="/login" className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
           <Link data-testid="nav-register" to="/register" className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Start free</Link>
@@ -196,6 +197,8 @@ export default function Landing() {
               ))}
               <Link to="/login" data-testid="nav-mobile-signin" onClick={() => setMenuOpen(false)}
                 className="block px-4 py-3 rounded-xl text-sm text-white hover:bg-white/5">Sign in</Link>
+              <Link to="/work" data-testid="nav-mobile-client-work" onClick={() => setMenuOpen(false)}
+                className="block px-4 py-3 rounded-xl text-sm text-[var(--mut)] hover:text-white hover:bg-white/5">Client work</Link>
             </motion.div>
           )}
         </AnimatePresence>
