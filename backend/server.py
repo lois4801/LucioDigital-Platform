@@ -1101,6 +1101,8 @@ from auto_propagate import register as register_auto_propagate
 register_auto_propagate(api, db, get_current_user)
 from tenant_trash import register as register_tenant_trash
 register_tenant_trash(api, db, get_current_user, get_user_app, log_activity)
+from industry_vitals import register as register_industry_vitals
+register_industry_vitals(api, db, get_current_user, get_user_app, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

@@ -1,0 +1,29 @@
+{
+  "summary": "Iteration 80 — Per-template vitals + Site-Mode 'Live figures & charts' editor + Excel/CSV import. Backend (11/11 pytest) and Frontend (Site Mode UI + public site) both PASS. All 33 templates return a unique non-fallback spec (unique titles + unique series pairs). Testlab left on demo source.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter80_vitals.py",
+    "/app/test_reports/pytest/iter80.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "industry_vitals.py: T table cleanly covers all 33 template keys with distinct title + series + variant tuples. FALLBACK exists but is now unreachable for known keys (good).",
+    "Import endpoint correctly rejects .xls with friendly message, rejects single-column files with 400 'Need at least two rows…', supports header row via float() parse failure skip, and honours ?target=series2 for second chart only.",
+    "VitalsEditor click on dropzone opens hidden file input via ref — works cross-browser. Sample sheet download uses object URL + programmatic <a> click and is caught by Playwright (verified figures-template.csv).",
+    "GET /apps/{id}/vitals returns {resolved, demo:{...}} — clean baseline for Reset UX.",
+    "Public /public/site/{token} payload contains vitals and imported labels/values propagate to it (verified by CSV round-trip test)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter80_vitals.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based). Preview token pv_c3b797fcdafc58d4e70e320f.",
+  "seed_data_creation": "None. All test mutations were reset-to-demo at test end; testlab source=='demo' at teardown (confirmed via GET).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests live at /app/backend/tests/test_iter80_vitals.py (11 tests). Run with `pytest -o addopts= backend/tests/test_iter80_vitals.py`. Vitals editor testids: vitals-editor, vitals-title-input, vitals-metric-{label|prefix|value|suffix}-{0..2}, vitals-series-{1|2}, vitals-series-label-{1|2}, vitals-row-{label|value|del}-{1|2}-{i}, vitals-row-add-{1|2}, vitals-import-{1|2}, vitals-dropzone, vitals-file-input, vitals-sample-btn, vitals-reset-btn, vitals-save-btn, vitals-imported-file, vitals-chart-{1|2}. Public site payload endpoint: GET /api/public/site/{token} (not /public/sites/).",
+  "rca of the issue": "N/A — no regressions."
+}

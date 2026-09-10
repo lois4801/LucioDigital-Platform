@@ -753,3 +753,23 @@ FastAPI/Mongo. No feature or UI changes.
   description) — both fixed and confirmed in iteration_79 (3 scroll cycles all re-count; address now
   correct). iteration_79 has no open bugs; only a pre-existing cosmetic overlap of the floating
   "Sign in" pill over the map card on 390px, mitigated with bottom padding on that card.
+
+## 2026-06 · Unique per-template vitals + Site Mode figures editor + Excel/CSV import (iter80, 11/11 backend, frontend 100%)
+- `backend/industry_vitals.py` rewritten around an explicit `T` table covering ALL 33 template keys —
+  each has its own section title, three metric labels (with prefix/value/suffix), a primary series
+  (with its own x-axis kind: years/quarters/months/weeks/days/seasons) AND a second series, plus a
+  unique pair of chart variants. `FALLBACK` still exists but is unreachable for known keys.
+- Endpoints: `GET /public/vitals/{key}`, `GET /apps/{id}/vitals` (resolved + `demo` baseline),
+  `PUT /apps/{id}/vitals`, `POST /apps/{id}/vitals/reset`,
+  `POST /apps/{id}/vitals/import?target=series|series2` (two-column CSV / .xlsx / .xlsm via openpyxl,
+  optional header row, max 12 rows, 400 on <2 usable rows, friendly 400 for legacy .xls).
+- `IndustryVitals.tsx` now renders the REAL vitals payload: 3 metric cards (counted up by
+  ContentMotion), 2 charts drawn from the actual labels/series with axis ticks and a last-point
+  callout, plus the located map. `LiveChart` is exported for reuse.
+- NEW `components/VitalsEditor.tsx`, mounted in the Site Mode panel: section title, the 3 metrics,
+  inline row add/edit/delete for both charts with live chart previews, a drag-and-drop
+  Excel/CSV dropzone (per-chart "Import into this chart" too), sample-sheet download and
+  "Reset to demo".
+- Figures are deliberately NOT auto-propagated from the master workspace — they are client data, so
+  a master edit must never overwrite a tenant's imported numbers. Design/motion propagation is
+  unchanged.

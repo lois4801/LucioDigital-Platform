@@ -69,7 +69,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
             )}
             <div className="relative z-[2]">
               {(page?.blocks || []).map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
-              <IndustryVitals templateKey={detail.key} industry={detail.industry}
+              <IndustryVitals templateKey={detail.key} industry={detail.industry} vitals={detail.vitals}
                 accent={detail.theme?.primary} brand={detail.brand} address={detail.address} />
             </div>
           </div>

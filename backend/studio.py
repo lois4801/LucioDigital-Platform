@@ -442,9 +442,13 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
             prof["accent"] = sm["accent"]
         prof["speed"] = float(sm.get("motion_speed") or prof.get("speed") or 1.0)
         prof["intensity"] = float(sm.get("motion_intensity") or prof.get("intensity") or 1.0)
+        from industry_vitals import spec_for
+        _vk = prof.get("template_key") or doc.get("site_niche") or ""
+        vitals = {**spec_for(_vk, doc.get("industry") or ""), **(doc.get("vitals") or {})}
         return {"app": {**{k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
                         "app_id": doc["app_id"],
                         "site_mode": sm,
+                        "vitals": vitals,
                         "motion_profile": prof},
                 "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True,
                 "webapp": {"converted": bool((doc.get("webapp") or {}).get("converted")),

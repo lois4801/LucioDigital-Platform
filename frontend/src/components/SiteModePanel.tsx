@@ -5,6 +5,7 @@ import { Loader2, ShieldCheck } from "lucide-react";
 import { previewUrl } from "@/components/SitePreviewOverlay";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionTuner from "@/components/editorial/MotionTuner";
+import VitalsEditor from "@/components/VitalsEditor";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -142,6 +143,8 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
             </div>
           </div>
         </div>
+
+        <VitalsEditor appId={appId} accent={sm.accent || "#10B981"} />
 
         {templates.length > 0 && (
           <div className="py-4">
