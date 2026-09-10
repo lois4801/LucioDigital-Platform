@@ -6,6 +6,7 @@ import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
 import { useTenantCursorFX, CursorFXPicker } from "@/components/CursorFX";
 import ChatWidget from "@/components/ChatWidget";
+import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
@@ -66,6 +67,14 @@ export default function PublicPreview() {
     <DesignCtx.Provider value={v2}>
     <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: setOpenForm, editMode: false }}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.app?.site_mode?.style === "editorial" ? "ed-scope" : ""} ${site.app?.site_mode?.animation === "none" ? "ed-static" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" data-site-style={site.app?.site_mode?.style || "original"} data-site-animation={site.app?.site_mode?.animation || "full"} data-hero-motion={site.app?.motion_profile?.hero || ""} style={{ ...themeVars(site.theme), ["--ed-lime"]: site.app?.motion_profile?.accent || site.theme?.primary, background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
+      {site.app?.site_mode?.style === "editorial" && site.app?.motion_profile?.hero && (
+        <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none z-0" aria-hidden="true">
+          <HeroMotionLayer hero={site.app.motion_profile.hero}
+            accent={site.app.motion_profile.accent || site.theme?.primary || "#10B981"}
+            reduced={site.app?.site_mode?.animation === "none"}
+            mobile={typeof window !== "undefined" && window.innerWidth < 768} />
+        </div>
+      )}
       {!embed && <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: site.app.color }} />

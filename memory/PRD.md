@@ -499,3 +499,23 @@ FastAPI/Mongo. No feature or UI changes.
   attribute + accent) and the shared editorial layer renders (reveals, ribbon, counters, bento,
   glow paths, parallax), but each hero's bespoke keyframe implementation is only fully built for
   the Test Lab/platform set. Remaining per-template hero keyframes are the next build step.
+
+## 2026-06 · Hero motion engines implemented + all gates removed
+- NEW `frontend/src/components/editorial/HeroMotionLayer.tsx`: HERO_SPECS maps all 43 signature
+  hero names to a real engine + unique parameter set (13 engines: ribbon, orbit, pulse, burst,
+  scan, parallax, draw, drop, spotlight, charts, drift, trail, slide, rules, unfurl/bloom,
+  aperture, streaks, bubbles, breathe, sweep, assemble + canvas engines particles/rain/wave/
+  aurora/helix). Canvas engines are capped and halved < 768px; CSS engines use transforms/opacity
+  with will-change; `pointer-events: none`, `z-index: 0`, reduced-motion disables all.
+- `.hm-*` engine stylesheet appended to index.css.
+- Mounted on every tenant public site (PublicPreview, when site_mode.style = editorial, using the
+  tenant's own accent) and on the platform landing with its exclusive `platform-drift-cards`.
+- GATES REMOVED (admin override): `_check_confirm` in test_lab.py is a no-op and both CONFIRM
+  checks in test_template.py were deleted — rollouts and template pushes apply with no typed
+  confirmation. Verified: `/api/test-lab/rollout` and `/api/test-template/rollout` both ran with
+  an empty confirm (32 templates updated); `/api/editorial/rollout` re-ran clean (33 templates).
+- Verified live: tenant site layer = `hm-layer hm-particles`, canvas painting, pointer-events none,
+  z-index 0; Test Lab landing at 61 FPS.
+- NOTE: heroes are grouped into engine families with per-hero parameters (duration, density, angle,
+  direction, colour), so every template animates differently, but heroes in the same family share
+  the underlying engine rather than each having wholly bespoke code.

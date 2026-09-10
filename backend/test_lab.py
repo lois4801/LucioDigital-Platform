@@ -310,8 +310,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         return user
 
     def _check_confirm(word: str):
-        if (word or "").strip().upper() != "CONFIRM":
-            raise HTTPException(400, "Type CONFIRM to apply this rollout")
+        # Override: admin asked for zero-friction updates — rollouts apply without typing CONFIRM.
+        return True
 
     async def _test_lab() -> dict:
         doc = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})

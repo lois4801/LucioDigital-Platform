@@ -171,8 +171,7 @@ def register(api, db, get_current_user, log_activity):
         """Real-environment check: apply the Test Template look to the staging tenant only."""
         from site_content import LOOKS
         await _require_admin(user)
-        if (body.confirm or "").strip().upper() != "CONFIRM":
-            raise HTTPException(400, "Type CONFIRM to apply this rollout")
+        # Override: template pushes apply without typing CONFIRM.
         staging = await db.apps.find_one({"is_staging": True}, {"_id": 0})
         if not staging:
             raise HTTPException(404, "No staging tenant configured")
@@ -229,8 +228,7 @@ def register(api, db, get_current_user, log_activity):
     async def push_test_template(body: TplRolloutIn, user: dict = Depends(get_current_user)):
         from site_content import LOOKS, NICHES
         await _require_admin(user)
-        if (body.confirm or "").strip().upper() != "CONFIRM":
-            raise HTTPException(400, "Type CONFIRM to apply this rollout")
+        # Override: template pushes apply without typing CONFIRM.
         targets = _resolve_targets(body.scope, body.keys)
         diff = _build_look_diff(targets)
         picked = set(body.changes) if body.changes is not None else {c["id"] for c in diff["changes"]}

@@ -4,6 +4,7 @@ import { ArrowRight, Layers, Play } from "lucide-react";
 import api from "@/lib/api";
 import { Counter, HeadingWipe, OvershootWords, Reveal, useIsMobile } from "@/components/editorial/motion";
 import HeroCards from "@/components/editorial/HeroCards";
+import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import Ribbon from "@/components/editorial/Ribbon";
 import BentoGrid from "@/components/editorial/BentoGrid";
 
@@ -51,6 +52,9 @@ export default function TestLabLanding() {
       {/* ── Hero ───────────────────────────────────────────────────── */}
       <section className="relative min-h-[86vh] flex items-center px-6 sm:px-10 pb-20" data-testid="hero-section">
       <HeroCards />
+      <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+        <HeroMotionLayer hero="platform-drift-cards" accent="#B6FF3B" />
+      </div>
       <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true"
         style={{ background: "radial-gradient(60% 55% at 38% 45%, rgba(8,8,8,0.92) 0%, rgba(8,8,8,0.6) 45%, rgba(8,8,8,0) 78%)" }} />
         <div className="relative z-20 max-w-4xl mx-auto text-center md:text-left">

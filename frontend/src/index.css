@@ -350,3 +350,135 @@ html { scroll-behavior: smooth; }
 
 /* Site Mode: animation intensity "none" freezes every motion on a tenant's public site. */
 .ed-static, .ed-static * { animation: none !important; transition: none !important; }
+
+/* ── Signature hero motion engines (per-template) ─────────────────────────── */
+.hm-layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+.hm-canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .4; }
+.hm-el { position: absolute; left: var(--x); top: var(--y); pointer-events: none; will-change: transform, opacity; }
+
+/* engine: ribbon — curved film-strip sweep */
+.hm-ribbon .hm-el { width: 90px; height: 58px; border: 1px solid var(--hm-accent); opacity: .28; border-radius: 6px;
+  transform: rotate(var(--hm-tilt)); animation: hm-ribbon var(--hm-dur) linear infinite; animation-delay: var(--d); }
+@keyframes hm-ribbon { from { transform: translate3d(-30vw,0,0) rotate(calc(var(--hm-tilt) * -1)); } to { transform: translate3d(120vw,-40px,0) rotate(var(--hm-tilt)); } }
+
+/* engine: orbit — nodes circling a centre */
+.hm-orbit { --hm-radius: 34%; }
+.hm-orbit .hm-el { left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--hm-accent); opacity: .5;
+  animation: hm-orbit var(--hm-dur) linear infinite; animation-delay: calc(var(--i) * -1.6s); }
+@keyframes hm-orbit {
+  from { transform: rotate(0deg) translateX(var(--hm-radius)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--hm-radius)) rotate(-360deg); }
+}
+
+/* engine: pulse — sonar rings */
+.hm-pulse .hm-el { left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%;
+  border: 1px solid var(--hm-accent); animation: hm-pulse var(--hm-dur) ease-out infinite; animation-delay: calc(var(--i) * 1s); }
+@keyframes hm-pulse { from { transform: scale(.4); opacity: .45; } to { transform: scale(9); opacity: 0; } }
+
+/* engine: burst — shards exploding out */
+.hm-burst .hm-el { left: 50%; top: 50%; width: 3px; height: 42px; background: var(--hm-accent); opacity: .35;
+  animation: hm-burst var(--hm-dur) cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d); transform-origin: center; }
+@keyframes hm-burst { from { transform: rotate(var(--r)) translateY(0) scaleY(0); } 70% { transform: rotate(var(--r)) translateY(-38vh) scaleY(1.1); } to { transform: rotate(var(--r)) translateY(-32vh) scaleY(1); } }
+
+/* engine: scan — dot grid illuminated by a scanning line */
+.hm-scan { background-image: radial-gradient(var(--hm-accent) .8px, transparent .9px); background-size: 26px 26px; }
+.hm-scan .hm-el { left: 0; top: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--hm-accent), transparent);
+  opacity: .5; animation: hm-scan var(--hm-dur) linear infinite; animation-delay: calc(var(--i) * .5s); }
+@keyframes hm-scan { from { transform: translateY(0); } to { transform: translateY(100vh); } }
+
+/* engine: parallax / push-in */
+.hm-parallax .hm-el { inset: 0; left: 0; top: 0; width: 100%; height: 100%;
+  border: 1px solid var(--hm-accent); opacity: .1; animation: hm-push var(--hm-dur) ease-in-out infinite alternate; animation-delay: var(--d); }
+@keyframes hm-push { from { transform: scale(1); } to { transform: scale(var(--hm-scale)); } }
+
+/* engine: draw — trim-path style stroke building (blueprint, route, circuit, pipes, shield, structure) */
+.hm-draw .hm-el { left: var(--x); top: var(--y); width: 34%; height: 1.5px; background: var(--hm-accent); opacity: .35;
+  transform-origin: left center; animation: hm-draw var(--hm-dur) ease-in-out infinite; animation-delay: var(--d); }
+@keyframes hm-draw { 0% { transform: scaleX(0) rotate(var(--r)); } 55% { transform: scaleX(1) rotate(var(--r)); } 100% { transform: scaleX(1) rotate(var(--r)); opacity: .12; } }
+
+/* engine: drop / scatter */
+.hm-drop .hm-el { width: 64px; height: 44px; border: 1px solid var(--hm-accent); border-radius: 8px; opacity: .3;
+  animation: hm-drop var(--hm-dur) cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d); }
+@keyframes hm-drop { from { transform: translate3d(0,-60vh,0) rotate(calc(var(--r) * 2)); opacity: 0; } 80% { transform: translate3d(0,6px,0) rotate(var(--r)); opacity: .3; } to { transform: translate3d(0,0,0) rotate(var(--r)); } }
+
+/* engine: spotlight */
+.hm-spotlight .hm-el:first-child { left: -20%; top: -30%; width: 60vw; height: 160%;
+  background: radial-gradient(closest-side, var(--hm-accent), transparent); opacity: .16;
+  animation: hm-spot var(--hm-dur) ease-in-out infinite alternate; }
+.hm-spotlight .hm-el:not(:first-child) { display: none; }
+@keyframes hm-spot { from { transform: translateX(0); } to { transform: translateX(90vw); } }
+
+/* engine: charts — bars growing + ticker feel */
+.hm-charts .hm-el { bottom: 12%; top: auto; width: 14px; height: 12vh; background: var(--hm-accent); opacity: .25;
+  transform-origin: bottom; animation: hm-bar var(--hm-dur) ease-out infinite alternate; animation-delay: var(--d); }
+@keyframes hm-bar { from { transform: scaleY(.2); } to { transform: scaleY(1); } }
+
+/* engine: drift — wisps / cards rising */
+.hm-drift .hm-el { width: 90px; height: 90px; border-radius: 50%;
+  background: radial-gradient(closest-side, var(--hm-accent), transparent); opacity: .18;
+  animation: hm-rise var(--hm-dur) ease-in-out infinite; animation-delay: var(--d); }
+@keyframes hm-rise { from { transform: translate3d(0,10vh,0) scale(.8); opacity: 0; } 50% { opacity: .2; } to { transform: translate3d(20px,-30vh,0) scale(1.3); opacity: 0; } }
+
+/* engine: trail — paw / footstep walk */
+.hm-trail .hm-el { width: 16px; height: 20px; border-radius: 50% 50% 45% 45%; background: var(--hm-accent); opacity: 0;
+  transform: rotate(var(--r)); animation: hm-trail var(--hm-dur) ease-in-out infinite; animation-delay: calc(var(--i) * .35s); }
+@keyframes hm-trail { 0%,100% { opacity: 0; } 12% { opacity: .28; } 60% { opacity: .12; } }
+
+/* engine: slide — clinical 8px overshoot */
+.hm-slide .hm-el { width: 120px; height: 2px; background: var(--hm-accent); opacity: .3;
+  animation: hm-slide 1.2s cubic-bezier(.2,.9,.2,1) infinite; animation-delay: var(--d); }
+@keyframes hm-slide { 0% { transform: translateX(-40px); } 70% { transform: translateX(8px); } 100% { transform: translateX(0); } }
+
+/* engine: rules — ledger lines */
+.hm-rules .hm-el { left: 0; width: 100%; height: 1px; background: var(--hm-accent); opacity: .16; transform-origin: left;
+  animation: hm-rule var(--hm-dur) ease-out infinite; animation-delay: calc(var(--i) * .12s); }
+@keyframes hm-rule { 0% { transform: scaleX(0); } 60%,100% { transform: scaleX(1); } }
+
+/* engine: unfurl / bloom */
+.hm-unfurl .hm-el, .hm-bloom .hm-el { width: 120px; height: 120px; background: var(--hm-accent); opacity: .12;
+  border-radius: 60% 40% 55% 45%; animation: hm-unfurl var(--hm-dur) ease-in-out infinite alternate; animation-delay: var(--d); }
+@keyframes hm-unfurl { from { transform: scale(.4) rotate(var(--r)); border-radius: 60% 40% 55% 45%; } to { transform: scale(1) rotate(0deg); border-radius: 45% 55% 40% 60%; } }
+
+/* engine: aperture — iris blades */
+.hm-aperture .hm-el { left: 50%; top: 50%; width: 60vw; height: 60vw; margin: -30vw 0 0 -30vw;
+  border: 1px solid var(--hm-accent); opacity: .16; clip-path: polygon(50% 50%, 100% 0, 100% 100%);
+  animation: hm-iris 4s ease-in-out infinite alternate; animation-delay: var(--d); transform-origin: center; }
+@keyframes hm-iris { from { transform: rotate(var(--r)) scale(.7); } to { transform: rotate(calc(var(--r) + 30deg)) scale(1); } }
+
+/* engine: streaks — speed lines */
+.hm-streaks .hm-el { width: 180px; height: 2px; background: linear-gradient(90deg, transparent, var(--hm-accent)); opacity: .3;
+  animation: hm-streak var(--hm-dur) cubic-bezier(.3,0,.1,1) infinite; animation-delay: var(--d); }
+@keyframes hm-streak { from { transform: translateX(-30vw); } to { transform: translateX(110vw); } }
+
+/* engine: bubbles — playful dots */
+.hm-bubbles .hm-el { width: 14px; height: 14px; border-radius: 50%; background: var(--hm-accent); opacity: .22;
+  animation: hm-bubble var(--hm-dur) ease-in-out infinite; animation-delay: var(--d); }
+@keyframes hm-bubble { 0%,100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-26px) scale(1.15); } }
+
+/* engine: breathe */
+.hm-breathe .hm-el { left: 50%; top: 50%; width: 60vw; height: 60vh; margin: -30vh 0 0 -30vw; border-radius: 50%;
+  background: radial-gradient(closest-side, var(--hm-accent), transparent); opacity: .12;
+  animation: hm-breathe var(--hm-dur) ease-in-out infinite alternate; }
+@keyframes hm-breathe { from { transform: scale(1); } to { transform: scale(var(--hm-scale)); } }
+
+/* engine: sweep — brush stroke */
+.hm-sweep .hm-el:first-child { left: 0; top: 0; width: 40vw; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--hm-accent), transparent); opacity: .14;
+  animation: hm-sweep 3.2s ease-in-out infinite; }
+.hm-sweep .hm-el:not(:first-child) { display: none; }
+@keyframes hm-sweep { from { transform: translateX(-40vw); } to { transform: translateX(110vw); } }
+
+/* engine: assemble — broken grid snapping together */
+.hm-assemble .hm-el { width: 72px; height: 48px; border: 1px solid var(--hm-accent); opacity: .18;
+  animation: hm-assemble var(--hm-dur) cubic-bezier(.16,1,.3,1) both; animation-delay: var(--d); }
+@keyframes hm-assemble { from { transform: translate3d(40px,30px,0) rotate(var(--r)) scale(.8); opacity: 0; } to { transform: none; opacity: .18; } }
+
+/* engine: type / flip fall back to a calm shared reveal */
+.hm-type .hm-el, .hm-flip .hm-el { left: var(--x); top: var(--y); width: 140px; height: 2px; background: var(--hm-accent);
+  opacity: .22; animation: hm-rule 2.6s ease-out infinite; animation-delay: var(--d); }
+
+.hm-static .hm-el, .hm-static .hm-canvas { animation: none !important; opacity: .12 !important; transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .hm-layer .hm-el, .hm-layer .hm-canvas { animation: none !important; }
+}
+@media (max-width: 767px) { .hm-canvas { opacity: .28; } }
