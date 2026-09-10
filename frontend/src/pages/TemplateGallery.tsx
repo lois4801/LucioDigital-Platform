@@ -22,7 +22,7 @@ function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260, motio
           {blocks.map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
         </DesignCtx.Provider>
       </div>
-      {mo?.hero && <HeroMotionLayer hero={mo.hero} accent={mo.accent} intensity={0.55} />}
+      {mo?.hero && <HeroMotionLayer hero={mo.hero} accent={mo.accent} mode={detail.theme?.mode} intensity={0.65} />}
     </div>
   );
 }
@@ -59,8 +59,9 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
           <div className="relative">
             {motionProfile?.hero && (
               /* above the hero artwork, never intercepting clicks, screen-blended so copy stays readable */
-              <div className="absolute inset-x-0 top-0 h-[85vh] pointer-events-none z-[5] mix-blend-screen" data-testid="template-preview-motion">
-                <HeroMotionLayer hero={motionProfile.hero} accent={motionProfile.accent} intensity={0.75} />
+              <div className="absolute inset-x-0 top-0 h-[85vh] pointer-events-none z-[5]" data-testid="template-preview-motion">
+                <HeroMotionLayer hero={motionProfile.hero} accent={motionProfile.accent}
+                  mode={detail.theme?.mode} intensity={0.8} />
               </div>
             )}
             <div className="relative z-[2]">

@@ -678,3 +678,21 @@ FastAPI/Mongo. No feature or UI changes.
   any tenant with a `motion_profile.hero` animates unless animation is set to "none".
   Verified: particles visible over the SaaS template preview (tabs + Use this template still clickable)
   and circuit traces live on the Test Lab public site.
+- FIX (motion invisible on light templates): `mix-blend-screen` cancels out on white and 1px
+  low-alpha strokes disappeared. `HeroMotionLayer` now takes a `mode` prop and auto-adapts:
+  dark -> `screen` blend + `lighter` compositing; light -> `multiply` blend + `source-over`,
+  accent darkened 35%, stroke widths x1.9 (Proxy intercepts every `ctx.lineWidth` assignment),
+  intensity x1.45 and higher canvas opacity (0.8 desktop / 0.55 mobile). `data-mode` exposed.
+  Mode is passed from the template theme (gallery cards + full preview), the tenant theme /
+  `site_mode.mode` (PublicPreview) and the Site Mode panel, so switching light/dark re-tunes itself.
+  Verified: dental + accounting (light) now show their motion clearly; dark templates unchanged.
+- Refinement: instead of trusting `site_mode.mode` (the Test Lab reported "light" on a visibly dark
+  page), `HeroMotionLayer` now MEASURES the real backdrop — it walks up to 12 ancestors for the first
+  opaque `background-color`, computes relative luminance and flips to light tuning above 0.45. The
+  `mode` prop is only a fallback when nothing opaque is found. Verified: tenant dark page -> dark/screen,
+  dental + accounting light templates -> light/multiply.
+- Final precedence: an EXPLICIT `mode` prop (a template's own `theme.mode`) wins, because a gallery
+  card's nearest opaque ancestor is the dark dashboard card and would mis-measure. Measurement is the
+  fallback used by the tenant site, Site Mode panel and MotionStage. Result on /templates:
+  14 light / 19 dark auto-tuned; light templates (Northgate calm-pulse-wave, Maison Verde
+  product-orbit-carousel, Brightline precision-slide-in, Ledgerhouse ledger-line-reveal) now visible.

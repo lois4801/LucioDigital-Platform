@@ -77,7 +77,7 @@ export default function PublicPreview() {
     <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: setOpenForm, editMode: false }}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.app?.site_mode?.style === "editorial" ? "ed-scope" : ""} ${site.app?.site_mode?.animation === "none" ? "ed-static" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" data-site-style={site.app?.site_mode?.style || "original"} data-site-animation={site.app?.site_mode?.animation || "full"} data-hero-motion={site.app?.motion_profile?.hero || ""} style={{ ...themeVars(site.theme), ["--ed-lime"]: site.app?.motion_profile?.accent || site.theme?.primary, background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
       {!iso && site.app?.motion_profile?.hero && site.app?.site_mode?.animation !== "none" && (
-        <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none z-[5] mix-blend-screen" aria-hidden="true">
+        <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none z-[5]" aria-hidden="true">
           <HeroMotionLayer hero={site.app.motion_profile.hero}
             accent={site.app.motion_profile.accent || site.theme?.primary || "#10B981"}
             speed={site.app.motion_profile.speed ?? 1}
