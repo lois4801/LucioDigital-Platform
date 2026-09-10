@@ -1,0 +1,39 @@
+{
+  "summary": "Iter93 tested end-to-end: (1) Ribbon Live Line — sources review/offer/figure resolve on /api/public/site/{token}; unknown source 400s; offer window fully respected (no dates -> shows; future offer_from -> static fallback; past offer_to -> static; blank offer_text -> static); per-page source (figure) resolves inside app.marquee.pages[slug] while site-wide stays untouched. (2) Edit log — GET returns {entries, areas, count} with kind/area/message/created_at/actor/role/is_you; newest-first ordering; ?mine=true filters to caller; area labels come from AREAS map; role=agency for owner. (3) Portal Preview — sticky preview renders, desktop/mobile toggles change iframe style, refresh bumps src, Open full site points at /p/{token}; portal MarqueeEditor shows offer_text but hides dates + speed/opacity/font-size/toggle; portal 'Your changes' log has no area/who filters. Backend: 13/14 new pytest tests pass; 1 failure documents a real 500 bug in /apps/{id}/edit-log when limit is raised (see rca). Iter91 (17/17) and Iter92 (9/9) previously green; site-wide reset called on cleanup.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/apps/{id}/edit-log?limit=200", "issue": "Returns 500 (TypeError: unhashable type: 'dict') when the query pulls in older activity_logs rows that stored user_id as a dict. The set comprehension at edit_log.py line 44 `{r.get('user_id') for r in rows ...}` crashes. Only surfaces at higher limits on the master workspace because its legacy rows are further back. UI default limit=60 works, but any client whose history contains an older dict-shaped user_id will crash the panel.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Site Mode -> bottom_source=review", "issue": "After selecting 'Newest review quote' the input didn't appear disabled and the 'Now showing: ...' hint (marquee-bottom_text-live) wasn't visible within 700ms of the change; likely a stale-state race between the save + refetch and the select's onChange re-render. The figure branch worked fine in the same run, and offer/review resolve correctly on the public site, so this is a UI-timing issue rather than a data bug. Worth verifying the editor waits on the refetch before recomputing `src`.", "affected_selectors": ["marquee-bottom_text", "marquee-bottom_text-live"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter93_ribbon_live_editlog.py",
+    "/app/test_reports/pytest/iter93.xml"
+  ],
+  "action_items": [
+    "Fix backend/edit_log.py line 44: guard against non-string user_id values, e.g. `ids = list({r['user_id'] for r in rows if isinstance(r.get('user_id'), str)})`. Also consider `role_by_id.get(uid)` requiring uid to be a string. This unblocks any client whose activity history contains a legacy dict-shaped user_id.",
+    "MarqueeEditor.tsx: after `save({ [sk]: e.target.value })` on the source dropdown, ensure the disabled state + 'Now showing' hint update once the GET refetch completes (they do eventually, but the input momentarily looks editable). Consider optimistic setLocal(sk, e.target.value) before the round-trip so `src` flips immediately."
+  ],
+  "critical_code_review_comments": [
+    "backend/edit_log.py: `{r.get('user_id') for r in rows if r.get('user_id')}` assumes user_id is always hashable. Real data on app_testlab has some rows with dict user_id -> 500. Filter or coerce.",
+    "backend/marquee.py apply_live(): correctly formats figure text uppercase and falls back to `top_live='static'` when the source can't produce a line — verified live. Small nit: `_offer_live` compares ISO strings with `>` / `<` which works only because ISO dates are lexicographically ordered; fine as-is but a comment would help future maintainers.",
+    "MarqueeEditor.tsx line 133: input `value={val(k) || ''}` — when source is review/offer/figure the underlying static text is intentionally kept in state (so the user can toggle back). Good.",
+    "PortalPreview.tsx: uses a `key={src}` on the iframe so the refresh button (bump increment) properly forces a full reload. Good pattern; confirmed visually and via src-attr diff.",
+    "edit_log.py: `role_by_id.get(uid) or 'client'` — a user with an unknown membership record silently becomes 'client'. Acceptable default but consider distinguishing 'unknown'."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter93_ribbon_live_editlog.py"],
+  "success_rate": {"backend": "93% (13/14 new tests pass; 1 failure is a real backend bug)", "frontend": "100% functional (1 minor timing observation)"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based)",
+  "seed_data_creation": "Temporary marquee overrides on app_testlab (top_source/bottom_source/offer_*) and one page override /app-showcase-pro-4 created and cleared. Final state: reset via POST /api/apps/app_testlab/marquee/reset in fixture teardown.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Iter93 covers: ribbon sources (static|review|offer|figure), offer_from/offer_to date window, top_figure/bottom_figure indexes into vitals.metrics, per-page sources under app.marquee.pages[slug], and /api/apps/{id}/edit-log with ?mine and ?limit. Regression file: /app/backend/tests/test_iter93_ribbon_live_editlog.py (13 pass, 1 documenting the edit-log 500 bug — will pass once edit_log.py is fixed). Do NOT delete/archive/rename app_testlab. app_testlab preview_token: pv_c3b797fcdafc58d4e70e320f. Site Mode is /apps/app_testlab -> tab-builder-btn. Portal is /portal (client MarqueeEditor uses textOnly compact: offer text yes, dates no, sliders/toggle no). Public route /p/{token}.",
+  "rca of the issue": "GET /api/apps/{app_id}/edit-log crashes with `TypeError: unhashable type: 'dict'` at edit_log.py:44 `list({r.get('user_id') for r in rows if r.get('user_id')})`. Some legacy documents in db.activity_logs have user_id stored as a dict (probably from an earlier logging call that passed the full user object instead of user_id). Set comprehensions cannot contain unhashable elements. Repro: `GET /api/apps/app_testlab/edit-log?limit=200` -> 500. Fix: coerce to string, e.g. `ids = list({r['user_id'] for r in rows if isinstance(r.get('user_id'), str) and r['user_id']})`. Also worth cleaning the legacy rows: `db.activity_logs.updateMany({user_id: {$type: 'object'}}, {$set: {user_id: ''}})` or similar."
+}

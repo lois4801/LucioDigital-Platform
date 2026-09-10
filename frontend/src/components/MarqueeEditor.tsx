@@ -31,10 +31,10 @@ export default function MarqueeEditor({ appId, accent = "#10B981", mode = "dark"
   async function save(patch: any) {
     setBusy(true);
     try {
-      const { data } = slug
-        ? await api.put(`/apps/${appId}/marquee/pages${slug}`, patch)
-        : await api.put(`/apps/${appId}/marquee`, patch);
-      setD({ ...data, pages_list: d.pages_list });
+      if (slug) await api.put(`/apps/${appId}/marquee/pages${slug}`, patch);
+      else await api.put(`/apps/${appId}/marquee`, patch);
+      const { data } = await api.get(`/apps/${appId}/marquee`);
+      setD(data);
       onSaved();
       toast.success(slug ? "Page ribbon updated on the live site" : "Text ribbon updated on the live site");
     } catch (e: any) {
@@ -45,10 +45,10 @@ export default function MarqueeEditor({ appId, accent = "#10B981", mode = "dark"
   async function reset() {
     setBusy(true);
     try {
-      const { data } = slug
-        ? await api.delete(`/apps/${appId}/marquee/pages${slug}`)
-        : await api.post(`/apps/${appId}/marquee/reset`);
-      setD({ ...data, pages_list: d.pages_list });
+      if (slug) await api.delete(`/apps/${appId}/marquee/pages${slug}`);
+      else await api.post(`/apps/${appId}/marquee/reset`);
+      const { data } = await api.get(`/apps/${appId}/marquee`);
+      setD(data);
       onSaved();
       toast.success(slug ? "This page is back to the site-wide ribbon" : "Template ribbon restored");
     } catch { toast.error("Could not restore the ribbon"); }
@@ -108,17 +108,71 @@ export default function MarqueeEditor({ appId, accent = "#10B981", mode = "dark"
       </div>
 
       <div className="mt-3 grid gap-3 md:grid-cols-2">
-        {[["top_text", "Top ribbon text"], ["bottom_text", "Bottom ribbon text"]].map(([k, label]) => (
-          <div key={k}>
-            <div className="text-xs text-[var(--mut)] mb-1">{label}</div>
-            <input data-testid={`marquee-${k}`} value={val(k) || ""} maxLength={160}
-              placeholder={slug ? `Inherits: ${inherited(k) || "—"}` : ""}
-              onChange={e => setLocal(k, e.target.value)} onBlur={() => save({ [k]: val(k) || "" })}
-              onKeyDown={e => { if (e.key === "Enter") save({ [k]: val(k) || "" }); }}
-              className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" />
-          </div>
-        ))}
+        {[["top_text", "Top ribbon", "top_source", "top_figure"], ["bottom_text", "Bottom ribbon", "bottom_source", "bottom_figure"]].map(([k, label, sk, fk]) => {
+          const src = val(sk) || inherited(sk) || "static";
+          return (
+            <div key={k}>
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs text-[var(--mut)]">{label}</div>
+                <select data-testid={`marquee-${sk}`} value={src}
+                  onChange={e => { setLocal(sk, e.target.value); save({ [sk]: e.target.value }); }}
+                  className="bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1 text-[11px] outline-none focus:border-[var(--acc)]">
+                  <option value="static">Your own wording</option>
+                  <option value="review">Newest review quote</option>
+                  <option value="offer">Current offer</option>
+                  <option value="figure">A live figure</option>
+                </select>
+              </div>
+              {src === "figure" ? (
+                <select data-testid={`marquee-${fk}`} value={Number(val(fk) ?? inherited(fk) ?? 0)}
+                  onChange={e => save({ [fk]: Number(e.target.value) })}
+                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]">
+                  {(d.figures || []).map((f: any) => <option key={f.index} value={f.index}>{f.value} {f.label}</option>)}
+                  {(d.figures || []).length === 0 && <option value={0}>No figures yet — add them in your figures editor</option>}
+                </select>
+              ) : (
+                <input data-testid={`marquee-${k}`} value={val(k) || ""} maxLength={160}
+                  disabled={src !== "static"}
+                  placeholder={src === "review" ? "Pulled live from your newest review"
+                    : src === "offer" ? "Pulled live from the offer below" : (slug ? `Inherits: ${inherited(k) || "—"}` : "")}
+                  onChange={e => setLocal(k, e.target.value)} onBlur={() => save({ [k]: val(k) || "" })}
+                  onKeyDown={e => { if (e.key === "Enter") save({ [k]: val(k) || "" }); }}
+                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)] disabled:opacity-50" />
+              )}
+              {src !== "static" && (
+                <div className="text-[10px] text-[var(--mut)] mt-1" data-testid={`marquee-${k}-live`}>
+                  Now showing: {(d.live || {})[k] || "—"}
+                  {(d.live || {})[sk.replace("_source", "_live")] === "static" && " (falls back to your wording)"}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      {!slug && (
+        <div className="mt-3 rounded-xl border border-[var(--line)] p-3" data-testid="marquee-offer-block">
+          <div className="text-xs text-[var(--mut)] mb-1">Current offer — shown by any ribbon set to “Current offer”</div>
+          <input data-testid="marquee-offer_text" value={d.offer_text || ""} maxLength={160}
+            placeholder="e.g. 15% OFF EVERY BOILER SERVICE BOOKED THIS MONTH"
+            onChange={e => setD((s: any) => ({ ...s, offer_text: e.target.value }))}
+            onBlur={() => save({ offer_text: d.offer_text || "" })}
+            onKeyDown={e => { if (e.key === "Enter") save({ offer_text: d.offer_text || "" }); }}
+            className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]" />
+          {!textOnly && (
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              {[["offer_from", "Starts (optional)"], ["offer_to", "Ends (optional)"]].map(([k, label]) => (
+                <div key={k}>
+                  <div className="text-[10px] text-[var(--mut)] mb-1">{label}</div>
+                  <input type="date" data-testid={`marquee-${k}`} value={d[k] || ""}
+                    onChange={e => save({ [k]: e.target.value })}
+                    className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2.5 py-2 text-xs outline-none focus:border-[var(--acc)]" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {!textOnly && (
         <div className="mt-4 grid gap-4 md:grid-cols-3">
@@ -129,7 +183,7 @@ export default function MarqueeEditor({ appId, accent = "#10B981", mode = "dark"
       )}
 
       <div className="mt-4 rounded-2xl overflow-hidden border border-[var(--line)]" data-testid="marquee-editor-preview">
-        <MarqueeRibbon text={val("top_text") || inherited("top_text")} accent={accent}
+        <MarqueeRibbon text={(d.live || {}).top_text || val("top_text") || inherited("top_text")} accent={accent}
           speed={Number(val("speed") || inherited("speed"))}
           strokeOpacity={Number(val("stroke_opacity") || inherited("stroke_opacity"))}
           fontSize={Math.min(0.6, Number(val("font_size") || inherited("font_size")) * 0.35)}

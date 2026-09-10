@@ -12,6 +12,8 @@ import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
 import ReviewsEditor from "@/components/ReviewsEditor";
 import MarqueeEditor from "@/components/MarqueeEditor";
+import EditLog from "@/components/EditLog";
+import PortalPreview from "@/components/PortalPreview";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 export default function Portal() {
@@ -21,6 +23,7 @@ export default function Portal() {
   const [sel, setSel] = useState(null);
   const [req, setReq] = useState({ title: "", details: "" });
   const [busy, setBusy] = useState(false);
+  const [pv, setPv] = useState(0);
   useEffect(() => { load(); }, []);
   async function load() { try { const { data } = await api.get("/portal"); setData(data); setSel(s => s || data.apps[0]?.app_id); } catch { toast.error("Failed to load portal"); } }
   const app = data?.apps.find(a => a.app_id === sel);
@@ -63,7 +66,9 @@ export default function Portal() {
             <div className="text-xs text-[var(--mut)] mb-3">
               Update the numbers shown on your website yourself, or drop in a spreadsheet — no need to send it to the agency.
             </div>
-            <LocationFields appId={app.app_id} compact />
+            <div className="grid xl:grid-cols-[1fr_360px] gap-5 items-start">
+              <div className="min-w-0">
+            <LocationFields appId={app.app_id} compact onSaved={() => setPv(v => v + 1)} />
             <div className="mt-3 pt-3 border-t border-[var(--line)]">
               <AnimationControls appId={app.app_id} accent={app.color || "#10B981"} compact />
             </div>
@@ -71,11 +76,18 @@ export default function Portal() {
               <ReviewsEditor appId={app.app_id} accent={app.color || "#10B981"} compact />
             </div>
             <div className="mt-3 pt-3 border-t border-[var(--line)]">
-              <MarqueeEditor appId={app.app_id} accent={app.color || "#10B981"} textOnly compact />
+              <MarqueeEditor appId={app.app_id} accent={app.color || "#10B981"} textOnly compact
+                onSaved={() => setPv(v => v + 1)} />
             </div>
             <div className="mt-2 border-t border-[var(--line)]">
               <VitalsEditor appId={app.app_id} accent={app.color || "#10B981"} />
             </div>
+              </div>
+              <PortalPreview token={app.preview_token} v={pv} />
+            </div>
+          </div>
+          <div className="card-surface p-5" data-testid="portal-editlog-card">
+            <EditLog appId={app.app_id} mine compact />
           </div>
           <CursorFXVoting appId={app.app_id} />
           <div className="grid md:grid-cols-3 gap-4">

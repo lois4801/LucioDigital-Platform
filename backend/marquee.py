@@ -45,7 +45,55 @@ PHRASES: Dict[str, tuple] = {
 }
 FALLBACK = ("BUILT PROPERLY · DELIVERED ON TIME", "TRUSTED BY THE PEOPLE WE WORK FOR")
 
-DEFAULTS = {"speed": 1.0, "stroke_opacity": 0.3, "font_size": 1.0, "enabled": True}
+DEFAULTS = {"speed": 1.0, "stroke_opacity": 0.3, "font_size": 1.0, "enabled": True,
+            "top_source": "static", "bottom_source": "static",
+            "top_figure": 0, "bottom_figure": 1,
+            "offer_text": "", "offer_from": "", "offer_to": ""}
+
+SOURCES = ("static", "review", "offer", "figure")
+
+
+def _offer_live(mq: Dict[str, Any]) -> str:
+    """The offer line, only while it is inside its optional date window."""
+    text = (mq.get("offer_text") or "").strip()
+    if not text:
+        return ""
+    today = datetime.now(timezone.utc).date().isoformat()
+    if (mq.get("offer_from") or "") > today or ((mq.get("offer_to") or "") and mq["offer_to"] < today):
+        return ""
+    return text
+
+
+def live_ctx(reviews: Any = None, vitals: Any = None) -> Dict[str, Any]:
+    """The live values a ribbon can pull from: newest review and the client's own figures."""
+    rows = (reviews or {}).get("reviews") or []
+    first = rows[0] if rows else {}
+    return {"review_quote": (first.get("quote") or "").strip(), "review_name": (first.get("name") or "").strip(),
+            "metrics": (vitals or {}).get("metrics") or []}
+
+
+def apply_live(mq: Dict[str, Any], ctx: Dict[str, Any]) -> Dict[str, Any]:
+    """Replace each ribbon's text with its live source, falling back to the static wording."""
+    out = dict(mq)
+    for pos in ("top", "bottom"):
+        src = out.get(f"{pos}_source") or "static"
+        line = ""
+        if src == "review" and ctx.get("review_quote"):
+            quote = ctx["review_quote"].rstrip(" .")
+            line = f"“{quote}”" + (f" — {ctx['review_name']}" if ctx.get("review_name") else "")
+        elif src == "offer":
+            line = _offer_live(out)
+        elif src == "figure":
+            m = (ctx.get("metrics") or [])
+            i = int(out.get(f"{pos}_figure") or 0)
+            if 0 <= i < len(m):
+                row = m[i]
+                line = f"{row.get('prefix') or ''}{row.get('value')}{row.get('suffix') or ''} {row.get('label') or ''}".strip()
+        out[f"{pos}_live"] = src if line else "static"
+        if line:
+            out[f"{pos}_text"] = line.upper() if src == "figure" else line
+    return out
+
 
 
 def spec_for(key: str, brand: str = "") -> Dict[str, Any]:
@@ -75,6 +123,13 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         stroke_opacity: Optional[float] = None
         font_size: Optional[float] = None
         enabled: Optional[bool] = None
+        top_source: Optional[str] = None
+        bottom_source: Optional[str] = None
+        top_figure: Optional[int] = None
+        bottom_figure: Optional[int] = None
+        offer_text: Optional[str] = None
+        offer_from: Optional[str] = None
+        offer_to: Optional[str] = None
 
     class PageMarqueeIn(BaseModel):
         top_text: Optional[str] = None
@@ -83,6 +138,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         stroke_opacity: Optional[float] = None
         font_size: Optional[float] = None
         enabled: Optional[bool] = None
+        top_source: Optional[str] = None
+        bottom_source: Optional[str] = None
+        top_figure: Optional[int] = None
+        bottom_figure: Optional[int] = None
 
     def _resolved(app: dict) -> Dict[str, Any]:
         key = (app.get("motion_profile") or {}).get("template_key") or app.get("site_niche") or ""
@@ -97,6 +156,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Stroke opacity must be between 0.05 and 1")
         if patch.get("font_size") is not None and not 0.5 <= patch["font_size"] <= 2.5:
             raise HTTPException(400, "Font size must be between 0.5x and 2.5x")
+        for pos in ("top_source", "bottom_source"):
+            if patch.get(pos) is not None and patch[pos] not in SOURCES:
+                raise HTTPException(400, f"Unknown ribbon source. Use one of: {', '.join(SOURCES)}")
 
     @api.get("/public/marquee/{key}")
     async def public_marquee(key: str):
@@ -107,7 +169,22 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         app = await get_user_app(app_id, user)
         rows = await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1, "name": 1, "order": 1}).to_list(200)
         rows.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
-        return {**_resolved(app),
+        key = (app.get("motion_profile") or {}).get("template_key") or app.get("site_niche") or ""
+        from industry_vitals import spec_for as _vspec
+        vitals = {**_vspec(key, app.get("industry") or ""), **(app.get("vitals") or {})}
+        from reviews import DEFAULT_STYLE  # noqa: F401  (kept for parity with the reviews payload)
+        rev = app.get("reviews") or {}
+        if not rev.get("reviews"):
+            doc = await db.template_reviews.find_one({"key": key}, {"_id": 0})
+            rev = {"reviews": (doc or {}).get("reviews") or []}
+        base = _resolved(app)
+        ctx = live_ctx(rev, vitals)
+        return {**base,
+                "live": {k: v for k, v in apply_live({k: v for k, v in base.items() if k != "pages"}, ctx).items()
+                         if k in ("top_text", "bottom_text", "top_live", "bottom_live")},
+                "figures": [{"index": i, "label": m.get("label") or f"Figure {i + 1}",
+                             "value": f"{m.get('prefix') or ''}{m.get('value')}{m.get('suffix') or ''}"}
+                            for i, m in enumerate(vitals.get("metrics") or [])],
                 "pages_list": [{"slug": p.get("slug") or "/", "name": p.get("name") or p.get("slug")} for p in rows]}
 
     @api.put("/apps/{app_id}/marquee")

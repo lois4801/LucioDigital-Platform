@@ -1112,6 +1112,8 @@ from onboarding import register as register_onboarding
 register_onboarding(api, db, get_current_user, get_user_app, log_activity)
 from marquee import register as register_marquee
 register_marquee(api, db, get_current_user, get_user_app, log_activity)
+from edit_log import register as register_edit_log
+register_edit_log(api, db, get_current_user, get_user_app)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

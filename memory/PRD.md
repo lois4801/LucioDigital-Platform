@@ -962,3 +962,25 @@ FastAPI/Mongo. No feature or UI changes.
 - ElevenLabs: deliberately NOT wired this pass — the integration is real (key stored server-side via
   `POST /media/config/elevenlabs`, live SDK calls in `extras.py`), the user will add the key themselves
   in AI Media -> Connect ElevenLabs. Voice generation stays unavailable (503) until then.
+
+## 2026-06 · Ribbon live line + client edit log + portal live preview (iter93, backend 14/14, frontend 100%)
+- **Ribbon live line** (`marquee.py`): each ribbon has its own `top_source`/`bottom_source` in
+  `static | review | offer | figure` (unknown -> 400). `live_ctx()` + `apply_live()` resolve the text:
+  newest review quote (`“quote” — Name`), the current offer (`offer_text` gated by the optional
+  `offer_from`/`offer_to` ISO window, which sort lexicographically), or one of the client's own vitals
+  metrics by index (`top_figure`/`bottom_figure`, rendered uppercase as "8640 ACTIVE WORKSPACES").
+  Anything that can't produce a line falls back to the static wording and reports `*_live: "static"`.
+  `studio.public_site()` resolves the site-wide ribbon AND every page override, so per-page sources work.
+  `GET /apps/{id}/marquee` also returns `live` (resolved preview) and `figures` (index/label/value).
+- **Client edit log** (`backend/edit_log.py`, NEW): `GET /apps/{id}/edit-log?mine=&limit=` filters
+  `activity_logs` to content edits via the `AREAS` kind-prefix map (Text ribbon, Reviews, Figures &
+  charts, Onboarding, Design & motion, Pages, Branding, Files & media, Forms, Domain, Change requests),
+  resolves the actor's name plus role (agency = owner, otherwise the membership role) and flags
+  `is_you`. `components/EditLog.tsx` renders it: full panel with area + agency/client filters in Site
+  Mode, and a `mine` "Your changes" card in the Portal. Guard: legacy rows with a dict-shaped `user_id`
+  are skipped (they used to 500 the endpoint at higher limits).
+- **Portal live preview** (`components/PortalPreview.tsx`): sticky iframe of `/p/{token}?embed=1`
+  beside the client's editors, desktop/mobile toggle, manual refresh, "Open full site"; the frame
+  remounts whenever a save fires (`onSaved` -> version bump), so clients see their change immediately.
+- MarqueeEditor now flips the source dropdown optimistically before the save round-trip and refetches
+  the resolved payload afterwards.
