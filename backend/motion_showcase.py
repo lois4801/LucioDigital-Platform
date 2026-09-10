@@ -28,7 +28,7 @@ LABELS = {
     "beauty": "Beauty", "insurance": "Insurance", "pet_grooming": "Pet Grooming",
     "hvac_plumbing": "HVAC & Plumbing", "coworking": "Coworking", "wellness": "Wellness",
     "cleaning": "Cleaning", "music_school": "Music School", "nonprofit": "Nonprofit",
-    "architecture": "Architecture", "test_template": "Sandbox Template",
+    "architecture": "Architecture", "test_template": "Sandbox Project",
     "tech_code": "Tech / Code", "medical": "Medical", "sports": "Sports", "fashion": "Fashion",
     "internal_tools": "Internal Tools", "saas_portals": "SaaS Portals",
     "art_culture": "Art & Culture", "mental_health": "Mental Health",
@@ -114,7 +114,7 @@ def register(api, db, get_current_user):
         if key == "platform":
             prof = PLATFORM_PROFILE
         if not prof:
-            raise HTTPException(404, "Unknown template")
+            raise HTTPException(404, "Unknown project")
         live = await _live_by_template()
         clients = live.get(key) or (["luciodigital.ca"] if key == "platform" else [])
         return {

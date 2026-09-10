@@ -13,7 +13,7 @@ import MarqueeEditor from "@/components/MarqueeEditor";
 import EditLog from "@/components/EditLog";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 
-const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
+const STYLES = [["original", "Original project"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
 const ANIMS = [["full", "Full"], ["reduced", "Reduced"], ["none", "None"]];
 const PUB = [["draft", "Draft"], ["preview", "Preview link only"], ["live", "Live"]];
@@ -96,7 +96,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
       </div>
 
       <div className="mt-4">
-        <Row busy={busy} testid="sm-style" label="Design style" hint="Original template look, or the new editorial motion system."
+        <Row busy={busy} testid="sm-style" label="Design style" hint="Original project look, or the new editorial motion system."
           value={sm.style} options={STYLES} onPick={v => patch({ style: v })} />
         <Row busy={busy} testid="sm-mode" label="Light / dark default" hint="What visitors see first on this client's public site."
           value={sm.mode} options={MODES} onPick={v => patch({ mode: v })} />
@@ -113,7 +113,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
             <div className="flex items-center gap-2">
               <select data-testid="sm-hero-select" value={sm.hero || ""} onChange={e => patch({ hero: e.target.value })}
                 className="bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--acc)] max-w-[240px]">
-                <option value="">— inherit from template —</option>
+                <option value="">— inherit from project —</option>
                 {heroes.map(h => <option key={h.hero} value={h.hero}>{h.hero}</option>)}
               </select>
               <a href="/hero-gallery" data-testid="sm-hero-gallery-link" className="chip cursor-pointer hover:!text-white">See all {heroes.length}</a>
@@ -177,7 +177,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
 
         {templates.length > 0 && (
           <div className="py-4">
-            <div className="text-sm font-semibold">Active template</div>
+            <div className="text-sm font-semibold">Active project</div>
             <div className="text-xs text-[var(--mut)] mt-0.5 mb-2">Which industry layout drives this client's site.</div>
             <select data-testid="sm-template" value={sm.template_key || ""} onChange={e => patch({ template_key: e.target.value })}
               className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]">

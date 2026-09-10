@@ -1039,3 +1039,27 @@ the Stripe Checkout card path automatically).
   resolve to `client` and keep Portal access for free.
 - Fixed during testing: admin "email this member" 500 (`send_email` returns a str on one provider path)
   and a `resolve_access` edge where a manual month with no end date never expired.
+
+## 2026-06 · "Template" -> "Project" rename + Client Work button removed (iter96, backend 9/9, frontend 100%)
+User choice: rename ONLY what people read on screen. The `/templates` URL, every API path, response key
+(`{"templates": [...]}`), database field and every `data-testid` stay exactly as they were, so no saved
+links, tests or integrations break.
+- `scripts/rename_templates_to_projects.py` rewrote JSX text nodes and human-copy string literals across
+  the frontend; the pass over-reached into API keys, query params, log kinds and test ids, so the backend
+  was reverted wholesale and redone by hand (user-facing strings only: HTTP error details, activity-log
+  messages, the sandbox brand `TEST_TEMPLATE_BRAND = "Test Project"`, the welcome email copy) and the
+  frontend internals were restored (`page-templates`, `app-templates-btn`, `sm-template`,
+  `workflow-templates-btn`, `nav-templates-link`, `?template=` query params, `kind === "template"`).
+  LESSON: a blanket rename script must never touch quoted keys, params or ids — audit `git diff` first.
+- Visible copy now: nav "Projects", "Projects gallery · 33 designs", "Use this project", "Active project",
+  "Original project look", "Reset to project default", "Industry projects (N)", "PROJECTS READY",
+  tab titles "LucioDigital — Projects" / "Choose a project", and "Unknown project" errors.
+- Stored copy migrated too (source-only renames leave the database behind):
+  `backend/scripts/rename_stored_template_copy.py` (AI review text, landing CMS) and
+  `rename_stored_template_copy2.py` (client names/descriptions, page names, historical activity-log
+  messages, case studies).
+- Client Work: the landing links are gone from both `Landing.tsx` (desktop nav + mobile menu) and
+  `TestLabLanding.tsx`, with no layout gap; the `/work` page and `/work/{slug}` case studies stay live
+  and reachable (public slug is `luciodigital-test-lab`).
+- Fixed two stale iter69 assertions: the sandbox brand string, and a non-admin push now answering 402
+  (membership gate) before 403.

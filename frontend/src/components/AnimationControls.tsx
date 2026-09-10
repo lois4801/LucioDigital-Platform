@@ -80,12 +80,12 @@ export default function AnimationControls({ appId, accent = "#10B981", onSaved =
         <div className="min-w-0">
           <div className="text-sm font-semibold flex items-center gap-2"><Wand2 size={13} className="text-[var(--acc)]" /> Box entrance animation</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
-            How every card, heading and text group enters as visitors scroll. Each template has its own by default.
+            How every card, heading and text group enters as visitors scroll. Each project has its own by default.
           </div>
         </div>
         <select data-testid="sm-boxanim-select" value={sm.box_anim || ""} disabled={busy}
           onChange={e => patch({ box_anim: e.target.value })} className={sel}>
-          <option value="">— inherit from template —</option>
+          <option value="">— inherit from project —</option>
           {BOX_ANIMS.map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
         </select>
       </div>
@@ -121,7 +121,7 @@ export default function AnimationControls({ appId, accent = "#10B981", onSaved =
               <select data-testid={`sm-section-anim-${key}`} value={secs[key] || ""} disabled={busy}
                 onChange={e => patch({ box_anim_sections: { ...secs, [key]: e.target.value } })}
                 className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-xs outline-none focus:border-[var(--acc)]">
-                <option value="">inherit · {sm.box_anim ? (BOX_ANIMS.find(a => a.key === sm.box_anim)?.label || sm.box_anim) : (BOX_ANIMS.find(a => a.key === sectionAnimFor(tpl, key))?.label || "template")}</option>
+                <option value="">inherit · {sm.box_anim ? (BOX_ANIMS.find(a => a.key === sm.box_anim)?.label || sm.box_anim) : (BOX_ANIMS.find(a => a.key === sectionAnimFor(tpl, key))?.label || "project")}</option>
                 {BOX_ANIMS.map(a => <option key={a.key} value={a.key}>{a.label}</option>)}
               </select>
             </label>

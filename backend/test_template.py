@@ -16,7 +16,7 @@ from pydantic import BaseModel
 logger = logging.getLogger("agency.test_template")
 
 TEST_TEMPLATE_KEY = "test_template"
-TEST_TEMPLATE_BRAND = "Test Template"
+TEST_TEMPLATE_BRAND = "Test Project"
 BASE_KEY = "it_services"  # neutral base clone — no client-facing template is ever used as the sandbox
 
 # Look fields we can diff and push, grouped the same way the Diff Viewer groups them.
@@ -127,14 +127,14 @@ def register(api, db, get_current_user, log_activity):
 
     async def _require_admin(user: dict):
         if (user.get("email") or "").lower().strip() not in await _rollout_admins():
-            raise HTTPException(403, "Only a rollout admin can push template changes")
+            raise HTTPException(403, "Only a rollout admin can push project changes")
 
     def _resolve_targets(scope: str, keys: Optional[List[str]]) -> List[str]:
         from site_content import LOOKS
         if scope == "selected":
             picked = [k for k in (keys or []) if k in LOOKS and k != TEST_TEMPLATE_KEY]
             if not picked:
-                raise HTTPException(400, "Choose at least one template to push to")
+                raise HTTPException(400, "Choose at least one project to push to")
             return picked
         out = [k for k in LOOKS if k != TEST_TEMPLATE_KEY]
         if scope == "classic":
@@ -198,10 +198,10 @@ def register(api, db, get_current_user, log_activity):
             "diff": {"changes": rows, "by_category": {"Design": rows}, "total": len(rows),
                      "target_count": 1,
                      "targets": [{"app_id": staging["app_id"], "name": staging.get("name")}]},
-            "detail": f"Applied {len(fields)} Test Template change(s) to staging",
+            "detail": f"Applied {len(fields)} Test Project change(s) to staging",
             "created_at": _now(), "finished_at": _now()})
         await log_activity(TEST_LAB_ID, user["user_id"], "rollout.template_staging",
-                           f"Pushed {len(fields)} Test Template change(s) to staging")
+                           f"Pushed {len(fields)} Test Project change(s) to staging")
         return {"ok": True, "job_id": job_id, "staging": staging["app_id"], "changes": len(fields)}
 
     @api.get("/test-template")

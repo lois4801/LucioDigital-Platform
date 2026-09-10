@@ -242,5 +242,5 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def reset_marquee(app_id: str, user: dict = Depends(get_current_user)):
         app = await get_user_app(app_id, user)
         await db.apps.update_one({"app_id": app_id}, {"$unset": {"marquee": ""}})
-        await log_activity(app_id, user["user_id"], "marquee.reset", "Restored the template ribbon")
+        await log_activity(app_id, user["user_id"], "marquee.reset", "Restored the project ribbon")
         return _resolved({**app, "marquee": None})

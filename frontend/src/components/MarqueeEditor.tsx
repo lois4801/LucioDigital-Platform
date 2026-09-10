@@ -50,7 +50,7 @@ export default function MarqueeEditor({ appId, accent = "#10B981", mode = "dark"
       const { data } = await api.get(`/apps/${appId}/marquee`);
       setD(data);
       onSaved();
-      toast.success(slug ? "This page is back to the site-wide ribbon" : "Template ribbon restored");
+      toast.success(slug ? "This page is back to the site-wide ribbon" : "Project ribbon restored");
     } catch { toast.error("Could not restore the ribbon"); }
     finally { setBusy(false); }
   }

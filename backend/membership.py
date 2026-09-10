@@ -184,8 +184,8 @@ def register(api, db, get_current_user, log_activity):
                 "Welcome to LucioDigital",
                 f"<p>Your membership is active, {user.get('name') or user.get('email')}.</p>"
                 "<p>Your agency setup fee is paid and hosting &amp; maintenance is billing monthly. "
-                "You now have full access: unlimited client projects, all templates, the client dashboard "
-                "and Site Mode. Receipts and invoices come straight from Stripe.</p>",
+                "You now have full access: unlimited client projects, all 33+ industry projects, the client "
+                "dashboard and Site Mode. Receipts and invoices come straight from Stripe.</p>",
                 "Open your dashboard", f"{os.environ.get('FRONTEND_URL') or ''}/dashboard", "LucioDigital")
             await send_email(to=user["email"], subject="Welcome to LucioDigital — your membership is active", html=html)
         except Exception:

@@ -44,7 +44,7 @@ function ShowcaseCard({ s, i, onOpen }) {
       <div className="p-4 flex items-center justify-between gap-2">
         <div className="font-display text-lg truncate" data-testid={`showcase-name-${i}`}>{s.title}</div>
         <span data-testid={`showcase-status-${i}`} className={`chip ${live ? "chip-active badge-glow" : ""} shrink-0`} style={{ padding: "2px 8px" }}>
-          {live && <span className="pulse-dot" />}{live ? "LIVE" : "TEMPLATE"}
+          {live && <span className="pulse-dot" />}{live ? "LIVE" : "PROJECT"}
         </span>
       </div>
     </motion.div>
@@ -58,13 +58,13 @@ function NicheModal({ s, i, onClose, onStart }) {
         <div className="aspect-[21/9] relative">{s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <video src={s.video} autoPlay muted loop playsInline className="w-full h-full object-cover" />}<div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] to-transparent" /><div className="absolute top-4 left-4 chip">{s.tag}</div>
           <button data-testid="niche-modal-close" onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-black/80"><X size={14} /></button></div>
         <div className="p-7">
-          <div className="overline mb-2">{s.tag}{s.status === "TEMPLATE" ? " template" : " · live client"}</div>
+          <div className="overline mb-2">{s.tag}{s.status === "TEMPLATE" ? " project" : " · live client"}</div>
           <h3 className="font-display text-2xl font-bold tracking-tight">{s.title || s.name}</h3>
           <p className="text-[var(--mut)] mt-3">{s.summary || s.blurb}</p>
           <div className="mt-5 flex flex-wrap gap-2">{(s.sections || []).map(x => <span key={x} className="chip normal-case tracking-normal">{typeof x === "string" ? x.replace(/_/g, " ") : x}</span>)}</div>
           <p className="text-xs text-[var(--dim)] mt-4">Includes: dark premium design system, glass cards, niche hero imagery, AI chat widget, lead inbox, workflows, CMS and one-click export.</p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <button data-testid="niche-modal-cta" onClick={onStart} className="btn-primary btn-glow arrow-slide inline-flex items-center gap-2">Get started with this template <ArrowRight size={14} /></button>
+            <button data-testid="niche-modal-cta" onClick={onStart} className="btn-primary btn-glow arrow-slide inline-flex items-center gap-2">Get started with this project <ArrowRight size={14} /></button>
             <a data-testid="niche-modal-demo" href="mailto:jaybernabe@luciodigital.com?subject=Demo request" className="btn-ghost">Request a demo</a>
           </div>
         </div>
@@ -75,7 +75,7 @@ function NicheModal({ s, i, onClose, onStart }) {
 
 const DEMOS = [
   { title: "Site Mode — prompt to a multi-page site in 60 seconds", tag: "Framer-style builder", len: "1:24", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4" },
-  { title: "App Mode — 18 industry templates with live prototypes", tag: "Lovable-style app builder", len: "0:58", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
+  { title: "App Mode — 18 industry projects with live prototypes", tag: "Lovable-style app builder", len: "0:58", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4" },
   { title: "Export & handoff — GitHub, .zip, custom domains", tag: "Handoff pipeline", len: "0:46", video: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4" },
 ];
 
@@ -191,7 +191,6 @@ export default function Landing() {
             <a key={l} href={h} onClick={() => setActiveNav(l)} data-testid={`nav-pill-${l.toLowerCase()}-link`} className={`relative hidden md:inline px-3 py-1.5 text-sm transition-colors ${activeNav === l ? "text-white" : "text-[var(--mut)] hover:text-white"}`}>
               {activeNav === l && <motion.span layoutId="nav-pill" className="absolute inset-0 rounded-full bg-white/10" transition={{ duration: 0.25, ease: fast }} />}<span className="relative">{l}</span></a>
           ))}
-          <Link data-testid="nav-client-work" to="/work" className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Client work</Link>
           {/* Identical for owners, users and visitors — admin controls live in the slim bar above. */}
           <Link data-testid="nav-login" to="/login" className="hidden md:inline px-3 py-1.5 text-sm text-[var(--mut)] hover:text-white">Sign in</Link>
           <Link data-testid="nav-register" to="/register" className="ml-1 rounded-full bg-[var(--acc)] hover:bg-emerald-400 text-black font-semibold text-sm px-4 py-1.5 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-colors">Start free</Link>
@@ -210,8 +209,6 @@ export default function Landing() {
               ))}
               <Link to="/login" data-testid="nav-mobile-signin" onClick={() => setMenuOpen(false)}
                 className="block px-4 py-3 rounded-xl text-sm text-white hover:bg-white/5">Sign in</Link>
-              <Link to="/work" data-testid="nav-mobile-client-work" onClick={() => setMenuOpen(false)}
-                className="block px-4 py-3 rounded-xl text-sm text-[var(--mut)] hover:text-white hover:bg-white/5">Client work</Link>
             </motion.div>
           )}
         </AnimatePresence>
@@ -278,7 +275,7 @@ export default function Landing() {
       <section className="relative z-10 px-6 lg:px-14 py-16" data-testid="niche-cards-section">
         <div className="max-w-7xl mx-auto mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <div className="overline">Niche templates</div>
+            <div className="overline">Niche projects</div>
             <div className="text-sm text-[var(--mut)] mt-1">{templates.length} industry template{templates.length === 1 ? "" : "s"} ready to spin up — this list updates itself as templates are added or removed.</div>
           </div>
         </div>
@@ -296,7 +293,7 @@ export default function Landing() {
               </div>
             </div>
           ))}
-          {templates.length === 0 && <div className="col-span-2 md:col-span-4 text-sm text-[var(--mut)]">Loading templates…</div>}
+          {templates.length === 0 && <div className="col-span-2 md:col-span-4 text-sm text-[var(--mut)]">Loading projects…</div>}
         </div>
       </section>
 
@@ -324,7 +321,7 @@ export default function Landing() {
           <motion.div variants={fade} className="mb-12 max-w-2xl">
             <AdminText admin={admin} value={tx("demos_overline", "See it in action")} onSave={saveText("demos_overline")} as="div" className="overline mb-3" testid="text-demos-overline" />
             <AdminText admin={admin} value={tx("demos_heading", "Watch LucioDigital build, brand and ship a product.")} onSave={saveText("demos_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-demos-heading" />
-            <p className="text-[var(--mut)] mt-3"><Tx k="demos_sub" f="Three short walkthroughs: Site Mode, App Mode with industry templates, and the export & handoff pipeline." /></p>
+            <p className="text-[var(--mut)] mt-3"><Tx k="demos_sub" f="Three short walkthroughs: Site Mode, App Mode with industry projects, and the export & handoff pipeline." /></p>
           </motion.div>
           <div className="grid lg:grid-cols-[1.6fr_1fr] gap-6">
             <DemoVideo big d={demoAt(0)} i={0} />
@@ -358,7 +355,7 @@ export default function Landing() {
       {platformReviews.length > 0 && (
         <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
           <ReviewsSection reviews={platformReviews} limeLock
-            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, template speed, motion quality and client handoff." }} />
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, project speed, motion quality and client handoff." }} />
         </div>
       )}
 

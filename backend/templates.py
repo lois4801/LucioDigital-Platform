@@ -77,7 +77,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, install_defa
     async def apply_template(app_id: str, key: str, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
         if key not in T:
-            raise HTTPException(404, "Template not found")
+            raise HTTPException(404, "Project not found")
         spec = build_spec(key)
         spec["generated_at"] = datetime.now(timezone.utc).isoformat()
         theme = spec.pop("theme")
@@ -86,5 +86,5 @@ def register(api, db, get_current_user, get_user_app, log_activity, install_defa
         nk = key if key in LOOKS else INDUSTRY_MAP.get(T[key][1].lower().strip())
         theme = theme_for(NICHES[nk], nk) if nk in LOOKS else {**theme, "font_heading": "Plus Jakarta Sans", "font_body": "Manrope", "muted": "#64748B", "border": "#E2E8F0"}
         await db.apps.update_one({"app_id": app_id}, {"$set": {"app_spec": spec, "kind": "app", "industry": T[key][1], "site_niche": nk if nk in LOOKS else None, "theme": theme}})
-        await log_activity(app_id, user["user_id"], "template.applied", f"Applied template: {spec['name']}")
+        await log_activity(app_id, user["user_id"], "template.applied", f"Applied project: {spec['name']}")
         return {"spec": spec, "theme": theme}

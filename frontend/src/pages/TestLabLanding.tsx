@@ -57,8 +57,7 @@ export default function TestLabLanding() {
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
-          <Link to="/work" className="hover:text-white transition-colors">Client work</Link>
-          <Link to="/templates" data-testid="nav-templates-link" className="hover:text-white transition-colors">Templates</Link>
+          <Link to="/templates" data-testid="nav-templates-link" className="hover:text-white transition-colors">Projects</Link>
           {member?.full_access
             ? <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
             : <Link to="/upgrade" data-testid="nav-upgrade-btn" className="px-3.5 py-1.5 rounded-full bg-[var(--ed-lime)] text-black font-semibold hover:brightness-110 transition-all">Upgrade</Link>}
@@ -110,7 +109,7 @@ export default function TestLabLanding() {
           </Reveal>
 
           <div className="mt-14 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg mx-auto md:mx-0" data-testid="hero-stats">
-            {[["Clients created", stats.tenants], ["Templates ready", stats.templates], ["Live clients", stats.live]].map(([label, value], i) => (
+            {[["Clients created", stats.tenants], ["Projects ready", stats.templates], ["Live clients", stats.live]].map(([label, value], i) => (
               <Reveal key={label} i={i} className="text-center md:text-left">
                 <div className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
                   <Counter to={Number(value)} testid={`hero-stat-${i}`} />
@@ -144,7 +143,7 @@ export default function TestLabLanding() {
         <div className="max-w-7xl mx-auto">
           <span className="ed-pill">Selected work</span>
           <HeadingWipe testid="work-heading" className="mt-5 font-display text-3xl sm:text-5xl font-bold tracking-[-0.03em] max-w-3xl">
-            Templates, shipped as products.
+            Projects, shipped as products.
           </HeadingWipe>
           <div className="mt-12 grid grid-cols-2 lg:grid-cols-4 gap-4">
             {templates.slice(0, 8).map((c, i) => (
@@ -162,7 +161,7 @@ export default function TestLabLanding() {
                 </article>
               </Reveal>
             ))}
-            {templates.length === 0 && <div className="col-span-full text-sm text-white/40">Loading templates…</div>}
+            {templates.length === 0 && <div className="col-span-full text-sm text-white/40">Loading projects…</div>}
           </div>
         </div>
       </section>
@@ -173,7 +172,7 @@ export default function TestLabLanding() {
       {platformReviews.length > 0 && (
         <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
           <ReviewsSection reviews={platformReviews} limeLock
-            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, template speed, motion quality and client handoff." }} />
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, project speed, motion quality and client handoff." }} />
         </div>
       )}
 

@@ -168,7 +168,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, wf=None):
     async def install_template(app_id: str, key: str) -> dict:
         t = WORKFLOW_TEMPLATES.get(key)
         if not t:
-            raise HTTPException(404, "Template not found")
+            raise HTTPException(404, "Project not found")
         doc = {"workflow_id": uid("wf"), "app_id": app_id, **t, "template": key, "enabled": True, "runs": 0, "last_run": None, "created_at": now_iso()}
         await db.workflows.insert_one(dict(doc))
         return doc
@@ -177,7 +177,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, wf=None):
     async def add_template(app_id: str, key: str, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
         doc = await install_template(app_id, key)
-        await log_activity(app_id, user["user_id"], "workflow.template", f"Installed workflow template: {doc['name']}")
+        await log_activity(app_id, user["user_id"], "workflow.template", f"Installed workflow project: {doc['name']}")
         return doc
 
     async def install_defaults(app_id: str):

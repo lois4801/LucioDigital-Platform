@@ -80,7 +80,7 @@ export default function RedesignReview() {
             Everything here is already live.
           </div>
           <p className="text-sm text-[var(--mut)] mt-2 max-w-2xl mx-auto">
-            Auto-propagation is permanently on: every change lands on its template immediately,
+            Auto-propagation is permanently on: every change lands on its project immediately,
             reaches every active client using it, and is inherited by future clients. There is no
             approval step, no diff to confirm and no push button.
           </p>

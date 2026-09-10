@@ -40,7 +40,7 @@ export default function LocationFields({ appId, onSaved = () => {}, compact = fa
       <div className="text-sm font-semibold flex items-center gap-2"><MapPin size={13} className="text-[var(--acc)]" /> Business address</div>
       <div className="text-xs text-[var(--mut)] mt-0.5">
         Drives the map, the “Get directions” button and your contact + footer details.
-        {sm.template_address && !sm.address ? ` Showing the template sample for now: ${sm.template_address}` : ""}
+        {sm.template_address && !sm.address ? ` Showing the project sample for now: ${sm.template_address}` : ""}
       </div>
       <div className="mt-3 grid sm:grid-cols-2 gap-2">
         <input data-testid="sm-address-input" value={addr} onChange={e => setAddr(e.target.value)}

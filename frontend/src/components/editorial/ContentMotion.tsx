@@ -3,7 +3,7 @@ import { animForTemplate, teamAnimFor, durFor, sectionOfBlock, sectionAnimFor } 
 
 /** PowerPoint-style entrance animations for the CONTENT: every card, stat box, heading and
  *  paragraph group plays an entrance each time it scrolls into view. Per-section overrides win,
- *  then the client's site-wide choice, then the template's own per-section defaults.
+ *  then the client's site-wide choice, then the project's own per-section defaults.
  *  One shared IntersectionObserver, CSS animations only, so the cursor stays smooth. */
 export default function ContentMotion({
   scopeSelector = "[data-content-motion]",

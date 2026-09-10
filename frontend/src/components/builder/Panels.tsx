@@ -36,7 +36,7 @@ export function ThemePanel({ theme, onChange }) {
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-[var(--mut)] mt-1.5">Studio 2026 modernises any template's cards, buttons and type without touching your content.</p>
+          <p className="text-[10px] text-[var(--mut)] mt-1.5">Studio 2026 modernises any project's cards, buttons and type without touching your content.</p>
         </div>
       {[["font_heading", "Heading font"], ["font_body", "Body font"]].map(([k, l]) => (
         <label key={k} className="flex items-center justify-between text-xs"><span className="text-[var(--mut)]">{l}</span>

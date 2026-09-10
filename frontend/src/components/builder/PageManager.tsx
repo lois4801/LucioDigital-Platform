@@ -140,7 +140,7 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
           </div>
           <button data-testid="page-sections-btn" onClick={() => onSections?.(active)}
             className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1.5 shrink-0">
-            <LayoutTemplate size={11} /> Apply a section template
+            <LayoutTemplate size={11} /> Apply a section project
           </button>
           <button data-testid="page-save-set-btn" onClick={() => setSaveSet(true)}
             className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1.5 shrink-0">

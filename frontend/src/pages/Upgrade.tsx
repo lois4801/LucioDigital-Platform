@@ -8,14 +8,14 @@ import { useMembership } from "@/lib/membership";
 
 const SETUP_INCLUDES = [
   "Create unlimited client projects",
-  "All 33+ industry templates, fully editable",
+  "All 33+ industry projects, fully editable",
   "The full client management dashboard",
   "Site Mode visual editor for every client site",
 ];
 const MONTHLY_INCLUDES = [
   "Hosting for every client site you publish",
   "Ongoing maintenance and platform updates",
-  "Reviews, e-commerce, motion design & template switcher",
+  "Reviews, e-commerce, motion design & project switcher",
   "Client portals with live previews",
 ];
 
@@ -107,7 +107,7 @@ export default function Upgrade() {
           Two payments and the whole platform is yours.
         </h1>
         <p className="text-base text-white/55 mt-4 max-w-xl">
-          Browsing the templates is free forever. Building, publishing and managing client sites needs an
+          Browsing the projects is free forever. Building, publishing and managing client sites needs an
           active membership — a one-time setup fee, then hosting and maintenance every month.
         </p>
 
@@ -166,7 +166,7 @@ export default function Upgrade() {
         </div>
 
         <div className="mt-10 flex flex-wrap gap-3">
-          <Link to="/templates" className="btn-ghost" data-testid="browse-templates-link">Keep browsing the templates</Link>
+          <Link to="/templates" className="btn-ghost" data-testid="browse-templates-link">Keep browsing the projects</Link>
           {member && <Link to="/account" className="btn-ghost" data-testid="upgrade-account-link">Account settings</Link>}
         </div>
       </main>

@@ -132,7 +132,7 @@ export default function BlueprintPanel({ appId, apiRoot }) {
             <button data-testid="app-generate-btn" onClick={generate} disabled={busy || brief.trim().length < 10} className="btn-primary flex items-center gap-2 disabled:opacity-50">{busy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} {busy ? "Architecting (30–60s)…" : spec ? "Regenerate blueprint" : "Generate blueprint"}</button>
             <button data-testid="app-long-brief-btn" onClick={() => setBriefOpen(true)} className="btn-ghost flex items-center gap-2 text-sm"><FileUp size={14} /> Upload doc / long brief</button>
             <button data-testid="app-sync-btn" onClick={syncFromSite} disabled={syncing} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--cyan,#14B8A6)]/50 text-[var(--acc)] disabled:opacity-50">{syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />} {syncing ? "Reading your site…" : spec ? "Re-sync app from my site" : "Build app from my site"}</button>
-            <button data-testid="app-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--acc)]/50 text-[var(--acc)]"><LayoutGrid size={14} /> Industry templates ({templates.length})</button>
+            <button data-testid="app-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost flex items-center gap-2 text-sm !border-[var(--acc)]/50 text-[var(--acc)]"><LayoutGrid size={14} /> Industry projects ({templates.length})</button>
           </div>
         </div>
         <div data-testid="app-sync-bar" className="mt-4 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-3">
@@ -154,7 +154,7 @@ export default function BlueprintPanel({ appId, apiRoot }) {
       </div>
 
       {loading ? null : !spec ? (
-        <div className="card-surface p-12 text-center text-[var(--mut)] text-sm">No blueprint yet. Pick an <button onClick={() => setTplOpen(true)} className="text-[var(--acc)] underline">industry template</button> or describe your app above — the result becomes a navigable prototype here and React + FastAPI starter code in the .zip export.</div>
+        <div className="card-surface p-12 text-center text-[var(--mut)] text-sm">No blueprint yet. Pick an <button onClick={() => setTplOpen(true)} className="text-[var(--acc)] underline">industry project</button> or describe your app above — the result becomes a navigable prototype here and React + FastAPI starter code in the .zip export.</div>
       ) : (
         <div className="grid lg:grid-cols-[300px_1fr_280px] gap-5">
           <aside className="space-y-4">

@@ -48,7 +48,7 @@ export default function WorkflowsPanel({ appId }) {
             <h3 className="font-display text-2xl font-semibold tracking-tight">Trigger → conditions → actions</h3>
             <p className="text-sm text-[var(--mut)] mt-1">Automations run when leads arrive, chats start, payments succeed or members join. Emails send via LucioDigital mail{emailCfg && !emailCfg.configured && " (not configured — queued)"}.</p></div>
           <div className="flex gap-2">
-            <button data-testid="workflow-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost text-sm !py-2 !px-4">Templates</button>
+            <button data-testid="workflow-templates-btn" onClick={() => setTplOpen(!tplOpen)} className="btn-ghost text-sm !py-2 !px-4">Projects</button>
             <button data-testid="workflow-new-btn" onClick={() => setDraft({ ...EMPTY })} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Plus size={14} /> New workflow</button>
           </div>
         </div>

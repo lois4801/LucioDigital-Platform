@@ -98,7 +98,7 @@ function Entry({ e, onUndo }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-display text-base font-semibold">{when(e.created_at)}</span>
               <span className={`chip ${st.cls}`} data-testid={`history-status-${e.job_id}`}>{st.label}</span>
-              {e.kind === "template" && <span className="chip">template · {e.template_key}</span>}
+              {e.kind === "template" && <span className="chip">project · {e.template_key}</span>}
               {e.undone_at && <span className="chip chip-down" data-testid={`history-undone-${e.job_id}`}>Undone {when(e.undone_at)}</span>}
             </div>
             <div className="text-xs text-[var(--mut)] mt-1.5 font-mono">

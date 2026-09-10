@@ -289,7 +289,7 @@ def register(api, db, get_current_user):
         from site_content import LOOKS
         prof = MOTION_PROFILES.get(key)
         if not prof:
-            raise HTTPException(404, "Unknown template")
+            raise HTTPException(404, "Unknown project")
         if body.hero not in HERO_NAMES:
             raise HTTPException(400, "Unknown hero motion")
         previous = prof["hero"]

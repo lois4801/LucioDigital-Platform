@@ -18,7 +18,7 @@ export default function MotionStage({ profile, industry = "", speed = 1, intensi
         <div className="relative z-10 max-w-3xl">
           <span className="ed-pill" data-testid="motion-stage-industry">{industry || profile?.template_key}</span>
           <OvershootWords testid="motion-stage-headline"
-            text={`${industry || "This template"} sites that win the enquiry.`}
+            text={`${industry || "This project"} sites that win the enquiry.`}
             accentFrom={3}
             className="mt-5 font-display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[0.95]" />
           <p className="mt-5 text-sm md:text-base text-white/45 max-w-prose">

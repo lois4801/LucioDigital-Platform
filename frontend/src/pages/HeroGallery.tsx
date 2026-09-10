@@ -9,7 +9,7 @@ import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionTuner from "@/components/editorial/MotionTuner";
 import MotionPreviewOverlay from "@/components/editorial/MotionPreviewOverlay";
 
-/** Permanently PUBLIC "Motion Systems — Live Template Index".
+/** Permanently PUBLIC "Motion Systems — Live Project Index".
  *  Served at /motion and /hero-gallery. Admin-only controls (apply, favourites, client picks)
  *  render only for a signed-in owner; everything else is visible to any visitor. */
 export default function HeroGallery() {
@@ -117,13 +117,13 @@ export default function HeroGallery() {
   }
 
   async function applyToTemplate(hero) {
-    if (!tplTarget) return toast.error("Pick a template first");
+    if (!tplTarget) return toast.error("Pick a project first");
     setApplying(hero);
     try {
       const { data } = await api.put(`/editorial/templates/${tplTarget}/hero`, { hero, apply_to_tenants: true });
       toast.success(`${tplTarget}: ${data.previous} → ${hero}${data.tenants_updated.length ? ` · ${data.tenants_updated.length} client(s) updated` : ""}`);
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Could not update the template");
+      toast.error(e.response?.data?.detail || "Could not update the project");
     } finally { setApplying(""); }
   }
 
@@ -154,7 +154,7 @@ export default function HeroGallery() {
           <div className="min-w-0">
             <div className="overline">Signature motion systems</div>
             <div className="font-display text-lg font-semibold" data-testid="motion-index-title">
-              {rows.length} Motion Systems — Live Template Index
+              {rows.length} Motion Systems — Live Project Index
             </div>
             <div className="text-xs text-white/40 mt-0.5">
               <span data-testid="motion-count-active">{counts.active} active</span> · <span data-testid="motion-count-reserved">{counts.reserved} reserved</span>
@@ -238,7 +238,7 @@ export default function HeroGallery() {
             <article key={r.hero} data-testid={`motion-card-${r.hero}`}
               className={`rounded-2xl border overflow-hidden bg-black transition-colors ${sent === r.hero ? "border-[#84FF00]" : current === r.hero ? "border-[var(--acc)]" : favs.includes(r.hero) ? "border-amber-400/60" : "border-white/10 hover:border-white/30"}`}>
               <button data-testid={`motion-open-${r.hero}`} onClick={() => r.template_key && setPreviewKey(r.template_key)}
-                title={r.template_key ? "Open this live motion system" : "No template assigned yet"}
+                title={r.template_key ? "Open this live motion system" : "No project assigned yet"}
                 className="relative block w-full h-44 cursor-pointer text-left">
                 <HeroMotionLayer hero={r.hero} accent={r.accent} speed={speed} intensity={intensity} />
                 <span className="absolute inset-0 grid place-items-center">
@@ -273,7 +273,7 @@ export default function HeroGallery() {
                     {isAdmin ? (
                       <>
                         <button data-testid={`hero-apply-template-${r.hero}`} disabled={applying === r.hero} onClick={() => applyToTemplate(r.hero)}
-                          className="chip cursor-pointer hover:!text-white disabled:opacity-60">Template</button>
+                          className="chip cursor-pointer hover:!text-white disabled:opacity-60">Project</button>
                         <button data-testid={`hero-apply-${r.hero}`} disabled={applying === r.hero || current === r.hero} onClick={() => apply(r.hero)}
                           className={`text-xs !py-2 !px-3 rounded-full inline-flex items-center gap-1.5 cursor-pointer ${current === r.hero ? "chip chip-active" : "bg-white text-black font-semibold hover:bg-white/85"} disabled:opacity-70`}>
                           {applying === r.hero ? <Loader2 size={11} className="animate-spin" /> : current === r.hero ? <Check size={11} /> : null}

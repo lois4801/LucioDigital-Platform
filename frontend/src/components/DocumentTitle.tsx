@@ -6,8 +6,8 @@ const BRAND = "LucioDigital";
 const TITLES: [string, string][] = [
   ["/dashboard", "Dashboard"],
   ["/apps/", "Site Mode"],
-  ["/templates", "Templates"],
-  ["/choose/", "Choose a template"],
+  ["/templates", "Projects"],
+  ["/choose/", "Choose a project"],
   ["/leads", "Lead inbox"],
   ["/deploy", "Deploy"],
   ["/rollout-history", "Rollout history"],

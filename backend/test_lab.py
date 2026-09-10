@@ -664,7 +664,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await _require_rollout_admin(user)
         _check_confirm(body.confirm)
         if key not in LOOKS:
-            raise HTTPException(404, "Unknown template")
+            raise HTTPException(404, "Unknown project")
         job_id = _uid("tplroll")
         look = theme_for(NICHES[key], key)
         targets = await db.apps.find({"site_niche": key, "archived": {"$ne": True},
@@ -700,7 +700,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         from site_content import LOOKS
         await _require_rollout_admin(user)
         if key not in LOOKS:
-            raise HTTPException(404, "Unknown template")
+            raise HTTPException(404, "Unknown project")
         await db.template_states.update_one({"key": key}, {"$set": {
             "key": key, "look_hash": _look_hash(key), "status": "live", "pending_hash": None,
             "discarded_at": _now(), "updated_at": _now()}}, upsert=True)

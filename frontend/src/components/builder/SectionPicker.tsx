@@ -32,7 +32,7 @@ export default function SectionPicker({ appId, pageId, accent = "#10B981", open,
     setData(null);
     api.get(`/apps/${appId}/pages/${pageId}/section-sets`)
       .then(r => setData(r.data))
-      .catch(() => toast.error("Could not load the section templates"));
+      .catch(() => toast.error("Could not load the section projects"));
   }, [open, pageId, appId]);
 
   async function apply(setId: string) {
@@ -43,7 +43,7 @@ export default function SectionPicker({ appId, pageId, accent = "#10B981", open,
       onApplied?.(got);
       onClose();
     } catch (e: any) {
-      toast.error(e.response?.data?.detail || "Could not apply that section template");
+      toast.error(e.response?.data?.detail || "Could not apply that section project");
     } finally { setBusy(""); }
   }
 
@@ -52,11 +52,11 @@ export default function SectionPicker({ appId, pageId, accent = "#10B981", open,
       <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)] max-w-3xl max-h-[86vh] overflow-y-auto tenant-scroll"
         data-testid="section-picker">
         <DialogHeader>
-          <DialogTitle className="font-display">Pick a section template</DialogTitle>
+          <DialogTitle className="font-display">Pick a section project</DialogTitle>
         </DialogHeader>
         {!data ? (
           <div className="py-8 text-sm text-[var(--mut)] flex items-center gap-2 justify-center">
-            <Loader2 size={14} className="animate-spin" /> Loading templates…
+            <Loader2 size={14} className="animate-spin" /> Loading projects…
           </div>
         ) : (
           <>

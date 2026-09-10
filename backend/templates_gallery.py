@@ -55,7 +55,7 @@ def build_template_site(key: str):
     """Render a template to pages + theme in memory. No DB writes, no client created."""
     from site_content import NICHES, LOOKS, build_premium_site
     if key not in LOOKS:
-        raise HTTPException(404, "Unknown template")
+        raise HTTPException(404, "Unknown project")
     n = NICHES[key]
     fake = {"app_id": f"tpl_{key}", "name": n["brand"], "industry": n["industry"],
             "description": n["sub"], "thumbnail": n["hero"], "video_url": n["video"]}
@@ -156,7 +156,7 @@ def register(api, db, get_current_user):
     async def select_template(token: str, body: SelectIn):
         await _live_share(token)
         if body.key not in LOOKS:
-            raise HTTPException(400, "Unknown template")
+            raise HTTPException(400, "Unknown project")
         await db.template_shares.update_one({"token": token}, {"$set": {
             "selected_key": body.key, "selected_at": _iso(_now()),
             "client_note": body.client_note.strip()[:600], "acknowledged": False,

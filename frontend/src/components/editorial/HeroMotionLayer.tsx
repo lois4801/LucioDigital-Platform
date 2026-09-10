@@ -97,7 +97,7 @@ export default function HeroMotionLayer({
   mode, className = "",
 }: Props) {
   const cvs = useRef<HTMLCanvasElement | null>(null);
-  // An explicit mode (a template's own theme) wins; otherwise measure the real backdrop.
+  // An explicit mode (a project's own theme) wins; otherwise measure the real backdrop.
   const [measured, setMeasured] = useState<number | null>(null);
   const light = mode === "light" || mode === "dark" ? mode === "light" : ((measured ?? 0) > 0.45);
   const bgLuma = measured ?? (light ? 0.96 : 0.05);

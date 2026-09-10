@@ -5,7 +5,7 @@ import { AlertTriangle, Loader2, ShieldCheck, X } from "lucide-react";
 import DiffViewer from "@/components/DiffViewer";
 
 const SCOPES = [
-  { key: "all", label: "All templates" },
+  { key: "all", label: "All projects" },
   { key: "classic", label: "Classic only" },
   { key: "studio", label: "Studio 2026 only" },
 ];
@@ -25,7 +25,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
     const params = scope === "selected" ? { scope: "selected", keys: targetKey } : { scope };
     api.get("/test-template/diff", { params })
       .then(({ data }) => setDiff(data))
-      .catch(() => toast.error("Could not build the template diff"));
+      .catch(() => toast.error("Could not build the project diff"));
   }, [open, scope, targetKey]);
 
   async function confirm() {
@@ -42,7 +42,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
       onDone?.();
       onClose();
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Template rollout failed");
+      toast.error(e.response?.data?.detail || "Project rollout failed");
     } finally { setBusy(false); }
   }
 
@@ -77,7 +77,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
       <div className="card-surface w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="overline">Test Template rollout</div>
+            <div className="overline">Test Project rollout</div>
             <h3 className="font-display text-xl font-semibold tracking-tight mt-1">
               {staging ? "Push to Staging" : targetKey ? `Push to “${targetKey}”` : `Push to ${diff?.target_count ?? 0} template(s)`}
             </h3>

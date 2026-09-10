@@ -35,8 +35,8 @@ export default function ReviewsEditor({ appId, accent = "#10B981", compact = fal
     try {
       const { data: got } = await api.post(`/apps/${appId}/reviews/reset`);
       setData(got);
-      toast.success("Template reviews and colours restored");
-    } catch { toast.error("Could not restore the template reviews"); }
+      toast.success("Project reviews and colours restored");
+    } catch { toast.error("Could not restore the project reviews"); }
     finally { setBusy(false); }
   }
 
@@ -75,12 +75,12 @@ export default function ReviewsEditor({ appId, accent = "#10B981", compact = fal
         <div className="min-w-0">
           <div className="text-sm font-semibold flex items-center gap-2"><Star size={13} className="text-[var(--acc)]" /> Reviews &amp; testimonials</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
-            {data.reviews.length} five-star reviews · {data.source === "custom" ? "edited for this client" : "written for this template"}. Colours follow the template unless you override them.
+            {data.reviews.length} five-star reviews · {data.source === "custom" ? "edited for this client" : "written for this project"}. Colours follow the project unless you override them.
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button data-testid="reviews-add-btn" onClick={addReview} className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1"><Plus size={11} /> Add review</button>
-          <button data-testid="reviews-reset-btn" onClick={reset} disabled={busy} className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1 disabled:opacity-50"><RotateCcw size={11} /> Reset to template default</button>
+          <button data-testid="reviews-reset-btn" onClick={reset} disabled={busy} className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1 disabled:opacity-50"><RotateCcw size={11} /> Reset to project default</button>
           <button data-testid="reviews-save-btn" onClick={() => save()} disabled={busy} className="btn-primary text-xs !py-1.5 !px-3 disabled:opacity-60">{busy ? "Saving…" : "Save reviews"}</button>
         </div>
       </div>

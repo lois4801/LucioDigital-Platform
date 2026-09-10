@@ -49,7 +49,7 @@ export const BOX_ANIMS: BoxAnim[] = [
 export const ANIM_KEYS = BOX_ANIMS.map(a => a.key);
 const PLAYABLE = ANIM_KEYS.filter(k => k !== "none");
 
-/** One unique animation per template — all 33 differ. */
+/** One unique animation per project — all 33 differ. */
 export const TEMPLATE_ANIM: Record<string, string> = {
   hvac: "fly-in",
   healthcare: "float-in",

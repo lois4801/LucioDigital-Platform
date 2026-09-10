@@ -272,7 +272,7 @@ export default function Builder({ appId, appDoc, user }) {
     try {
       const { data } = await api.post(`/apps/${appId}/pages/${page.page_id}/save-as-set`,
         { label, page_type: pageType });
-      toast.success(`"${data.label}" saved — it is now in the section template picker`);
+      toast.success(`"${data.label}" saved — it is now in the section project picker`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not save that section set"); }
   }
 

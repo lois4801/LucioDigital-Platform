@@ -409,7 +409,7 @@ export default function Dashboard() {
                 <button data-testid="new-app-gallery-link" onClick={() => { setNewOpen(false); nav("/templates"); }}
                   className="w-full text-left p-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/8 hover:bg-[var(--acc)]/12 flex items-center gap-3">
                   <Sparkles size={16} className="text-[var(--acc)]" />
-                  <span><span className="font-display font-semibold block">Browse the 16 template designs</span>
+                  <span><span className="font-display font-semibold block">Browse the 16 project designs</span>
                     <span className="text-xs text-[var(--mut)]">The recommended way to start a client</span></span>
                 </button>
                 <div className="grid grid-cols-2 gap-2">

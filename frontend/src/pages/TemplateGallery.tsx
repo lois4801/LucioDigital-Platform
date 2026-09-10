@@ -194,7 +194,7 @@ export default function TemplateGallery({ clientMode = false }) {
       setList(clientMode ? r.data.templates.filter(t => t.key !== "test_template") : r.data.templates);
       setCats(r.data.categories);
     })
-      .catch(() => toast.error("Could not load the template gallery")).finally(() => setLoading(false));
+      .catch(() => toast.error("Could not load the project gallery")).finally(() => setLoading(false));
     if (clientMode && token) {
       api.get(`/public/template-shares/${token}`).then(r => { setShareInfo(r.data); setChosen(r.data.selected_key || null); })
         .catch(e => setShareInfo({ error: e.response?.data?.detail || "This preview link is not valid" }));
@@ -309,12 +309,12 @@ export default function TemplateGallery({ clientMode = false }) {
       <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
         <div>
           {!clientMode && member?.full_access && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
-          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}
+          <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Projects gallery · ${list.length} designs`}
           </div>
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
           <p className="text-[var(--mut)] mt-2 max-w-2xl text-sm">{clientMode
             ? "Browse every design side by side, open any one full screen to scroll the whole site, then send your pick to the team."
-            : "Every template is a complete, distinct build — its own palette, typography, hero and section style. Pick one and the client is created with that design applied instantly."}</p>
+            : "Every project is a complete, distinct build — its own palette, typography, hero and section style. Pick one and the client is created with that design applied instantly."}</p>
         </div>
         {!clientMode && (member?.full_access
           ? <button data-testid="preview-for-client-btn" onClick={() => setShareOpen(true)} className="btn-ghost text-sm flex items-center gap-2"><Share2 size={14} /> Preview for client</button>
@@ -344,7 +344,7 @@ export default function TemplateGallery({ clientMode = false }) {
               state={states[t.key]}
               motionProfile={motions[t.key]}
               allKeys={list.filter((x) => x.key !== "test_template").map((x) => x.key)}
-              selected={chosen === t.key} useLabel={clientMode ? (chosen === t.key ? "Your pick" : "Choose this") : "Use this template"} />
+              selected={chosen === t.key} useLabel={clientMode ? (chosen === t.key ? "Your pick" : "Choose this") : "Use this project"} />
           ))}
         </div>
       )}
@@ -361,7 +361,7 @@ export default function TemplateGallery({ clientMode = false }) {
 
       {full && <FullPreview detail={full} onClose={() => setFull(null)} onUse={useTemplate}
         motionProfile={motions[full.key]}
-        useLabel={clientMode ? "Choose this design" : "Use this template"} />}
+        useLabel={clientMode ? "Choose this design" : "Use this project"} />}
 
 
 

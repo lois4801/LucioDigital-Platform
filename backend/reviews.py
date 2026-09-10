@@ -253,7 +253,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def reset_reviews(app_id: str, user: dict = Depends(get_current_user)):
         await get_user_app(app_id, user)
         await db.apps.update_one({"app_id": app_id}, {"$unset": {"reviews": ""}})
-        await log_activity(app_id, user["user_id"], "reviews.reset", "Restored the template reviews")
+        await log_activity(app_id, user["user_id"], "reviews.reset", "Restored the project reviews")
         return await get_reviews(app_id, user)
 
     @api.post("/admin/reviews/generate/{key}")

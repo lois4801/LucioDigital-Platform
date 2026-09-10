@@ -35,7 +35,7 @@ export default function TemplateRolloutModal({ template, onClose, onDone }) {
       <div className="card-surface w-full max-w-lg p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="overline">Template rollout</div>
+            <div className="overline">Project rollout</div>
             <h3 className="font-display text-xl font-semibold tracking-tight mt-1">
               Push to all clients using “{template.brand || template.key}”
             </h3>

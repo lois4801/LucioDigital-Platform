@@ -1,0 +1,28 @@
+{
+  "summary": "Iter96 verifies the Templates→Projects user-visible rename + Client Work landing removal. Backend: created /app/backend/tests/test_iter96_projects_rename.py, 9/9 pytest pass. Verified: GET /api/public/templates still returns 200 with 'templates' response key and 33 items; /api/public/templates/{key} still works; GET /api/public/templates/not_a_key_xyz returns 404 with 'Unknown project' user-visible string; GET /api/test-template (admin) returns brand 'Test Project'; POST /api/apps/app_testlab/marquee/reset succeeds and /api/apps/app_testlab/edit-log recent entries contain 'project' (no user-visible 'template' string in marquee reset messages); /api/apps and /api/apps/app_testlab/site-mode still 200 for admin; fresh free account registered via /api/auth/register is properly gated (402) on /api/apps. Frontend (anonymous, desktop 1920 + mobile 390): landing page has no visible 'Client Work' text anywhere (nav or body); nav-templates-link testid still exists, label='Projects', href='/templates'; hero shows 'PROJECTS READY'; no 'Template'/'Templates' text remains on the visible landing page. /templates gallery: title='LucioDigital — Projects', overline present (source: 'Projects gallery · {count} designs' — rendered uppercase by CSS overline class), '33 designs' text present, 'Use this project' CTA present, 'Every project is a complete...' helper copy present, [data-testid=template-gallery] present, 33 [data-testid^=template-card-] rendered. Tab titles: / = 'LucioDigital — Agency platform', /templates = 'LucioDigital — Projects', /choose/<key> = 'LucioDigital — Choose a project', /dashboard = 'LucioDigital — Dashboard', /apps/app_testlab = 'LucioDigital — Site Mode'. /work still lives (title 'LucioDigital — Client work') and /work/luciodigital-test-lab renders the LucioDigital Test Lab case study (challenge, features, etc.). Client Work link is not present in any landing nav (desktop or mobile) at 1920/1280/390. Source-verified strings (grep) for admin-gated screens I could not fully render in-browser due to sporadic Cloudflare/vite 429s: SiteModePanel.tsx line 180 'Active project', line 99 hint 'Original project look, or the new editorial motion system.', ReviewsEditor.tsx line 83 'Reset to project default', MarqueeEditor.tsx line 53 toast 'Project ribbon restored', BlueprintPanel.tsx line 135 button 'Industry projects ({count})' with data-testid='app-templates-btn' preserved.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "/work/<slug> case study route", "issue": "The task spec listed /work/app-showcase-pro-4 as an example case-study URL, but the actual published slug is 'luciodigital-test-lab' (GET /api/public/case-studies returns only that one). /work/app-showcase-pro-4 correctly resolves to a soft 404 ('That case study isn't published') — this is expected/correct behaviour, just clarifying the spec used the preview hostname as the slug by mistake.", "affected_selectors": []}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter96_projects_rename.py",
+    "/app/test_reports/pytest/iter96.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Two landing pages coexist (Landing.tsx and TestLabLanding.tsx). TestLabLanding renders on the current master workspace host and has a very different mobile header (no hamburger — just a single 'Dashboard'/'Upgrade' pill). The task's 'mobile menu behind nav-mobile-menu-btn' check only applies to Landing.tsx. This is fine, but it means two mobile IA patterns must be kept in sync going forward.",
+    "TemplateGallery.tsx still uses testids prefixed 'template-*' by design (task confirmed internals stay); acceptable but a comment in code would help future readers who see 'Projects' in UI but 'template' in testids."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter96_projects_rename.py"],
+  "success_rate": {"backend": "100% (9/9)", "frontend": "100% for anonymous flows (landing, /templates, /work, /work/<slug>, /choose/<key> tab title); admin-gated screens (/dashboard, /apps/app_testlab) source-verified via grep but not re-rendered in-browser this run due to intermittent Cloudflare/vite 429 rate-limits when logging in via UI"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (used for backend admin_session fixture). One throwaway free_iter96_<ts>@example.com free account created for gating check.",
+  "seed_data_creation": "One free account (free_iter96_<epoch>@example.com). One marquee reset on app_testlab (already the intended master workspace, reset is idempotent).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend regression file: /app/backend/tests/test_iter96_projects_rename.py — run with REACT_APP_BACKEND_URL env exported (pytest does NOT load /app/frontend/.env). Public case study slug is 'luciodigital-test-lab' (not 'app-showcase-pro-4'). Two landing components exist — the master-workspace host renders TestLabLanding.tsx which has 'Projects' nav-templates-link but no hamburger (nav-mobile-menu-btn only exists on Landing.tsx). If a UI test blanks out with title stuck on 'LucioDigital — Agency platform', it's the vite dev server 429ing — sleep 4-6s and retry.",
+  "rca of the issue": "N/A — no bugs found this run."
+}

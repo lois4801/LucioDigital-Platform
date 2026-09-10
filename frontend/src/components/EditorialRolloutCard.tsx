@@ -20,7 +20,7 @@ export default function EditorialRolloutCard() {
         <div className="min-w-0">
           <div className="font-display text-base">Always live · auto-propagation on</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
-            Every design, motion and content change applies to its template instantly, pushes to all
+            Every design, motion and content change applies to its project instantly, pushes to all
             active clients using it, and is inherited by future clients. No pending state, no push step.
           </div>
         </div>
