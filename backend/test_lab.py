@@ -97,9 +97,9 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
         doc = {
             "app_id": TEST_LAB_ID, "owner_id": owner_id, "name": TEST_LAB_NAME,
             "industry": "Internal Tools", "kind": "website",
-            "description": "Permanent sandbox for testing designs, animations, templates and new "
-                           "features before anything is pushed to live tenants.",
-            "status": "active", "tags": ["test", "sandbox"], "color": "#22D3EE",
+            "description": "The live master workspace. Every design, motion and content change made "
+                           "here applies instantly to its template and to every active tenant.",
+            "status": "active", "tags": ["internal tools", "website"], "color": "#22D3EE",
             "is_test_lab": True, "protected": True, "archived": False, "transfer_mode": False,
             "theme": theme_for(NICHES["saas"], "saas") if "saas" in LOOKS else {},
             "site_niche": "saas", "premium_site_v": 3,
@@ -113,9 +113,11 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
         await db.apps.update_one({"app_id": TEST_LAB_ID},
                                  {"$set": {"name": TEST_LAB_NAME, "is_test_lab": True,
                                            "protected": True, "archived": False,
-                                           "description": "Permanent sandbox for testing designs, animations, "
-                                                          "templates and new features before anything is pushed "
-                                                          "to live tenants."}})
+                                           "industry": "Internal Tools", "kind": "website",
+                                           "tags": ["internal tools", "website"],
+                                           "description": "The live master workspace. Every design, motion and "
+                                                          "content change made here applies instantly to its "
+                                                          "template and to every active tenant."}})
 
     existing = {p.get("template_key") for p in
                 await db.pages.find({"app_id": TEST_LAB_ID}, {"_id": 0, "template_key": 1}).to_list(200)}
@@ -192,24 +194,16 @@ async def retheme_test_lab_only(db) -> int:
 
 
 async def mark_template_states(db) -> int:
-    """Any template whose design changed since the last push is parked as Pending Rollout."""
+    """Pending state removed permanently — every template is always live. Changes are pushed
+    automatically by auto_propagate, so nothing is ever parked waiting for a manual push."""
     from site_content import LOOKS
-    pending = 0
     for key in LOOKS:
-        h = _look_hash(key)
-        doc = await db.template_states.find_one({"key": key}, {"_id": 0})
-        if not doc:
-            await db.template_states.update_one(
-                {"key": key}, {"$set": {"key": key, "look_hash": h, "status": "live", "updated_at": _now()}},
-                upsert=True)
-            continue
-        if doc.get("look_hash") != h:
-            await db.template_states.update_one(
-                {"key": key}, {"$set": {"pending_hash": h, "status": "pending", "updated_at": _now()}})
-            pending += 1
-        elif doc.get("status") == "pending" and doc.get("pending_hash") == h:
-            pending += 1
-    return pending
+        await db.template_states.update_one(
+            {"key": key},
+            {"$set": {"key": key, "look_hash": _look_hash(key), "status": "live",
+                      "pending_hash": None, "updated_at": _now()}},
+            upsert=True)
+    return 0
 
 
 def _common(values: list):
@@ -534,16 +528,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.get("/test-lab/pending")
     async def pending_map(user: dict = Depends(get_current_user)):
-        """Per-tenant count of unpushed Test Lab changes — drives the orange "Pending Update" badge."""
-        lab = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})
-        if not lab:
-            return {"tenants": {}}
-        out = {}
-        for t in await _targets():
-            d = await build_diff(db, [t], lab)
-            if d["total"]:
-                out[t["app_id"]] = d["total"]
-        return {"tenants": out, "total": sum(out.values())}
+        """Pending state removed permanently — every change is applied instantly, so this is
+        always empty. Kept so older clients keep working."""
+        return {"tenants": {}, "total": 0, "auto": True}
 
     @api.get("/test-lab/rollout/history")
     async def rollout_history(user: dict = Depends(get_current_user)):
@@ -667,9 +654,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             st = states.get(key) or {}
             using = await db.apps.count_documents({"site_niche": key, "archived": {"$ne": True},
                                                    "app_id": {"$ne": TEST_LAB_ID}})
-            out.append({"key": key, "status": st.get("status", "live"), "tenants_using": using,
+            out.append({"key": key, "status": "live", "tenants_using": using,
                         "updated_at": st.get("updated_at"), "last_pushed_at": st.get("last_pushed_at")})
-        return {"templates": out, "pending": sum(1 for t in out if t["status"] == "pending")}
+        return {"templates": out, "pending": 0, "auto": True}
 
     @api.post("/templates/{key}/rollout")
     async def push_template(key: str, body: RolloutIn, user: dict = Depends(get_current_user)):

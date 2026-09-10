@@ -13,13 +13,21 @@ type Props = {
   accent?: string;
   reduced?: boolean;
   mobile?: boolean;
+  speed?: number;       // 0.25x – 2x playback of the engine's own clock
+  intensity?: number;   // 0.2 (subtle) – 1.5 (bold) presence
   className?: string;
 };
 
+const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, Number.isFinite(v) ? v : 1));
+
 export default function HeroMotionLayer({
-  hero = "", accent = "#10B981", reduced = false, mobile, className = "",
+  hero = "", accent = "#10B981", reduced = false, mobile, speed = 1, intensity = 1, className = "",
 }: Props) {
   const cvs = useRef<HTMLCanvasElement | null>(null);
+  const sp = clamp(speed, 0.25, 2);
+  const it = clamp(intensity, 0.2, 1.5);
+  const isNarrow = mobile ?? (typeof window !== "undefined" && window.innerWidth < 768);
+  const baseOpacity = isNarrow ? 0.42 : 0.62;
 
   useEffect(() => {
     const cv = cvs.current;
@@ -64,21 +72,24 @@ export default function HeroMotionLayer({
 
     const loop = (now: number) => {
       if (!start) start = now;
-      if (visible) frame((now - start) / 1000);
+      if (visible) frame(((now - start) / 1000) * sp);
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => { io.disconnect(); ro.disconnect(); cancelAnimationFrame(raf); };
-  }, [hero, accent, reduced, mobile]);
+  }, [hero, accent, reduced, mobile, sp]);
 
   return (
     <div
       className={`hm-layer ${reduced ? "hm-static" : ""} ${className}`}
       data-testid="hero-motion-layer"
       data-hero={hero || "particle-network"}
+      data-speed={sp}
+      data-intensity={it}
       aria-hidden="true"
     >
-      <canvas ref={cvs} className="hm-canvas" data-testid="hero-motion-canvas" />
+      <canvas ref={cvs} className="hm-canvas" data-testid="hero-motion-canvas"
+        style={{ opacity: Math.min(1, baseOpacity * it) }} />
     </div>
   );
 }

@@ -1,0 +1,42 @@
+{
+  "summary": "Iter75 — Template looks/imagery/motion restoration verified. Backend pytest: 16/17 pass. GET /api/public/templates returns 33 templates with 27 distinct primary colours, 10 distinct heading fonts, mix of light+dark modes (NO uniform techno palette). Every sampled template (hvac/healthcare/legal/restaurant/saas/construction/fitness/retail) has 9+ distinct unsplash photos. /api/public/motion-reel returns 44 heroes with 44 distinct engines. Content preservation confirmed: 4 pages/template with hero title present; Test Lab site /p/pv_c3b797fcdafc58d4e70e320f still returns 33 pages / 366 blocks. Always-live regression: /api/templates/rollout-status pending=0, all 33 status='live'; /api/test-lab/pending total=0; POST /api/auto-propagate/run => 33 templates. Frontend /templates (desktop 1920): 33 template-card-* cards, 33 template-motion-badge-* (ALL 33 unique), 33 hero-motion-canvas (sampled 10 with 10 distinct pixel signatures — motions live and unique per template), 13 hero-cover + 2 hero-centered (rest use split/other variants without those testids), 0 template-pending-badges, 0 push-* buttons, 33 template-live-note-*. 51 imgs across cards, 50 loaded, 1 BROKEN: https://images.unsplash.com/photo-1590644365607-1c5a5e03a0a5. Full preview: template-full-preview opens with template-preview-motion (pointer-events: none confirmed), template-preview-close, template-preview-page-{home,about,services,contact} tabs all render, template-preview-use-btn present. Mobile 390x780: 0 horizontal overflow, 33 cards + 33 canvases render, 43/51 imgs loaded at capture (Unsplash still fetching). /motion (logged-out): 44 motion-open-* cards. Console: only pre-login 401 on /me (benign).\n\nONE CRITICAL BUG: team-section photos are NOT unique across templates. 130 cross-template team-photo overlaps detected. site_content.faces_for() uses a sliding window with step=4 over a FACES pool that only contains ~57 unique photos, but 33 templates × 4 members needs 132 unique photos. Slice wraps and adjacent templates share 3-of-4 photos (e.g. hvac & veterinary share photo-1560250097/-1573496359/-1507003211; dental & healthcare share 3; accounting & construction share 3, etc.). Spec explicitly required zero cross-template team-photo overlap.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/public/templates/<key> (team blocks)", "issue": "faces_for() in backend/site_content.py picks a sliding 4-photo window from a ~57-entry FACES pool for 33 templates → 130 cross-template photo overlaps. Spec required each template to have DIFFERENT team photos from every other template. Fix: expand FACES to ≥132 unique portraits and change faces_for to a truly disjoint slice (idx*4 with pool size ≥ 33*4).", "priority": "CRITICAL"}
+    ],
+    "minor": [
+      {"endpoint": "hero image asset", "issue": "Single broken Unsplash hero image: https://images.unsplash.com/photo-1590644365607-1c5a5e03a0a5?w=1800&q=90 returns non-200/empty. Replace this photo id in site_content.py (LOOKS hero image for the template that references it — likely one of the platform/test/special templates)."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "TemplateGallery FullPreview", "issue": "Spec referred to selectors 'preview-tab-*' and 'use-this-template' — actual DOM uses 'template-preview-page-<home|about|services|contact>' and 'template-preview-use-btn'. Not a functional bug; both variants render and click correctly. Recommend either aligning selectors with the spec doc or updating spec.", "selector": "[data-testid^=template-preview-page-]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/templates FullPreview hero", "issues": ["Motion overlay (particle-network / hero-motion-canvas) is very dense/high-contrast on top of the hero photograph — the photo is visible but partially obscured by the animated grid dots at default intensity. Consider dropping default hero-motion opacity by ~30% or tightening particle count for gallery preview so the restored hero photography reads more clearly."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iter75_restore_looks.py", "/app/test_reports/pytest/iter75.xml"],
+  "action_items": [
+    "CRITICAL: Fix team-photo cross-template collisions. Either (a) grow FACES in backend/site_content.py to ≥ 132 unique Unsplash portrait ids and rebuild templates via /api/auto-propagate/run, or (b) rewrite faces_for(key,count) to draw from per-industry disjoint pools. Current sliding-window over 57 photos guarantees overlap.",
+    "MINOR: Replace the single broken hero image photo-1590644365607-1c5a5e03a0a5 (visible on /templates as 1 broken img in the card grid).",
+    "LOW: Consider softening hero-motion-canvas default intensity/opacity so restored hero photography is more clearly visible in the full preview.",
+    "OPTIONAL: Reconcile spec testid names with actual DOM (template-preview-page-* vs preview-tab-*, template-preview-use-btn vs use-this-template)."
+  ],
+  "critical_code_review_comments": [
+    "backend/site_content.py FACES pool contains a duplicate ('photo-1580489944761-15a19d654956' appears in both the initial list and later; after dict.fromkeys dedup, size ~57). With FACE_ORDER of 33 keys and count=4 per template, faces_for produces 132 requested faces from a 57-entry pool — mathematically impossible to be disjoint; comment on line 53 ('no two industries share a team photo') is not enforced by the current implementation.",
+    "restore_template_looks.py appears to have run successfully — 27 distinct primary colours and 10 distinct heading fonts confirm looks were restored per-template (not uniform techno palette). Good.",
+    "TemplateGallery FullPreview correctly sets template-preview-motion with pointer-events: none, preventing motion overlay from blocking tab/CTA clicks — verified in DOM.",
+    "Motion pipeline: 44 unique hero engines exposed on /api/public/motion-reel; TemplateGallery maps each card to a live canvas with a unique testid + badge — all 33 badges DISTINCT verified.",
+    "Test Lab preview site preserved intact at 33 pages / 366 blocks — no content loss."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter75_restore_looks.py"],
+  "success_rate": {"backend": "94% (16/17 pytest)", "frontend": "95% — all UI checks pass; single broken hero image + team-photo dupes are backend-driven"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie login). Preview token pv_c3b797fcdafc58d4e70e320f.",
+  "seed_data_creation": "None. app_testlab left with publish='live', animation='full' as instructed. No pages/blocks/tenants deleted or archived. POST /api/auto-propagate/run was called once (idempotent, returns templates=33).",
+  "retest_needed": true,
+  "main_agent_can_self_test": false,
+  "context_for_next_testing_agent": "Backend test at /app/backend/tests/test_iter75_restore_looks.py — run `python -m pytest backend/tests/test_iter75_restore_looks.py -v -o addopts=''`. It auto-loads REACT_APP_BACKEND_URL from /app/frontend/.env and logs in as admin. Only failing test is test_team_photos_unique_within_and_across_templates (130 cross-template overlaps). After main agent expands FACES pool and re-runs restore, re-execute this single test to confirm zero overlaps. Broken hero image id: photo-1590644365607-1c5a5e03a0a5 — grep site_content.py / LOOKS for it and swap. Do not touch app_testlab pages/blocks (baseline 33/366).",
+  "rca of the issue": "site_content.FACES pool contains ~57 unique Unsplash portrait ids after dedup. faces_for(key, count=4) computes start = idx*4 % len(FACES) and returns FACES[(start+i) % len(FACES)] for i in range(count). With FACE_ORDER of 33 keys × 4 members = 132 demands vs 57 supply, the modular sliding window forces adjacent templates to overlap heavily (each subsequent template shares 3 photos with its 4-step neighbour once the counter wraps). Concrete evidence: hvac ↔ veterinary share 3 photos (idx diff = 16 in a 57-entry pool → 16*4=64, 64%57=7, so windows overlap by 4-1=3). Reproduction: `curl <BASE>/api/public/templates/hvac | grep photo-` and `.../veterinary | grep photo-`, intersect team-block URLs. Mitigation: (1) expand FACES to at least 132 unique portrait photo ids, (2) OR replace faces_for with a per-industry-keyed disjoint pool (dict of key → 4 curated portraits). After fix, POST /api/auto-propagate/run to rewrite tenants, then re-run the pytest suite."
+}

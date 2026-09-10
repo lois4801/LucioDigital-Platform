@@ -1,0 +1,34 @@
+{
+  "summary": "Iter74 — always-live auto-propagation, no pending state, master workspace rebrand verified end-to-end. Backend 10/10 pytest pass. GET /api/auto-propagate/status => {auto:true, pending:0}. POST /api/auto-propagate/run => 200 {ok:true, templates:33}. POST /api/auto-propagate/templates/saas => 200. GET /api/templates/rollout-status => pending=0 and ALL 33 templates status='live'. GET /api/test-lab/pending => total=0. app_testlab tags = ['internal tools','website'] (no 'test'), description has no 'test'/'sandbox'. PUT /api/apps/app_testlab/site-mode {animation:'reduced'} => 200 with propagated_to key, GET confirms animation stuck; reverted to 'full' and confirmed. PUT /api/editorial/templates/saas/hero {hero:'aurora-wave'} => 200, rollout-status.pending still 0 and saas.status='live'; reverted to particle-network. CONTENT PRESERVATION: baseline 33 pages/366 blocks vs post-ops identical per-page block counts. Frontend: /dashboard shows auto-propagate-card, 0 tenant-pending-badges, no editorial-rollout-card, no redesign-banner, no tenant-test-badge-app_testlab, tenant-industry-badge-app_testlab='INTERNAL TOOLS'. /templates shows 0 template-pending-badges, 0 gallery-pending-count, 33 template-live-note-<key>, 0 push-to-all/push-*/push-to-one buttons. /redesign-review has redesign-live-notice=1, 0 redesign-approval-prompt/push-one/push-all/generate-diff. /apps/app_testlab header-master-badge='INTERNAL TOOLS', 0 header-test-badge, no 'TEST'/'sandbox' wording in Overview body. Site Mode tab: site-mode-preview-btn removed, sm-hero-live-render present WITH data-speed='1.15' and data-intensity='0.85' (iter73 FIX VERIFIED), sm-live-site-frame present, publish toggles wired with disabled={busy} (source-verified in SiteModePanel.tsx). /motion (logged out): 44 motion-open-<key> cards render, ACTIVE and RESERVED badges present, opening one renders motion-live-overlay. Test Lab public site /p/pv_c3b797fcdafc58d4e70e320f still serves 33 pages/366 blocks. Only console errors observed were dev-only 401 on /me and 429 on /src/*.tsx from Vite HMR — benign.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "SiteModePanel.tsx site-mode-live-badge", "issue": "Site Mode header still displays the copy 'Live · isolated to this tenant' next to the LIVE chip. Not explicitly banned by this iteration's spec, but the phrase 'isolated' conflicts with the always-live/auto-propagation narrative — worth rewording to just 'Live' or 'Live · master workspace' for consistency with the platform's new posture.", "selector": "[data-testid=\"site-mode-live-badge\"]", "priority": "LOW"}
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter74_auto_propagate.py", "/app/test_reports/pytest/iter74.xml"],
+  "action_items": [
+    "OPTIONAL (LOW): Reword or drop 'isolated to this tenant' inside site-mode-live-badge — the new platform behavior is always-live auto-propagation from master workspace, so 'isolated' is misleading."
+  ],
+  "critical_code_review_comments": [
+    "auto_propagate.py is content-safe by construction — only writes to apps.theme/motion_profile/site_mode and platform_settings.site_mode_defaults; never touches pages/blocks/CTAs/stats. Good separation.",
+    "SiteModePanel.tsx: data-speed / data-intensity are now on the sm-hero-live-render wrapper (fixes iter73 HIGH finding). Publish Row chips use disabled={busy} so rapid clicks are ignored while a PUT is in-flight (fixes iter73 MEDIUM race).",
+    "AppDetail.tsx line 121: header-master-badge only renders when appDoc.is_test_lab, and Test Lab tags are enforced to ['internal tools','website'] server-side via test_lab.ensure_test_lab — consistent.",
+    "One live tenant (app_testlab) means propagate_site_mode's tenant list is always empty; platform_settings.site_mode_defaults doc is the actual acceptance signal for propagation and is being written correctly (confirmed via GET after PUT).",
+    "editorial hero swap accepts only names in HERO_NAMES — spec's suggested 'aurora-mesh' would 400. Tests use 'aurora-wave' which is a valid hero. Consider exposing /api/editorial/heroes or a whitelist for future automation.",
+    "SiteModePanel still renders the string 'isolated to this tenant' (line 77) — mild inconsistency with the new always-live narrative."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter74_auto_propagate.py"],
+  "success_rate": {"backend": "100% (10/10 pytest)", "frontend": "100% on spec-listed checks (only a low-priority wording nit)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie login). Preview token pv_c3b797fcdafc58d4e70e320f.",
+  "seed_data_creation": "None. No tenants/pages/blocks created or deleted. animation was toggled reduced->full and saas hero toggled aurora-wave->particle-network within the test run; both reverted. app_testlab final state left with publish='live' and animation='full' as instructed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend test lives at /app/backend/tests/test_iter74_auto_propagate.py — run with `python -m pytest backend/tests/test_iter74_auto_propagate.py -v -o addopts=''`. It self-loads REACT_APP_BACKEND_URL from /app/frontend/.env if not in env. Baseline for content preservation is 33 pages / 366 blocks on pv_c3b797fcdafc58d4e70e320f — do not delete/archive app_testlab. Valid hero names live in editorial_rollout.HERO_NAMES (particle-network, aurora-wave, circuit-trace-draw, etc.) — 'aurora-mesh' is NOT valid.",
+  "rca of the issue": "N/A — no critical bugs found this iteration. Iter73's three action items (data-speed/intensity on sm-hero-live-render, busy-disabled publish chips, no unconditional preview_token rotation) are all present in source and verified in DOM."
+}

@@ -65,7 +65,8 @@ function AppRouter() {
       <Route path="/rollout-history" element={<ProtectedRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></ProtectedRoute>} />
       <Route path="/test-lab/landing" element={<TestLabLanding />} />
       <Route path="/redesign-review" element={<ProtectedRoute><RedesignReview /></ProtectedRoute>} />
-      <Route path="/hero-gallery" element={<ProtectedRoute><HeroGallery /></ProtectedRoute>} />
+      <Route path="/hero-gallery" element={<HeroGallery />} />
+      <Route path="/motion" element={<HeroGallery />} />
       <Route path="/accent-audit" element={<ProtectedRoute><AccentAudit /></ProtectedRoute>} />
       <Route path="/work" element={<Showcase />} />
       <Route path="/work/:slug" element={<CaseStudy />} />

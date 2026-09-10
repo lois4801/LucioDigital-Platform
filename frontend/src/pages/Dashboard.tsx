@@ -49,7 +49,6 @@ export default function Dashboard() {
   const [showArchived, setShowArchived] = useState(false);
   const [rolloutOpen, setRolloutOpen] = useState(false);
   const [rolloutTarget, setRolloutTarget] = useState(null);
-  const [pendingMap, setPendingMap] = useState({});
   const [staging, setStaging] = useState(null);
   const [landingEditor, setLandingEditor] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -73,7 +72,7 @@ export default function Dashboard() {
     } catch (e) { toast.error(e.response?.data?.detail || "Bulk upgrade failed"); } finally { setUpBusy(false); }
   }
 
-  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/test-lab/pending").then(r => setPendingMap(r.data.tenants || {})).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
+  useEffect(() => { load(); loadNotifs(); loadArchived(); loadPicks(); api.get("/redesign/pending").then(r => setRedesign(r.data)).catch(() => {}); api.get("/inbox").then(r => setInboxUnread(r.data.unread)).catch(() => {}); api.get("/locks/summary").then(r => setLockStates(r.data.tenants || {})).catch(() => {}); }, []);
   useEffect(() => { load(); }, [showArchived]);
 
   async function loadArchived() {
@@ -294,20 +293,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Mandatory redesign approval banner */}
+        {/* Always-live: no approval banner, no pending state. */}
         <EditorialRolloutCard />
-        {redesign?.pending && (
-          <div data-testid="redesign-banner" className="card-surface p-4 mb-6 flex flex-wrap items-center gap-3 !border-[var(--acc)]/50">
-            <FlaskConical size={16} className="text-[var(--acc)] shrink-0" />
-            <div className="min-w-0">
-              <div className="font-display text-base">A new redesign is ready for review in Test Lab.</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">Open Preview to inspect it before approving. {redesign.note}</div>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
-              <button data-testid="redesign-open-preview" onClick={() => nav("/redesign-review")} className="btn-primary text-xs !py-1.5 !px-3">Open Preview</button>
-            </div>
-          </div>
-        )}
 
         {/* Client template picks */}        {picks.length > 0 && (
           <div className="space-y-2 mb-6" data-testid="client-picks">
@@ -445,10 +432,8 @@ export default function Dashboard() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
-                      {a.is_test_lab && <span data-testid={`tenant-test-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(16,185,129,0.16)", color: "#34D399", borderColor: "rgba(16,185,129,0.4)" }}><FlaskConical size={10} /> TEST</span>}
                       {a.is_staging && <span data-testid={`tenant-staging-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(249,115,22,0.18)", color: "#FB923C", borderColor: "rgba(249,115,22,0.45)" }}><Rocket size={10} /> STAGING</span>}
-                      {!a.is_test_lab && pendingMap[a.app_id] > 0 && <span data-testid={`tenant-pending-badge-${a.app_id}`} className="chip" style={{ background: "rgba(249,115,22,0.16)", color: "#FB923C", borderColor: "rgba(249,115,22,0.4)" }}>Pending Update</span>}
-                      <span className="chip">{a.industry}</span>
+                      <span className="chip" data-testid={`tenant-industry-badge-${a.app_id}`}>{a.is_test_lab ? "INTERNAL TOOLS" : a.industry}</span>
                       {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}

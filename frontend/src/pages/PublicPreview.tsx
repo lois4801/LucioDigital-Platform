@@ -7,6 +7,8 @@ import CursorTrail from "@/components/CursorTrail";
 import { useTenantCursorFX, CursorFXPicker } from "@/components/CursorFX";
 import ChatWidget from "@/components/ChatWidget";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
+import MotionSwitcher from "@/components/editorial/MotionSwitcher";
+import MotionStage from "@/components/editorial/MotionStage";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
@@ -27,12 +29,19 @@ export default function PublicPreview() {
   const [openForm, setOpenForm] = useState(null);
   const [hasPaid, setHasPaid] = useState(false);
   const member = useMember(token);
+  // Template Isolation Preview — public, any visitor can swap the motion context.
+  const [iso, setIso] = useState(() => new URLSearchParams(window.location.search).get("template") || "");
+  const [isoData, setIsoData] = useState(null);
   useTenantCursorFX(site?.theme?.cursor === false ? "none" : site?.theme?.cursor_effect, site?.theme?.cursor_density ?? 1, site?.theme?.cursor_speed ?? 1);
 
   useEffect(() => {
     api.get(`/public/site/${token}`).then(r => { setSite(r.data); loadFonts(r.data.theme); }).catch(e => setErr(e.response?.data?.detail || "Preview unavailable"));
     api.get(`/public/site/${token}/cta-forms`).then(r => setCtaForms(r.data.forms || {})).catch(() => {});
   }, [token]);
+  useEffect(() => {
+    if (!iso) { setIsoData(null); return; }
+    api.get(`/public/motion-preview/${iso}`).then(r => setIsoData(r.data)).catch(() => setIso(""));
+  }, [iso]);
   useEffect(() => {
     if (!site) return;
     const k = "os_visitor"; let s = localStorage.getItem(k); if (!s) { s = "v_" + Math.random().toString(36).slice(2, 12); localStorage.setItem(k, s); }
@@ -67,15 +76,33 @@ export default function PublicPreview() {
     <DesignCtx.Provider value={v2}>
     <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: setOpenForm, editMode: false }}>
     <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.app?.site_mode?.style === "editorial" ? "ed-scope" : ""} ${site.app?.site_mode?.animation === "none" ? "ed-static" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" data-site-style={site.app?.site_mode?.style || "original"} data-site-animation={site.app?.site_mode?.animation || "full"} data-hero-motion={site.app?.motion_profile?.hero || ""} style={{ ...themeVars(site.theme), ["--ed-lime"]: site.app?.motion_profile?.accent || site.theme?.primary, background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
-      {site.app?.site_mode?.style === "editorial" && site.app?.motion_profile?.hero && (
+      {!iso && site.app?.site_mode?.style === "editorial" && site.app?.motion_profile?.hero && (
         <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none z-0" aria-hidden="true">
           <HeroMotionLayer hero={site.app.motion_profile.hero}
             accent={site.app.motion_profile.accent || site.theme?.primary || "#10B981"}
+            speed={site.app.motion_profile.speed ?? 1}
+            intensity={site.app.motion_profile.intensity ?? 1}
             reduced={site.app?.site_mode?.animation === "none"}
             mobile={typeof window !== "undefined" && window.innerWidth < 768} />
         </div>
       )}
-      {!embed && <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
+      {!embed && <MotionSwitcher value={iso} onPick={setIso} />}
+      {iso && isoData?.profile && isoData.template_key === iso && (
+        <div className="relative z-10" data-testid="live-motion-render" data-template={iso}>
+          <div className="px-4 sm:px-6 py-2 border-b border-white/10 bg-black/60 text-xs text-white/60 flex flex-wrap items-center gap-2">
+            <span className="overline text-[#84FF00]">LIVE</span>
+            <span className="font-semibold text-white" data-testid="live-motion-title">{isoData.industry}</span>
+            <span className="font-mono text-white/40">{isoData.profile.hero}</span>
+            <span data-testid="live-motion-status"
+              className={`chip ${isoData.status === "active" ? "!text-black" : ""}`}
+              style={isoData.status === "active" ? { background: "#84FF00", borderColor: "#84FF00" } : undefined}>
+              {isoData.status === "active" ? "ACTIVE" : "RESERVED"}
+            </span>
+          </div>
+          <MotionStage key={iso} profile={isoData.profile} industry={isoData.industry} />
+        </div>
+      )}
+      {!embed && !iso && <div className="relative z-50 backdrop-blur-xl bg-[#0B0F17]/90 text-white border-b border-white/10 px-4 sm:px-5 py-2 flex flex-wrap items-center gap-y-2 justify-between text-xs">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: site.app.color }} />
           <span className="font-semibold truncate max-w-[120px] sm:max-w-none">{site.app.name}</span>
@@ -90,7 +117,7 @@ export default function PublicPreview() {
               <button data-testid="member-signout" onClick={member.signOut} className="flex items-center gap-1.5 text-white/60 hover:text-white"><LogOut size={11} /> {member.user.name || "Sign out"}</button>
             </>
             : <span data-testid="member-status" className="chip">Members area</span>)}
-          <span className="chip chip-handover"><Eye size={11} /> Preview</span>
+          <span className="chip chip-handover" data-testid="public-live-badge"><Eye size={11} /> Live</span>
           <Link to="/" className="flex items-center gap-1.5 text-white/60 hover:text-white"><Layers size={12} className="text-[var(--acc)]" /> <span className="hidden sm:inline">Lois-Tech</span></Link>
         </div>
       </div>}
@@ -105,8 +132,8 @@ export default function PublicPreview() {
           </Link>
         </div>
       )}
-      {navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
-      <AnimatePresence mode="wait">
+      {!iso && navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
+      {!iso && <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
           {account && member.user
@@ -122,7 +149,7 @@ export default function PublicPreview() {
                 </EffectWrap>
               ))}
         </motion.div>
-      </AnimatePresence>
+      </AnimatePresence>}
       {site.theme.cursor !== false && <CursorTrail color={site.theme.primary} />}
       <ChatWidget token={token} brand={site.app.name} accent={site.theme.primary} light={site.theme.mode !== "dark"} />
       {openForm && <CtaFormModal form={openForm} theme={site.theme} onClose={() => setOpenForm(null)}

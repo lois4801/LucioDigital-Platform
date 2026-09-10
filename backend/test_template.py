@@ -213,8 +213,7 @@ def register(api, db, get_current_user, log_activity):
             "key": TEST_TEMPLATE_KEY, "brand": TEST_TEMPLATE_BRAND,
             "look": LOOKS[TEST_TEMPLATE_KEY],
             "is_rollout_admin": (user.get("email") or "").lower().strip() in admins,
-            "templates": [{"key": k, "studio": bool(LOOKS[k].get("studio")),
-                           "pending": (states.get(k) or {}).get("status") == "pending"}
+            "templates": [{"key": k, "studio": bool(LOOKS[k].get("studio")), "pending": False}
                           for k in LOOKS if k != TEST_TEMPLATE_KEY],
         }
 
@@ -254,10 +253,12 @@ def register(api, db, get_current_user, log_activity):
                 NICHES[key]["secondary"] = patch["secondary"]
             await db.template_looks.update_one({"key": key}, {"$set": {"key": key, "look": LOOKS[key],
                                                                       "updated_at": _now()}}, upsert=True)
-            # tenants on this template now have an unpushed design change waiting
+            # always-live: the change is applied to tenants on this template immediately
             await db.template_states.update_one({"key": key}, {"$set": {
-                "key": key, "status": "pending", "pending_hash": _look_hash(key),
+                "key": key, "status": "live", "look_hash": _look_hash(key), "pending_hash": None,
                 "updated_at": _now()}}, upsert=True)
+            from auto_propagate import apply_template
+            await apply_template(db, key)
 
         await db.rollout_jobs.insert_one({
             "job_id": job_id, "kind": "template_look", "scope": body.scope, "template_keys": targets,

@@ -599,3 +599,48 @@ FastAPI/Mongo. No feature or UI changes.
   and CTAs clickable; hero apply to Test Lab works; SiteModePanel inline preview paints.
 - Open (minor, unrelated): SiteModePanel "Preview Site" click did not open PublicPreview in the
   automated run — worth a look next pass.
+
+## 2026-06 · Motion tuning, public LIVE index, always-live propagation, imagery restore
+### Hero motion tuning (iter71)
+- `site_mode.motion_speed` (0.25-2x) + `motion_intensity` (0.2-1.5) per tenant, validated backend-side;
+  `MotionTuner.tsx` sliders in Site Mode and on the motion index; `HeroMotionLayer` scales its clock
+  by speed and canvas opacity by intensity (`data-speed` / `data-intensity`).
+- `GET /public/site/{token}` now merges `site_mode.hero/accent/speed/intensity` OVER the template
+  profile, so an applied hero actually reaches the live site.
+
+### Public LIVE motion index (iter72-73)
+- `backend/motion_showcase.py`: `GET /public/motion-reel` (44 systems, industry label, ACTIVE/RESERVED
+  from live tenant usage), `GET /public/motion-preview/{key}`, `POST /public/motion-picks`,
+  `GET /motion-picks`.
+- `/motion` and `/hero-gallery` are the SAME permanently public page (`pages/HeroGallery.tsx`);
+  admin controls (apply to tenant/template, favourites, client picks) render only when signed in.
+- `MotionStage.tsx` renders a template's full live motion context (hero + reveals + counters + layout);
+  `MotionSwitcher.tsx` is the public fixed top switcher ("LIVE — 44 Motion Systems" / "LIVE TEMPLATE");
+  `MotionPreviewOverlay.tsx` is the full live render. ALL preview/isolation/staging wording removed.
+- Site Mode: "Preview Site" button deleted. It now shows a 46vh live hero render plus a 56vh live
+  public-site iframe that remounts after every save.
+
+### Always live — pending state removed permanently (iter74)
+- `backend/auto_propagate.py`: `apply_template()`, boot-time `run()` sweep, `propagate_site_mode()`
+  (master workspace -> all active tenants -> `platform_settings.site_mode_defaults` for future tenants),
+  endpoints `/auto-propagate/status|run|templates/{key}`.
+- `mark_template_states()` marks everything live; `/test-lab/pending` returns zeros;
+  `/templates/rollout-status` always `live`, `pending: 0`.
+- All push buttons, pending badges, rollout modals and the redesign-approval banner removed
+  (TemplateGallery, Dashboard, RedesignReview, EditorialRolloutCard -> always-live status strip).
+- LucioDigital Test Lab is the LIVE MASTER WORKSPACE: tags are `internal tools` + `website`,
+  TEST badge gone (`header-master-badge`), sandbox wording replaced.
+
+### Template imagery + per-template design restored (iter75 + follow-up)
+- ROOT CAUSE: an earlier editorial rollout overwrote every `template_looks` doc with one identical
+  techno palette AND `hero: "centered"` — flattening all 33 designs and hiding every hero photo
+  (the centered hero variant rendered no image). `backend/restore_template_looks.py` restored each
+  template's palette/typography/radius/preset/hero variant from `site_content.LOOKS` + `studio_pack`
+  while preserving every `ed_*` motion key. Result: 33 templates, ~27 distinct primaries, ~10 fonts.
+- `BlockPreview` hero: scrims moved to `.hero-scrim/.hero-scrim-b/.hero-scrim-c` classes and softened,
+  and non-split heroes now render their photo as a backdrop, so no template can lose its imagery.
+- Team photos: `faces_for()` gives every industry a disjoint interleaved set from the randomuser
+  portrait CDN — 128 photos, 0 cross-template overlap, mixed genders per team.
+- Every template card and full preview runs its own live motion engine (33 unique engines,
+  `template-motion-badge-<key>`, intensity dialled to 0.55-0.6 so photography still reads).
+- Broken Unsplash ids replaced (hvac hero + one gallery photo); 0 broken images on /templates.

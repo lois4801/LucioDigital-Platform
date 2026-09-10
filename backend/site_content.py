@@ -23,7 +23,54 @@ def img(pid, w=2400):
     return f"{U}{pid}?w={w}&q=90&auto=format&fit=crop"
 
 
-FACES = ["photo-1560250097-0b93528c311a", "photo-1573496359142-b8d87734a5a2", "photo-1507003211169-0a1dd7228f2d", "photo-1580489944761-15a19d654956", "photo-1472099645785-5658abf4ff4e", "photo-1438761681033-6461ffad8d80"]
+FACES = ["photo-1560250097-0b93528c311a", "photo-1573496359142-b8d87734a5a2", "photo-1507003211169-0a1dd7228f2d", "photo-1580489944761-15a19d654956", "photo-1472099645785-5658abf4ff4e", "photo-1438761681033-6461ffad8d80",
+         "photo-1519085360753-af0119f7cbe7", "photo-1544005313-94ddf0286df2", "photo-1568602471122-7832951cc4c5", "photo-1517841905240-472988babdf9",
+         "photo-1531427186611-ecfd6d936c79", "photo-1524504388940-b1c1722653e1", "photo-1500648767791-00dcc994a43e", "photo-1494790108377-be9c29b29330",
+         "photo-1552058544-f2b08422138a", "photo-1534528741775-53994a69daeb", "photo-1508214751196-bcfd4ca60f91", "photo-1492562080023-ab3db95bfbce",
+         "photo-1549068106-b024baf5062d", "photo-1546525848-3ce03ca516f6", "photo-1573497019940-1c28c88b4f3e", "photo-1595152772835-219674b2a8a6",
+         "photo-1583864697784-a0efc8379f70", "photo-1607346256330-dee7af15f7c5", "photo-1517365830460-955ce3ccd263", "photo-1600180758890-6b94519a8ba6",
+         "photo-1580489944761-15a19d654956", "photo-1521119989659-a83eee488004", "photo-1502767089025-6572583495b0", "photo-1611432579699-484f7990b127"]
+
+
+FACES += [
+    "photo-1590086782792-42dd2350140d", "photo-1652471943570-f3590a4e52ed", "photo-1543949806-2c9935e6aa78",
+    "photo-1589729132389-8f0e0b55b91e", "photo-1506863530036-1efeddceb993", "photo-1580894732444-8ecded7900cd",
+    "photo-1484863137850-59afcfe05386", "photo-1598568398879-e2828721b300", "photo-1759521296144-fe6f2d2dc769",
+    "photo-1773186527252-0383a4f332af", "photo-1783323260513-fb1857ac515c", "photo-1594824476967-48c8b964273f",
+    "photo-1730597842283-943c7986ee2c", "photo-1673865641073-4479f93a7776", "photo-1622253694238-3b22139576c6",
+    "photo-1717700921740-a1440f3b89a4", "photo-1703792684940-a05aa0f1188f", "photo-1595294572864-ddb46d169dbb",
+    "photo-1639511177364-0866c0da16fa", "photo-1587397845856-e6cf49176c70", "photo-1563170446-9c3c0622d8a9",
+    "photo-1581841064838-a470c740e8ee", "photo-1779304726886-dd26c24950b0", "photo-1782323709687-43675cbddd46",
+    "photo-1726930095108-3737074d0f42", "photo-1778681547252-933c01ade375",
+]
+FACES = list(dict.fromkeys(FACES + [
+    "photo-1758685734503-58a8accc24e8", "photo-1601655781320-205e34c94eb1", "photo-1758685847747-597ce085906e",
+    "photo-1644778055925-cf45809c2c17", "photo-1621905252507-b35492cc74b4", "photo-1621905252472-943afaa20e20",
+    "photo-1776597172681-1d893349e719", "photo-1758600435798-fad26c19c314", "photo-1716428401265-6e0ed6cf32bc",
+    "photo-1758600435880-d7c0546a69d0", "photo-1594824476967-48c8b964273f",
+]))
+
+# Every template gets its own slice of the face pool — no two industries share a team photo.
+FACE_ORDER = ["hvac", "healthcare", "construction", "fitness", "retail", "hospitality", "finance",
+              "it_services", "creative_studio", "logistics", "saas", "legal", "education",
+              "real_estate", "restaurant", "events", "veterinary", "dental", "accounting",
+              "landscaping", "photography", "automotive", "beauty", "insurance", "pet_grooming",
+              "hvac_plumbing", "coworking", "wellness", "cleaning", "music_school", "nonprofit",
+              "architecture", "test_template"]
+
+
+def faces_for(key: str, count: int):
+    """A disjoint portrait set per industry — no two templates share a team photo.
+    Uses the randomuser portrait CDN (200 stable, distinct portraits) so 33 templates
+    × 4 members all get a unique face."""
+    idx = FACE_ORDER.index(key) if key in FACE_ORDER else abs(hash(key)) % len(FACE_ORDER)
+    out = []
+    for i in range(count):
+        n = (idx * 4 + i) % 200
+        # interleaved so every team mixes men and women while staying globally unique
+        gender, slot = ("men", n // 2) if n % 2 == 0 else ("women", n // 2)
+        out.append(f"https://randomuser.me/api/portraits/{gender}/{slot}.jpg")
+    return out
 
 # Premium dark design system per mood. bg / surface / border tuned so glass cards glow against the accent.
 MOODS = {
@@ -105,7 +152,7 @@ async def retheme_all(db):
 NICHES = {
  "hvac": dict(brand="Summit Air & Heat", industry="HVAC", mood="industrial", primary="#F97316", secondary="#38BDF8",
   badge="24/7 emergency service · NATE-certified", title="Comfort you can count on, in every season.", sub="Residential and light-commercial heating, cooling and indoor air quality — installed right the first time and maintained for life.",
-  cta="Book a service call", cta2="Call (416) 555-0188", hero=img("photo-1581094794329-c8112a89af12"), video=PX.format(28886877),
+  cta="Book a service call", cta2="Call (416) 555-0188", hero=img("photo-1660330589827-da8ab7dd3c02"), video=PX.format(28886877),
   gallery=["photo-1621905251189-08b45d6a269e", "photo-1504328345606-18bbc8c9d7d1", "photo-1585129777188-94600bc7b4b3", "photo-1607400201889-565b1ee75f8e", "photo-1581092160562-40aa08e78837", "photo-1558618666-fcd25c85cd64"],
   sections=["services", "emergency", "plans", "areas", "certs", "stats", "video", "testimonials", "faq", "cta"],
   services=("Services", "From a single furnace repair to a full ductless retrofit.", [("Furnace & boiler repair", "Same-day diagnostics on all gas, oil and electric systems. Most repairs completed on the first visit.", "Zap"), ("AC installation", "Right-sized 16–20 SEER systems with Manual J load calculations, not guesswork.", "Star"), ("Heat pumps & ductless", "Cold-climate heat pumps that hold 100% capacity to −15°C. Rebate paperwork handled for you.", "Globe"), ("Indoor air quality", "HRVs, HEPA filtration, humidifiers and duct cleaning for healthier air.", "Heart"), ("Commercial rooftop units", "Preventive maintenance and replacement for 3–25 ton RTUs.", "Shield"), ("Smart thermostats", "Ecobee and Nest installs with zoning and remote monitoring.", "Sparkles")]),
@@ -140,7 +187,7 @@ NICHES = {
  "construction": dict(brand="Ironbridge Construction Group", industry="Construction", mood="industrial", primary="#F59E0B", secondary="#94A3B8",
   badge="ISO 45001 · COR™ Certified · Bonded", title="We build the structures cities run on.", sub="Commercial, institutional and industrial general contracting — delivered on schedule, on budget and with an industry-leading safety record since 1987.",
   cta="Request a quote", cta2="View our projects", hero=img("photo-1541888946425-d81bb19240f5"), video=PX.format(8598737),
-  gallery=["photo-1503387762-592deb58ef4e", "photo-1541976590-713941681591", "photo-1429497419816-9ca5cfb4571a", "photo-1517581177682-a085bb7ffb15", "photo-1590644365607-1c5a5e03a0a5", "photo-1487958449943-2429e8be8625"],
+  gallery=["photo-1503387762-592deb58ef4e", "photo-1541976590-713941681591", "photo-1429497419816-9ca5cfb4571a", "photo-1517581177682-a085bb7ffb15", "photo-1698479603408-1a66a6d9e80f", "photo-1487958449943-2429e8be8625"],
   sections=["portfolio", "services", "safety", "certs", "stats", "video", "team", "testimonials", "quote"],
   portfolio=("Projects Portfolio", "A selection of recent work across sectors."),
   services=("Services", "One accountable partner from pre-construction to turnover.", [("General contracting", "Lump-sum and CM-at-risk delivery with self-performed concrete and carpentry.", "Shield"), ("Design-build", "Integrated architecture and engineering that cuts schedule by an average of 22%.", "Sparkles"), ("Pre-construction", "Constructability reviews, 4D scheduling and budgets accurate to ±3% at 60% design.", "Star"), ("Industrial & tilt-up", "Warehouses, distribution centres and plants up to 800,000 sq ft.", "Globe"), ("Institutional", "Schools, hospitals and civic buildings with occupied-site phasing.", "Heart"), ("Renovation & tenant fit-out", "Fast-track interior work with after-hours crews and dust control.", "Zap")]),
@@ -409,7 +456,8 @@ def _sec(n, key, i, brand):
     if key == "stats":
         return _blk("stats", {"heading": "By the numbers", "items": [{"value": v, "label": l} for v, l in n["stats"]]}, bg, "center")
     if key == "team":
-        return _blk("team", {"heading": n.get("team_heading", "Meet the team"), "members": [{"name": a, "role": b, "photo": img(FACES[k % len(FACES)], 900)} for k, (a, b) in enumerate(n["team"])]}, bg)
+        faces = faces_for(n.get("_key") or n.get("industry") or "", len(n["team"]))
+        return _blk("team", {"heading": n.get("team_heading", "Meet the team"), "members": [{"name": a, "role": b, "photo": faces[k]} for k, (a, b) in enumerate(n["team"])]}, bg)
     if key in ("testimonials", "stories", "cases"):
         h = {"testimonials": "What our clients say", "stories": g("stories")[0] if key == "stories" else "", "cases": g("cases")[0] if key == "cases" else ""}[key] or "What our clients say"
         items = n["quotes"] if key == "testimonials" else g(key)[1]
@@ -451,6 +499,7 @@ def extract_brand(app, pages):
 def build_premium_site(app, niche_key=None, brand=None):
     key = niche_key or niche_for(app)
     n = dict(NICHES[key])
+    n["_key"] = key
     brand = brand or {}
     if brand.get("name") and app.get("name") not in APP_MAP:
         n["brand"] = brand["name"]

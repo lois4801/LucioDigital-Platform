@@ -91,9 +91,15 @@
 .tmode-light p, .tmode-light li, .tmode-light summary { color: #333333; }
 .tmode-light .text-\[var\(--tmut\)\], .tmode-light .t-lead { color: #555555; }
 
-/* ---------- Cover hero scrim: keep the photograph readable in light mode ---------- */
-.tmode-light .hero-scrim { background: linear-gradient(100deg, color-mix(in srgb, var(--tbg) 92%, transparent) 0%, color-mix(in srgb, var(--tbg) 62%, transparent) 40%, transparent 78%) !important; }
-.tmode-light .hero-scrim-b { background: linear-gradient(180deg, transparent 65%, var(--tbg) 100%) !important; }
+/* ---------- Cover hero scrim ---------- */
+/* The photograph is the subject: the scrim only lifts text legibility. */
+.hero-scrim { background: linear-gradient(105deg, color-mix(in srgb, var(--tbg) 88%, transparent) 0%, color-mix(in srgb, var(--tbg) 52%, transparent) 42%, color-mix(in srgb, var(--tbg) 8%, transparent) 100%); }
+.hero-scrim-b { background: linear-gradient(180deg, transparent 55%, var(--tbg) 100%); }
+[data-testid="hero-cover"].text-center .hero-scrim { background: linear-gradient(180deg, color-mix(in srgb, var(--tbg) 62%, transparent) 0%, color-mix(in srgb, var(--tbg) 45%, transparent) 55%, color-mix(in srgb, var(--tbg) 70%, transparent) 100%); }
+.hero-scrim-c { background: linear-gradient(180deg, color-mix(in srgb, var(--tbg) 68%, transparent) 0%, color-mix(in srgb, var(--tbg) 48%, transparent) 50%, color-mix(in srgb, var(--tbg) 92%, transparent) 100%); }
+.tmode-light .hero-scrim-c { background: linear-gradient(180deg, color-mix(in srgb, var(--tbg) 72%, transparent) 0%, color-mix(in srgb, var(--tbg) 52%, transparent) 50%, color-mix(in srgb, var(--tbg) 94%, transparent) 100%) !important; }
+.tmode-light .hero-scrim { background: linear-gradient(100deg, color-mix(in srgb, var(--tbg) 88%, transparent) 0%, color-mix(in srgb, var(--tbg) 52%, transparent) 42%, transparent 82%) !important; }
+.tmode-light .hero-scrim-b { background: linear-gradient(180deg, transparent 68%, var(--tbg) 100%) !important; }
 
 /* Keep the accent bloom behind cover heroes subtle so the photograph stays the subject */
 .tmode-dark [data-testid="hero-cover"] .blur-3xl { opacity: .16 !important; }

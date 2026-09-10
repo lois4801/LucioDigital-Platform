@@ -94,6 +94,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         template_key: Optional[str] = None     # which of the industry templates drives the look
         hero: Optional[str] = None             # signature hero motion for this tenant
         accent: Optional[str] = None           # tenant accent used by every motion layer
+        motion_speed: Optional[float] = None       # 0.25x – 2x playback of the hero engine
+        motion_intensity: Optional[float] = None   # 0.2 (subtle) – 1.5 (bold) presence
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -205,6 +207,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "template_key": sm.get("template_key") or app.get("site_niche") or "",
             "hero": sm.get("hero") or (app.get("motion_profile") or {}).get("hero") or "",
             "accent": sm.get("accent") or (app.get("motion_profile") or {}).get("accent") or theme.get("primary") or "",
+            "motion_speed": float(sm.get("motion_speed") or 1.0),
+            "motion_intensity": float(sm.get("motion_intensity") or 1.0),
+            "preview_token": app.get("preview_token") or "",
+            "preview_enabled": bool(app.get("preview_enabled")),
             "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS), "publish": list(PUBLISH_STATES)},
         }
 
@@ -226,6 +232,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Unknown hero motion")
         if patch.get("accent") and patch["accent"].upper() in RESERVED_ACCENTS:
             raise HTTPException(400, "That accent is reserved for the platform site")
+        if patch.get("motion_speed") is not None and not 0.25 <= patch["motion_speed"] <= 2.0:
+            raise HTTPException(400, "Motion speed must be between 0.25x and 2x")
+        if patch.get("motion_intensity") is not None and not 0.2 <= patch["motion_intensity"] <= 1.5:
+            raise HTTPException(400, "Motion intensity must be between 0.2 and 1.5")
         cur.update(patch)
         cur["updated_at"] = _now()
         prof = dict(app.get("motion_profile") or {})
@@ -233,13 +243,20 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             prof["hero"] = patch["hero"]
         if patch.get("accent"):
             prof["accent"] = patch["accent"]
+        if patch.get("motion_speed") is not None:
+            prof["speed"] = patch["motion_speed"]
+        if patch.get("motion_intensity") is not None:
+            prof["intensity"] = patch["motion_intensity"]
         if prof:
             await db.apps.update_one({"app_id": app_id}, {"$set": {"motion_profile": prof}})
-        # Scoped to this one tenant only — never written to any other app document.
         await db.apps.update_one({"app_id": app_id}, {"$set": {"site_mode": cur}})
+        # Always-live: a design change saved in the master workspace propagates instantly to every
+        # active tenant and to the platform defaults future tenants inherit. Content is untouched.
+        from auto_propagate import propagate_site_mode
+        prop = await propagate_site_mode(db, app_id, patch)
         if log_activity:
             await log_activity(app_id, user, "site_mode.save", f"Site Mode updated: {patch}")
-        return {"app_id": app_id, **cur}
+        return {"app_id": app_id, **cur, "propagated_to": (prop or {}).get("tenants") or []}
 
     # ── redesign approval workflow ────────────────────────────────────────
     @api.get("/redesign/pending")

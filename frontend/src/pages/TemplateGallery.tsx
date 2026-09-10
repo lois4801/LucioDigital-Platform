@@ -4,15 +4,14 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { ArrowLeft, Check, Clock, Eye, FlaskConical, Layers, Link2, Loader2, Rocket, Share2, Sparkles, X } from "lucide-react";
 import api from "@/lib/api";
-import TemplateRolloutModal from "@/components/TemplateRolloutModal";
-import TemplatePushModal from "@/components/TemplatePushModal";
-import PushToOnePicker from "@/components/PushToOnePicker";
 import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** Live, scaled render of a template's real pages — same renderer the tenant sites use. */
-function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260 }) {
+import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
+
+function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260, motion: mo = null }) {
   const vars = themeVars(detail.theme);
   const blocks = (detail.pages?.[0]?.blocks || []).slice(0, maxBlocks);
   return (
@@ -23,12 +22,13 @@ function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260 }) {
           {blocks.map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
         </DesignCtx.Provider>
       </div>
+      {mo?.hero && <HeroMotionLayer hero={mo.hero} accent={mo.accent} intensity={0.55} />}
     </div>
   );
 }
 
 /** Full-page, scrollable preview of every page in the template. */
-function FullPreview({ detail, onClose, onUse, useLabel }) {
+function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null }) {
   const [slug, setSlug] = useState(detail.pages?.[0]?.slug || "/");
   const page = detail.pages?.find(p => p.slug === slug) || detail.pages?.[0];
   useEffect(() => { loadFonts(detail.theme); }, [detail]);
@@ -56,14 +56,23 @@ function FullPreview({ detail, onClose, onUse, useLabel }) {
       <div className={`flex-1 overflow-y-auto ${isV2(detail.theme) ? "dsv2" : ""} ${modeCls(detail.theme)}`}
         style={{ ...themeVars(detail.theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
         <DesignCtx.Provider value={isV2(detail.theme)}>
-          {(page?.blocks || []).map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
+          <div className="relative">
+            {motionProfile?.hero && (
+              <div className="absolute inset-x-0 top-0 h-[70vh] pointer-events-none z-[1]" data-testid="template-preview-motion">
+                <HeroMotionLayer hero={motionProfile.hero} accent={motionProfile.accent} intensity={0.6} />
+              </div>
+            )}
+            <div className="relative z-[2]">
+              {(page?.blocks || []).map((b, i) => <BlockPreview key={b.block_id || i} block={b} collections={[]} />)}
+            </div>
+          </div>
         </DesignCtx.Provider>
       </div>
     </div>
   );
 }
 
-function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onTemplatePush, allKeys }) {
+function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [], motionProfile = null }) {
   const isTest = t.key === "test_template";
   const ref = useRef(null);
   return (
@@ -71,7 +80,7 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onT
       data-testid={`template-card-${t.key}`} className={`card-surface overflow-hidden group cursor-pointer ${selected ? "!border-[var(--acc)]" : ""}`}
       onClick={() => onOpen(t)}>
       <div className="relative bg-[var(--bg-2)] border-b border-[var(--line)]">
-        {detail ? <TemplateFrame detail={detail} /> : (
+        {detail ? <TemplateFrame detail={detail} motion={motionProfile} /> : (
           <div className="h-[260px] flex items-center justify-center"><Loader2 size={18} className="animate-spin text-[var(--mut)]" /></div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-transparent to-transparent pointer-events-none" />
@@ -82,15 +91,10 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onT
               <FlaskConical size={10} /> TEST
             </span>
           )}
-          {state?.status === "pending" && (
-            <span data-testid={`template-pending-badge-${t.key}`} className="chip inline-flex items-center gap-1"
-              style={{ background: "rgba(249,115,22,0.16)", color: "#FB923C", borderColor: "rgba(249,115,22,0.4)" }}>
-              <Clock size={10} /> Pending Update
-            </span>
-          )}
           {t.studio && <span data-testid={`template-studio-badge-${t.key}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
           <span className="chip">{t.category}</span>
           <span className="chip">{t.mode === "light" ? "Light" : "Dark"}</span>
+          {motionProfile?.hero && <span className="chip font-mono !text-[9px]" data-testid={`template-motion-badge-${t.key}`}>{motionProfile.hero}</span>}
         </div>
         <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
           <span className="chip chip-active flex items-center gap-1"><Eye size={11} /> Full preview</span>
@@ -111,24 +115,10 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, onPush, onT
           <button data-testid={`template-use-${t.key}`} onClick={(e) => { e.stopPropagation(); onUse(t); }}
             className="btn-primary text-xs !py-1.5 !px-3 whitespace-nowrap">{useLabel}</button>
         </div>
-        {isTest && onTemplatePush ? (
-          <div className="mt-2 space-y-2">
-            <button data-testid="push-to-all-templates-btn"
-              onClick={(e) => { e.stopPropagation(); onTemplatePush({ scope: "all" }); }}
-              className="w-full btn-primary text-[11px] !py-2 flex items-center justify-center gap-1.5">
-              <Rocket size={11} /> Push to All Templates
-            </button>
-            <PushToOnePicker testid="push-to-one-template" label="Push to One Template"
-              options={(allKeys || []).map((k) => ({ value: k, label: k.replace(/_/g, " ") }))}
-              onPick={(k) => onTemplatePush({ targetKey: k })} />
-          </div>
-        ) : onPush && (
-          <button data-testid={`template-push-${t.key}`} onClick={(e) => { e.stopPropagation(); onPush(t, state); }}
-            className={`mt-2 w-full text-[11px] !py-2 flex items-center justify-center gap-1.5 ${state?.status === "pending" ? "btn-primary" : "btn-ghost"}`}>
-            <Rocket size={11} /> Push to All Tenants Using This Template
-            <span className="font-mono text-[10px] opacity-70">({state?.tenants_using ?? 0})</span>
-          </button>
-        )}
+        {/* Always live: design changes reach this template's tenants automatically — no push button. */}
+        <div className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[var(--dim)]" data-testid={`template-live-note-${t.key}`}>
+          Live · {state?.tenants_using ?? 0} tenant(s) auto-synced
+        </div>
       </div>
     </motion.div>
   );
@@ -152,8 +142,7 @@ export default function TemplateGallery({ clientMode = false }) {
   const [clientNote, setClientNote] = useState("");
   const [shareInfo, setShareInfo] = useState(null);
   const [states, setStates] = useState({});
-  const [pushing, setPushing] = useState(null);
-  const [tplPush, setTplPush] = useState(null);   // { scope } | { targetKey }
+  const [motions, setMotions] = useState({});   // template_key -> { hero, accent }
 
   const loadStates = () => {
     if (clientMode) return;
@@ -175,6 +164,15 @@ export default function TemplateGallery({ clientMode = false }) {
         .catch(e => setShareInfo({ error: e.response?.data?.detail || "This preview link is not valid" }));
     }
   }, [clientMode, token]);
+
+  // Live motion profile per template so every card animates like the landing page.
+  useEffect(() => {
+    api.get("/public/motion-reel").then(({ data }) => {
+      const m = {};
+      (data.heroes || []).forEach(r => { if (r.template_key) m[r.template_key] = { hero: r.hero, accent: r.accent }; });
+      setMotions(m);
+    }).catch(() => {});
+  }, []);
 
   // Load real page data for every template so each card renders its true design.
   // Batched (4 at a time) with one retry so a slow/failed request never leaves a card spinning.
@@ -266,11 +264,6 @@ export default function TemplateGallery({ clientMode = false }) {
         <div>
           {!clientMode && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
           <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}
-            {!clientMode && Object.values(states).some((s) => s.status === "pending") && (
-              <span data-testid="gallery-pending-count" className="chip chip-maint inline-flex items-center gap-1">
-                <Clock size={10} /> {Object.values(states).filter((s) => s.status === "pending").length} pending update
-              </span>
-            )}
           </div>
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
           <p className="text-[var(--mut)] mt-2 max-w-2xl text-sm">{clientMode
@@ -298,8 +291,8 @@ export default function TemplateGallery({ clientMode = false }) {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
           {shown.map(t => (
             <Card key={t.key} t={t} detail={details[t.key]} onOpen={openFull} onUse={useTemplate}
-              state={states[t.key]} onPush={clientMode ? null : (tpl, st) => setPushing({ ...tpl, ...(st || {}) })}
-              onTemplatePush={clientMode ? null : setTplPush}
+              state={states[t.key]}
+              motionProfile={motions[t.key]}
               allKeys={list.filter((x) => x.key !== "test_template").map((x) => x.key)}
               selected={chosen === t.key} useLabel={clientMode ? (chosen === t.key ? "Your pick" : "Choose this") : "Use this template"} />
           ))}
@@ -317,15 +310,10 @@ export default function TemplateGallery({ clientMode = false }) {
       )}
 
       {full && <FullPreview detail={full} onClose={() => setFull(null)} onUse={useTemplate}
+        motionProfile={motions[full.key]}
         useLabel={clientMode ? "Choose this design" : "Use this template"} />}
 
-      {pushing && <TemplateRolloutModal template={pushing} onClose={() => setPushing(null)} onDone={loadStates} />}
 
-      {tplPush && (
-        <TemplatePushModal open initialScope={tplPush.scope || "all"} targetKey={tplPush.targetKey || null}
-          staging={!!tplPush.staging}
-          onClose={() => setTplPush(null)} onDone={() => loadStates()} />
-      )}
 
       <Dialog open={shareOpen} onOpenChange={setShareOpen}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">

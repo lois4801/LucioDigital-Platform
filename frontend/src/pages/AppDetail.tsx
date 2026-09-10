@@ -118,7 +118,7 @@ export default function AppDetail() {
               <div className="font-display text-xl font-semibold tracking-tight flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ background: appDoc.color }} />
                 <span data-testid="label-tenant-name">{appDoc.name}</span>
-                {appDoc.is_test_lab && <span data-testid="header-test-badge" className="chip chip-maint inline-flex items-center gap-1" style={{ padding: "2px 8px" }}><FlaskConical size={10} /> TEST</span>}
+                {appDoc.is_test_lab && <span data-testid="header-master-badge" className="chip chip-active inline-flex items-center gap-1" style={{ padding: "2px 8px" }}>INTERNAL TOOLS</span>}
                 <span data-testid="header-kind-chip" className={`chip ${appDoc.kind === "app" ? "chip-handover" : ""}`} style={{ padding: "2px 8px" }}>{appDoc.kind === "app" ? "App" : "Website"}</span>
                 {appDoc.plan && <span data-testid="header-plan-chip" className="chip chip-active" style={{ padding: "2px 8px" }}>{appDoc.plan}</span>}
                 {appDoc.custom_domain && <span data-testid="header-domain-chip" className={`chip ${appDoc.domain_status === "verified" ? "chip-active" : "chip-maint"}`} style={{ padding: "2px 8px" }}>{appDoc.custom_domain}</span>}

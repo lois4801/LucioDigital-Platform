@@ -994,7 +994,11 @@ async def startup():
         _purged = await purge_other_sandboxes(db)
         logger.info(f"Extra sandbox sites removed: {len(_purged)} {[p['name'] for p in _purged]}")
         logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
-        logger.info(f"Templates pending rollout: {await mark_template_states(db)}")
+        await mark_template_states(db)
+        # Always-live: every template design is pushed to its tenants on every boot. No pending state.
+        from auto_propagate import run as auto_propagate_run
+        _ap = await auto_propagate_run(db)
+        logger.info(f"Auto-propagated {_ap['templates']} template(s) to {_ap['tenants']} tenant(s)")
         from case_study import ensure_seed as ensure_case_study_seed
         await ensure_case_study_seed(db)
         logger.info(f"Editorial layer staged on Test Template: {await test_template.apply_editorial_to_test_template(db)}")
@@ -1086,6 +1090,10 @@ from sandbox_guard import register as register_sandbox_guard
 register_sandbox_guard(api, db, get_current_user)
 from editorial_rollout import register as register_editorial
 register_editorial(api, db, get_current_user)
+from motion_showcase import register as register_motion_showcase
+register_motion_showcase(api, db, get_current_user)
+from auto_propagate import register as register_auto_propagate
+register_auto_propagate(api, db, get_current_user)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

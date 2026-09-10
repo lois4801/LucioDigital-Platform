@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import api from "@/lib/api";
-import { Monitor, Tablet, Smartphone, ArrowLeft, GitCompare, Rocket, Layers, FlaskConical } from "lucide-react";
-import RolloutModal from "@/components/RolloutModal";
+import { Monitor, Tablet, Smartphone, ArrowLeft, Layers, FlaskConical } from "lucide-react";
 
 const SIZES = { desktop: [1440, 900], tablet: [820, 1100], mobile: [390, 844] };
 const ICONS = { desktop: Monitor, tablet: Tablet, mobile: Smartphone };
@@ -13,7 +12,6 @@ export default function RedesignReview() {
   const nav = useNavigate();
   const [vp, setVp] = useState("desktop");
   const [info, setInfo] = useState(null);
-  const [showDiff, setShowDiff] = useState(false);
   const [target, setTarget] = useState(null);      // null = all tenants
   const [tenants, setTenants] = useState([]);
 
@@ -24,12 +22,6 @@ export default function RedesignReview() {
 
   const [w, h] = SIZES[vp];
   const scale = vp === "desktop" ? 0.42 : vp === "tablet" ? 0.5 : 0.62;
-
-  async function generateDiff() {
-    try { await api.post("/redesign/reviewed"); } catch { /* non-blocking */ }
-    setTarget(null);
-    setShowDiff(true);
-  }
 
   async function dismiss() {
     try {
@@ -83,44 +75,23 @@ export default function RedesignReview() {
           <Frame src={info?.preview_url || "/test-lab/landing"} label="New Test Lab version" badge={<FlaskConical size={13} className="text-[var(--acc)]" />} />
         </div>
 
-        <div className="card-surface p-6 text-center" data-testid="redesign-approval-prompt">
+        <div className="card-surface p-6 text-center" data-testid="redesign-live-notice">
           <div className="font-display text-xl sm:text-2xl font-semibold tracking-tight">
-            Are you happy with this redesign?
+            Everything here is already live.
           </div>
           <p className="text-sm text-[var(--mut)] mt-2 max-w-2xl mx-auto">
-            When you are ready, click Generate Diff to see a detailed breakdown of every change before deciding where to push it.
+            Auto-propagation is permanently on: every change lands on its template immediately,
+            reaches every active tenant using it, and is inherited by future tenants. There is no
+            approval step, no diff to confirm and no push button.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            <button data-testid="redesign-generate-diff" onClick={generateDiff} className="btn-primary inline-flex items-center gap-2"><GitCompare size={15} /> Generate Diff</button>
-            <button data-testid="redesign-dismiss" onClick={dismiss} className="btn-ghost text-sm !py-2.5 !px-5">Not yet — keep it in Test Lab</button>
+            <button data-testid="redesign-open-motion" onClick={() => nav("/motion")} className="btn-primary inline-flex items-center gap-2">Motion systems index</button>
+            <button data-testid="redesign-open-dashboard" onClick={() => nav("/dashboard")} className="btn-ghost text-sm !py-2.5 !px-5">Back to dashboard</button>
           </div>
         </div>
 
-        {info?.reviewed_at && (
-          <div className="card-surface p-6" data-testid="redesign-rollout-options">
-            <div className="overline">Controlled rollout</div>
-            <div className="text-sm text-[var(--mut)] mt-1">Each option opens the confirmation modal before anything is applied.</div>
-            <div className="mt-4 grid sm:grid-cols-3 gap-3">
-              <div>
-                <select data-testid="redesign-target-tenant" onChange={e => setTarget(e.target.value || null)} defaultValue=""
-                  className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm mb-2 outline-none focus:border-[var(--acc)]">
-                  <option value="">Choose a tenant…</option>
-                  {tenants.map(t => <option key={t.app_id} value={t.app_id}>{t.name}</option>)}
-                </select>
-                <button data-testid="redesign-push-one" disabled={!target} onClick={() => setShowDiff(true)}
-                  className="btn-ghost w-full text-sm !py-2.5 disabled:opacity-40">Push to One Tenant</button>
-              </div>
-              <button data-testid="redesign-push-template" onClick={() => nav("/templates")}
-                className="btn-ghost text-sm !py-2.5 self-start">Push to One Template</button>
-              <button data-testid="redesign-push-all" onClick={() => { setTarget(null); setShowDiff(true); }}
-                className="btn-primary text-sm !py-2.5 inline-flex items-center justify-center gap-2 self-start"><Rocket size={14} /> Push to All</button>
-            </div>
-          </div>
-        )}
       </main>
 
-      <RolloutModal open={showDiff} onClose={() => setShowDiff(false)} targetAppId={target}
-        targetName={tenants.find(t => t.app_id === target)?.name || ""} />
     </div>
   );
 }

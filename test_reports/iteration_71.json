@@ -1,0 +1,31 @@
+{
+  "summary": "End-to-end verification of iteration 71 (Motion Showcase Reel + hero motion tuning + Preview Site absolute-URL fix). Backend pytest suite (6/6 passing) covers /api/public/motion-reel (43 heroes / 43 industries), /api/public/motion-picks create+validation+admin list, PUT /api/apps/{id}/site-mode range validation (speed 9 -> 400, intensity 5 -> 400), speed/intensity persistence, and template-hero override via /api/public/site/{token} (motion_profile.hero == site_mode.hero, not stale template hero). Frontend flows all verified: (1) Public /motion logged-OUT renders 43 motion-card-* with 43 hero-motion-canvas painting (43/43 desktop, 42/43 mobile - 1 off-screen), 44 motion-filter-* chips including motion-filter-all, motion-search filters cards live (aurora -> 1), motion-share-btn present, 0 horizontal overflow at both 1920 and 390. (2) Pick flow: motion-pick-<hero> opens motion-pick-modal, submit with empty email keeps modal open (blocked), fill motion-pick-name + motion-pick-email + submit closes modal, card button flips to 'Sent'; POST verified via curl and via admin GET /api/motion-picks. (3) Hero Gallery: gallery-speed and gallery-intensity change hero-motion-layer data-speed/data-intensity live (1.5/1.1 -> 1.75/1.3); hero-gallery-picks-btn opens hero-picks-panel with the just-created pick; hero-pick-apply-* fires 'aurora-wave applied to LucioDigital Test Lab' toast and GET /api/apps/app_testlab/site-mode confirms hero=aurora-wave and speed/intensity persisted. (4) Site Mode panel: sm-motion-tuner + sm-speed + sm-intensity + sm-hero-preview all present; real mouse drag on sm-speed persisted motion_speed=0.35 and fired 'Site Mode updated for this tenant only' toast. (5) Preview Site: site-mode-preview-btn opens site-preview-overlay containing site-preview-frame iframe pointing at absolute https://.../p/<token>?motion=full; both site-mode-preview-newtab and site-preview-newtab are absolute URLs with target=_blank. (6) Public preview at /p/<token>?motion=full renders hero-motion-layer with data-hero=aurora-wave (matches saved site_mode.hero, NOT the stale hvac template hero), data-speed=1.75 and data-intensity=1.3 matching the saved tuner values; canvas paints (1.46M non-zero alpha pixels at 1920x4000). Only console warnings observed are benign willReadFrequently canvas hints and a single 401 from /api/me on logged-out /motion (expected).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "Hero Gallery -> Client picks -> Apply to tenant", "issue": "hero-pick-apply-* applies the pick's hero correctly, but persists the current gallery tuner speed/intensity (e.g. 1.75/1.3) instead of the speed/intensity stored on the pick record (e.g. 1.083/1.00). This could be intentional (use current tuner as the source of truth on apply) but it's worth confirming, since the picks panel displays each pick's saved 'speed · intensity' and a user may reasonably expect those exact values to be applied.", "affected_selectors": ["[data-testid^=hero-pick-apply-]"]}
+    ],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/backend/tests/test_iter71_motion.py", "/app/test_reports/pytest/iter71.xml"],
+  "action_items": [
+    "OPTIONAL: decide whether 'Apply to tenant' from Client picks should send the pick's stored speed/intensity or the current gallery tuner values. Current behaviour = gallery tuner values.",
+    "COSMETIC (carry-over from iter_70): HeroMotionLayer canvas contexts could pass { willReadFrequently: true } to silence Chrome perf warnings observed during automated pixel sampling."
+  ],
+  "critical_code_review_comments": [
+    "SiteMode tuner correctly saves on pointer-release only (change event), not on every input tick — good for reducing PUT traffic; success toast 'Site Mode updated for this tenant only' fires reliably.",
+    "Preview Site links are now absolute URLs on both site-mode-preview-newtab (button row) and site-preview-newtab (inside overlay); target=_blank present. Resolves the iter_70 minor concern about Preview Site not opening a new tab.",
+    "Public /api/public/site/{token} correctly merges site_mode.hero + site_mode.motion_speed + site_mode.motion_intensity into motion_profile (hero/speed/intensity), so the public preview page reflects saved tenant tuning immediately.",
+    "SiteModeIn validation rejects out-of-range speed (>2) and intensity (>1.5) with HTTP 400 as required.",
+    "MotionShowcase page is fully public (no login) and renders 43 hero engines with their own canvas per-card; IntersectionObserver correctly pauses off-screen heroes (1/43 mobile canvases were off-screen and not painted, which is expected/desired)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter71_motion.py"],
+  "success_rate": {"backend": "100% (6/6 pytest)", "frontend": "100% on all 8 required checks"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (cookie login OK). Test Lab tenant: app_testlab, preview token pv_c3b797fcdafc58d4e70e320f.",
+  "seed_data_creation": "Created 2 hero-picks against aurora-wave via /api/public/motion-picks (TEST_reel_* and TEST_ prefixes) — allowed per request. app_testlab site-mode currently at hero=aurora-wave motion_speed=0.35 motion_intensity=1.3 after the drag test (also allowed).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Sliders in this app are true <input type=range> elements — programmatic value+input+change events UPDATE THE UI but do NOT trigger the save handler (which listens to pointerup/change-after-drag). To exercise save flows on sm-speed/sm-intensity/gallery-speed/gallery-intensity, use real page.mouse.down/move/up on the slider bounding box (see script in this iteration). Also, /motion canvases pause when off-screen (IntersectionObserver): scroll before sampling and use a strided full-canvas sample, not top-left. Public preview page must be tested at absolute URL /p/<token>?motion=full — that route now correctly reflects site_mode.hero/speed/intensity via motion_profile.",
+  "rca of the issue": "N/A — no regressions found. All three approved items in this iteration are functional end-to-end."
+}

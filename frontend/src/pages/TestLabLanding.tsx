@@ -36,6 +36,7 @@ export default function TestLabLanding() {
         <div className="sticky top-0 z-40 bg-[var(--ed-lime)] text-black text-[11px] font-semibold tracking-wide px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="testlab-sandbox-banner">
           <span>Admin · live landing page</span>
           <Link to="/hero-gallery" className="underline">Hero gallery</Link>
+          <Link to="/motion" className="underline" data-testid="landing-motion-reel-link">Motion reel</Link>
           <Link to="/accent-audit" className="underline">Accent audit</Link>
           <Link to="/dashboard" className="underline ml-auto">Dashboard</Link>
         </div>

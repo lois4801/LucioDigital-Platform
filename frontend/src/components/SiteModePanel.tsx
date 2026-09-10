@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Loader2, ShieldCheck } from "lucide-react";
-import SitePreviewOverlay, { PreviewSiteButton } from "@/components/SitePreviewOverlay";
+import { previewUrl } from "@/components/SitePreviewOverlay";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
+import MotionTuner from "@/components/editorial/MotionTuner";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
 const ANIMS = [["full", "Full"], ["reduced", "Reduced"], ["none", "None"]];
 const PUB = [["draft", "Draft"], ["preview", "Preview link only"], ["live", "Live"]];
 
-function Row({ label, hint, value, options, onPick, testid }) {
+function Row({ label, hint, value, options, onPick, testid, busy = false }) {
   return (
     <div className="py-4 border-b border-[var(--line)] last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -20,8 +21,8 @@ function Row({ label, hint, value, options, onPick, testid }) {
         </div>
         <div className="flex flex-wrap gap-1.5">
           {options.map(([v, l]) => (
-            <button key={v} data-testid={`${testid}-${v}`} onClick={() => onPick(v)}
-              className={`chip cursor-pointer transition-colors ${value === v ? "chip-active" : "hover:!text-white"}`}>{l}</button>
+            <button key={v} data-testid={`${testid}-${v}`} disabled={busy} onClick={() => onPick(v)}
+              className={`chip cursor-pointer transition-colors disabled:opacity-60 ${value === v ? "chip-active" : "hover:!text-white"}`}>{l}</button>
           ))}
         </div>
       </div>
@@ -33,12 +34,19 @@ function Row({ label, hint, value, options, onPick, testid }) {
 export default function SiteModePanel({ appId, appName, appDoc = null, templates = [] }) {
   const [sm, setSm] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [preview, setPreview] = useState(false);
   const [heroes, setHeroes] = useState([]);
+  const [renderV, setRenderV] = useState(0);   // bumps the live site render after every save
+  const [liveToken, setLiveToken] = useState(appDoc?.preview_token || "");
 
   useEffect(() => {
     if (!appId) return;
-    api.get(`/apps/${appId}/site-mode`).then(r => setSm(r.data)).catch(() => {});
+    api.get(`/apps/${appId}/site-mode`).then(r => {
+      setSm(r.data);
+      // Never rotate an existing link — only mint one when the tenant has none at all.
+      if (r.data.preview_token) setLiveToken(r.data.preview_token);
+      else api.post(`/apps/${appId}/preview/regenerate`)
+        .then(({ data }) => setLiveToken(data.preview_token || data.token || "")).catch(() => {});
+    }).catch(() => {});
     api.get("/editorial/heroes").then(r => setHeroes(r.data.heroes || [])).catch(() => {});
   }, [appId]);
 
@@ -48,6 +56,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
     try {
       const { data } = await api.put(`/apps/${appId}/site-mode`, next);
       setSm(s => ({ ...s, ...data }));
+      setRenderV(v => v + 1);
       toast.success("Site Mode updated for this tenant only");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not save Site Mode");
@@ -65,19 +74,18 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           <div className="text-xs text-[var(--mut)] mt-0.5">Public site · {sm.publish}</div>
         </div>
         <div className="flex items-center gap-2">
-          <PreviewSiteButton onClick={() => setPreview(true)} />
-          <span className="chip inline-flex items-center gap-1"><ShieldCheck size={11} /> Isolated to this tenant</span>
+          <span className="chip inline-flex items-center gap-1" data-testid="site-mode-live-badge"><ShieldCheck size={11} /> Live · isolated to this tenant</span>
         </div>
       </div>
 
       <div className="mt-4">
-        <Row testid="sm-style" label="Design style" hint="Original template look, or the new editorial motion system."
+        <Row busy={busy} testid="sm-style" label="Design style" hint="Original template look, or the new editorial motion system."
           value={sm.style} options={STYLES} onPick={v => patch({ style: v })} />
-        <Row testid="sm-mode" label="Light / dark default" hint="What visitors see first on this tenant's public site."
+        <Row busy={busy} testid="sm-mode" label="Light / dark default" hint="What visitors see first on this tenant's public site."
           value={sm.mode} options={MODES} onPick={v => patch({ mode: v })} />
-        <Row testid="sm-anim" label="Animation intensity" hint="Full motion, subtle transitions only, or completely static."
+        <Row busy={busy} testid="sm-anim" label="Animation intensity" hint="Full motion, subtle transitions only, or completely static."
           value={sm.animation} options={ANIMS} onPick={v => patch({ animation: v })} />
-        <Row testid="sm-publish" label="Publishing status" hint="Draft is private, Preview is link-only, Live is public."
+        <Row busy={busy} testid="sm-publish" label="Publishing status" hint="Draft is private, Preview is link-only, Live is public."
           value={sm.publish} options={PUB} onPick={v => patch({ publish: v })} />
         <div className="py-4 border-b border-[var(--line)]">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -95,9 +103,26 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
             </div>
           </div>
           {sm.hero && (
-            <div className="mt-3 relative h-28 rounded-xl overflow-hidden bg-[#080808] border border-[var(--line)]" data-testid="sm-hero-preview">
-              <HeroMotionLayer hero={sm.hero} accent={sm.accent || "#10B981"} />
-              <div className="absolute inset-0 grid place-items-center font-mono text-[11px] text-white/40">{sm.hero}</div>
+            <div className="mt-3">
+              <div className="relative h-[46vh] min-h-[280px] rounded-xl overflow-hidden bg-[#080808] border border-[var(--line)]"
+                data-testid="sm-hero-live-render" data-hero={sm.hero}
+                data-speed={sm.motion_speed ?? 1} data-intensity={sm.motion_intensity ?? 1}>
+                <HeroMotionLayer hero={sm.hero} accent={sm.accent || "#10B981"}
+                  speed={sm.motion_speed ?? 1} intensity={sm.motion_intensity ?? 1} />
+                <div className="absolute top-3 left-3 chip !text-black" style={{ background: sm.accent || "#10B981", borderColor: sm.accent || "#10B981" }}>LIVE</div>
+                <div className="absolute bottom-3 left-3 font-mono text-[11px] text-white/45">{sm.hero}</div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div className="text-xs text-[var(--mut)]">Speed and intensity update this live render as you drag.</div>
+                <MotionTuner prefix="sm" compact
+                  speed={sm.motion_speed ?? 1} intensity={sm.motion_intensity ?? 1}
+                  onChange={v => setSm(s => ({
+                    ...s,
+                    ...(v.speed !== undefined ? { motion_speed: v.speed } : {}),
+                    ...(v.intensity !== undefined ? { motion_intensity: v.intensity } : {}),
+                  }))}
+                  onCommit={() => patch({ motion_speed: sm.motion_speed ?? 1, motion_intensity: sm.motion_intensity ?? 1 })} />
+              </div>
             </div>
           )}
         </div>
@@ -131,8 +156,27 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
         )}
       </div>
       {busy && <div className="mt-3 text-xs text-[var(--mut)] flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Saving…</div>}
-      <SitePreviewOverlay open={preview} appId={appId} previewToken={appDoc?.preview_token}
-        onClose={() => setPreview(false)} />
+
+      {/* Live site render — exactly what a public visitor sees, all motion running. */}
+      <div className="mt-6 pt-5 border-t border-[var(--line)]" data-testid="sm-live-site-section">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="chip !text-black" style={{ background: sm.accent || "#10B981", borderColor: sm.accent || "#10B981" }}>LIVE SITE</span>
+          <div className="text-xs text-[var(--mut)]">Every change above lands here immediately — no preview step.</div>
+          {liveToken && (
+            <a data-testid="sm-live-newtab" href={previewUrl(liveToken)} target="_blank" rel="noreferrer"
+              className="ml-auto chip cursor-pointer hover:!text-white">Open full screen</a>
+          )}
+        </div>
+        {liveToken ? (
+          <iframe key={`${liveToken}-${renderV}`} data-testid="sm-live-site-frame" title="Live site"
+            src={previewUrl(liveToken)}
+            className="mt-3 w-full h-[56vh] min-h-[420px] rounded-xl border border-[var(--line)] bg-black" />
+        ) : (
+          <div className="mt-3 text-sm text-[var(--mut)]" data-testid="sm-live-site-missing">
+            This tenant has no public link yet — set Publishing status to Preview or Live.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

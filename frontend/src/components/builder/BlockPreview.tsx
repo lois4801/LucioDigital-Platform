@@ -189,16 +189,27 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
     if (cover) return (
       <section data-testid="hero-cover" className={`relative overflow-hidden px-6 sm:px-8 lg:px-12 ${v2 ? "thero py-24" : "py-28 lg:py-36"} text-[var(--thead)] ${centered ? "text-center" : ""}`}>
         <img src={p.image} alt="" decoding="async" fetchPriority="high" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 hero-scrim" style={{ background: "linear-gradient(105deg, var(--tbg) 0%, color-mix(in srgb, var(--tbg) 82%, transparent) 45%, color-mix(in srgb, var(--tbg) 30%, transparent) 100%)" }} />
-        <div className="absolute inset-0 hero-scrim-b" style={{ background: "linear-gradient(180deg, transparent 40%, var(--tbg) 100%)" }} />
+        <div className="absolute inset-0 hero-scrim" />
+        <div className="absolute inset-0 hero-scrim-b" />
         <div className="absolute -top-32 -right-24 w-[520px] h-[520px] rounded-full blur-3xl opacity-30 pointer-events-none" style={{ background: "var(--tp)" }} />
         <div className="relative w-full">{inner}</div>
         {onImage && <div className="absolute top-4 right-4 z-20"><button type="button" data-testid="image-swap-image" onClick={(e) => { e.stopPropagation(); onImage("image", p.image); }} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-white border border-white/30 bg-black/60 backdrop-blur hover:bg-black/80"><Icons.ImagePlus size={12} /> Replace background</button></div>}
       </section>
     );
     return (
-      <section className={`${sectionCls({ ...s, padding: s.padding || "lg" }, v2)} ${v2 && centered ? "thero" : ""} ${centered ? "text-center" : ""}`}>
-        {split ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<div className="relative"><img src={p.image} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /><Swap path="image" current={p.image} /></div></div> : inner}
+      <section data-testid={centered && p.image ? "hero-centered" : undefined}
+        className={`relative overflow-hidden ${sectionCls({ ...s, padding: s.padding || "lg" }, v2)} ${v2 && centered ? "thero" : ""} ${centered ? "text-center" : ""}`}>
+        {/* Centred heroes keep their photograph as the backdrop so no template loses its imagery. */}
+        {!split && p.image && (
+          <>
+            <img src={p.image} alt="" decoding="async" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 hero-scrim-c" />
+            <Swap path="image" current={p.image} />
+          </>
+        )}
+        {split
+          ? <div className="grid lg:grid-cols-2 gap-10 items-center">{inner}<div className="relative"><img src={p.image} alt="" loading="lazy" decoding="async" className="w-full aspect-[4/3] object-cover rounded-[var(--tr)] border border-[var(--tbd)] shadow-[0_30px_80px_-40px_var(--tp)]" /><Swap path="image" current={p.image} /></div></div>
+          : <div className="relative">{inner}</div>}
       </section>
     );
   }
