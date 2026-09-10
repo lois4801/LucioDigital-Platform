@@ -157,7 +157,7 @@ export function LiveChart({ variant, accent, label, values = [], labels = [], te
   );
 }
 
-function LocationMap({ accent, address, brand, sample = false }) {
+function LocationMap({ accent, address, brand, sample = false, mapUrl = "" }) {
   const ref = useRef(null);
   const seed = seedOf(address || brand);
   useLoop(ref, (ctx, w, h, t) => {
@@ -197,16 +197,25 @@ function LocationMap({ accent, address, brand, sample = false }) {
       <div className="text-[10px] uppercase tracking-[0.18em] opacity-60">Where to find us</div>
       <canvas ref={ref} className="w-full h-[190px] block mt-2" data-testid="industry-map-canvas" />
       <div className="mt-3 text-sm font-semibold">{brand}</div>
-      <div className="text-xs opacity-70 pb-12 sm:pb-0" data-testid="industry-map-address">{address || "Address on request"}</div>
+      <div className="text-xs opacity-70" data-testid="industry-map-address">{address || "Address on request"}</div>
+      {address ? (
+        <a data-testid="industry-map-directions" target="_blank" rel="noreferrer"
+          href={mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+          className="mt-2.5 inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5 border transition-transform hover:-translate-y-0.5"
+          style={{ borderColor: accent, color: accent }}>
+          <span aria-hidden>➔</span> Get directions
+        </a>
+      ) : null}
       {sample && address ? (
         <div className="mt-1.5 inline-block text-[9px] uppercase tracking-[0.16em] rounded-full border border-current px-2 py-0.5 opacity-55"
           data-testid="industry-map-sample-tag">Sample address</div>
       ) : null}
+      <div className="pb-12 sm:pb-0" />
     </div>
   );
 }
 
-export default function IndustryVitals({ templateKey = "", industry = "", accent = "#10B981", brand = "", address = "", vitals = null, sampleAddress = false }) {
+export default function IndustryVitals({ templateKey = "", industry = "", accent = "#10B981", brand = "", address = "", vitals = null, sampleAddress = false, mapUrl = "" }) {
   const v = vitals || {};
   const metrics = (v.metrics || []).slice(0, 3);
   const variants = v.variants || ["area", "donut"];
@@ -242,7 +251,7 @@ export default function IndustryVitals({ templateKey = "", industry = "", accent
         <LiveChart variant={variants[1]} accent={accent} label={v.series2_label || "Service mix"}
           values={v.series2 || []} labels={v.labels2 || []} testid="industry-chart-2"
           source={v.source_label2 || ""} updated={updated} />
-        <LocationMap accent={accent} address={address} brand={brand} sample={sampleAddress} />
+        <LocationMap accent={accent} address={address} brand={brand} sample={sampleAddress} mapUrl={mapUrl} />
       </div>
     </section>
   );

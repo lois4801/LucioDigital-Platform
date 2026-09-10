@@ -459,11 +459,14 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if not _addr:
             from site_content import NICHES as _NICHES
             _addr = (_NICHES.get(_vk) or {}).get("address") or ""
+        from urllib.parse import quote_plus
         return {"app": {**{k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
                         "app_id": doc["app_id"],
                         "site_mode": sm,
                         "vitals": vitals,
                         "address": _addr,
+                        "map_url": (sm.get("map_url") or "").strip() or (
+                            f"https://www.google.com/maps/search/?api=1&query={quote_plus(_addr)}" if _addr else ""),
                         "motion_profile": prof},
                 "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True,
                 "webapp": {"converted": bool((doc.get("webapp") or {}).get("converted")),

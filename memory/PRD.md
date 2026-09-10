@@ -790,3 +790,22 @@ FastAPI/Mongo. No feature or UI changes.
   "Source: X · Updated <date>" (`industry-chart-source`, `industry-chart-2-source`). The date comes
   from `imported_at`/`updated_at` automatically and the whole line is hidden when no source is set.
 - Known nit (non-blocking): pressing Enter in the address field fires a PUT even when unchanged.
+
+## 2026-06 · Get directions + client figures portal + 3-column import (iter82, backend 18/18 + 18/18 regression, frontend 100%)
+- Directions: `site_mode.map_url` (optional, http/https only, clamped to 400 chars). `studio.public_site()`
+  returns `app.map_url` = the custom link, else an auto-built
+  `https://www.google.com/maps/search/?api=1&query=<address>`, else "". `LocationMap` renders a
+  "Get directions" pill (`industry-map-directions`, target=_blank) only when an address exists.
+- NEW `components/LocationFields.tsx` — shared business address + directions link block
+  (`location-fields`, `sm-address-input`, `sm-mapurl-input`, `sm-address-save`, `sm-directions-test`),
+  used by the Site Mode panel AND the client portal. Replaced the inline address row in SiteModePanel.
+- Client portal (`/portal`): new `portal-figures-card` per project = LocationFields + the full
+  VitalsEditor, so clients edit their own numbers, source lines, address and directions link and
+  upload their own sheets. Authorisation reuses `server.get_user_app()` (owner OR member); verified a
+  non-member gets 403/404 on every vitals/site-mode route.
+- Excel auto-build: `import_vitals()` parses up to 3 columns — column 2 fills chart 1 and column 3
+  fills chart 2 in ONE upload (`charts: 2` in the response); two-column sheets are unchanged
+  (`charts: 1`); `?target=series2` still writes only the second chart. Sample sheet is now 3 columns.
+- Per the user's choice, chart DESIGNS stay fixed per template: no chart-type picker, no auto-switching.
+- Known cosmetic (non-blocking): saving repeatedly in quick succession can 429 the public-site refetch
+  as the Site Mode iframe remounts; it recovers on the next call.

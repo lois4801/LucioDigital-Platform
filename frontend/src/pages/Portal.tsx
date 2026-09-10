@@ -6,7 +6,9 @@ import { LookVoting } from "@/components/LookVoting";
 import { CursorFXVoting } from "@/components/CursorFXVoting";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
-import { ExternalLink, Receipt, Inbox, MessageSquarePlus, Loader2, Layers, LogOut, Globe } from "lucide-react";
+import { ExternalLink, Receipt, Inbox, MessageSquarePlus, Loader2, Layers, LogOut, Globe, BarChart3 } from "lucide-react";
+import VitalsEditor from "@/components/VitalsEditor";
+import LocationFields from "@/components/LocationFields";
 
 export default function Portal() {
   const nav = useNavigate();
@@ -49,6 +51,16 @@ export default function Portal() {
             </div>
           </div>
           <LookVoting appId={app.app_id} />
+          <div className="card-surface p-5" data-testid="portal-figures-card">
+            <div className="overline flex items-center gap-2 mb-1"><BarChart3 size={11} className="text-[var(--acc)]" /> Your figures, charts &amp; location</div>
+            <div className="text-xs text-[var(--mut)] mb-3">
+              Update the numbers shown on your website yourself, or drop in a spreadsheet — no need to send it to the agency.
+            </div>
+            <LocationFields appId={app.app_id} compact />
+            <div className="mt-2 border-t border-[var(--line)]">
+              <VitalsEditor appId={app.app_id} accent={app.color || "#10B981"} />
+            </div>
+          </div>
           <CursorFXVoting appId={app.app_id} />
           <div className="grid md:grid-cols-3 gap-4">
             <div className="card-surface p-5"><div className="overline flex items-center gap-2 mb-3"><Receipt size={11} /> Invoices</div>

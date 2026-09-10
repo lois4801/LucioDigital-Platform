@@ -54,14 +54,14 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
       const { data } = await api.post(`/apps/${appId}/vitals/import?target=${target}`, fd,
         { headers: { "Content-Type": "multipart/form-data" } });
       setV((s: any) => ({ ...s, ...data }));
-      toast.success(`Imported ${data.points} figures from ${file.name}`);
+      toast.success(`Imported ${data.points} figures from ${file.name}${data.charts > 1 ? " — both charts built" : ""}`);
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Could not read that spreadsheet");
     } finally { setBusy(false); setDrop(""); }
   }
 
   function sample() {
-    const csv = "Label,Value\nJan,280\nFeb,305\nMar,340\nApr,372\nMay,410\nJun,468\n";
+    const csv = "Label,Chart 1,Chart 2\nJan,280,42\nFeb,305,48\nMar,340,55\nApr,372,61\nMay,410,68\nJun,468,74\n";
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = "figures-template.csv"; a.click();
     URL.revokeObjectURL(url);
@@ -154,7 +154,7 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
         onClick={() => { targetRef.current = "series"; fileRef.current?.click(); }}
         className={`mt-4 rounded-xl border border-dashed px-4 py-5 text-center cursor-pointer transition-colors ${drop ? "border-[var(--acc)] bg-[var(--acc)]/5" : "border-[var(--line)] hover:border-[var(--acc)]"}`}>
         <div className="text-sm font-semibold inline-flex items-center gap-2"><Upload size={13} /> Drop an Excel or CSV sheet here</div>
-        <div className="text-xs text-[var(--mut)] mt-1">Two columns — label, value. A header row is fine. .xlsx, .xlsm or .csv, up to 12 rows.</div>
+        <div className="text-xs text-[var(--mut)] mt-1">Label in the first column, figures in the next. A third column automatically fills the second chart. .xlsx, .xlsm or .csv, up to 12 rows.</div>
         {v.imported_file && <div className="text-[11px] text-[var(--acc)] mt-2" data-testid="vitals-imported-file">Last import: {v.imported_file}</div>}
       </div>
 

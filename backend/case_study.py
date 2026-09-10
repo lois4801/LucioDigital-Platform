@@ -97,6 +97,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         motion_speed: Optional[float] = None       # 0.25x – 2x playback of the hero engine
         motion_intensity: Optional[float] = None   # 0.2 (subtle) – 1.5 (bold) presence
         address: Optional[str] = None          # real business address: map + contact/footer blocks
+        map_url: Optional[str] = None          # optional custom "Get directions" link
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -229,6 +230,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "motion_speed": float(sm.get("motion_speed") or 1.0),
             "motion_intensity": float(sm.get("motion_intensity") or 1.0),
             "address": sm.get("address") or (app.get("brand_profile") or {}).get("address") or "",
+            "map_url": sm.get("map_url") or "",
             "template_address": _template_address(sm.get("template_key") or app.get("site_niche") or ""),
             "preview_token": app.get("preview_token") or "",
             "preview_enabled": bool(app.get("preview_enabled")),
@@ -259,6 +261,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Motion intensity must be between 0.2 and 1.5")
         if "address" in patch:
             patch["address"] = patch["address"].strip()[:160]
+        if "map_url" in patch:
+            patch["map_url"] = patch["map_url"].strip()[:400]
+            if patch["map_url"] and not patch["map_url"].startswith(("http://", "https://")):
+                raise HTTPException(400, "The directions link must start with http:// or https://")
         cur.update(patch)
         cur["updated_at"] = _now()
         if "address" in patch:

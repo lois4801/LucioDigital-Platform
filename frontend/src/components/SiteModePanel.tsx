@@ -6,6 +6,7 @@ import { previewUrl } from "@/components/SitePreviewOverlay";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionTuner from "@/components/editorial/MotionTuner";
 import VitalsEditor from "@/components/VitalsEditor";
+import LocationFields from "@/components/LocationFields";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -37,14 +38,12 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
   const [busy, setBusy] = useState(false);
   const [heroes, setHeroes] = useState([]);
   const [renderV, setRenderV] = useState(0);   // bumps the live site render after every save
-  const [addr, setAddr] = useState("");
   const [liveToken, setLiveToken] = useState(appDoc?.preview_token || "");
 
   useEffect(() => {
     if (!appId) return;
     api.get(`/apps/${appId}/site-mode`).then(r => {
       setSm(r.data);
-      setAddr(r.data.address || "");
       // Never rotate an existing link — only mint one when the tenant has none at all.
       if (r.data.preview_token) setLiveToken(r.data.preview_token);
       else api.post(`/apps/${appId}/preview/regenerate`)
@@ -146,27 +145,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           </div>
         </div>
 
-        <div className="py-4 border-b border-[var(--line)]">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-sm font-semibold">Business address</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">
-                Drives the map on this tenant's site and its contact + footer blocks.
-                {sm.template_address && !sm.address ? ` Showing the template sample for now: ${sm.template_address}` : ""}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <input data-testid="sm-address-input" value={addr}
-                onChange={e => setAddr(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter") patch({ address: addr }); }}
-                placeholder={sm.template_address || "215 Industrial Pkwy N, Toronto, ON"}
-                className="flex-1 sm:w-[300px] bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--acc)]" />
-              <button data-testid="sm-address-save" disabled={busy || addr === (sm.address || "")}
-                onClick={() => patch({ address: addr })}
-                className="btn-primary text-xs !py-2 !px-3 disabled:opacity-50">Save</button>
-            </div>
-          </div>
-        </div>
+        <LocationFields appId={appId} onSaved={() => setRenderV(v => v + 1)} />
 
         <VitalsEditor appId={appId} accent={sm.accent || "#10B981"} />
 

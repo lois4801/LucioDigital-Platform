@@ -1,0 +1,32 @@
+{
+  "summary": "Iteration 82 — Get Directions + 3-column vitals import + Client Portal figures/location card. Backend: 18/18 pass in new suite test_iter82_directions_portal.py + regression 18/18 on iter80 and iter81 (36 total green). Frontend: verified public site /p/{token} renders industry-map-directions with target=_blank and correct Google Maps href when address is present (hidden when address empty by conditional); Site Mode LocationFields (location-fields, sm-address-input, sm-mapurl-input, sm-address-save, sm-directions-test) fully functional — schemeless URL is rejected with backend detail toast, Save disabled until dirty, valid Waze URL saves and success toast fires, iframe re-renders on save; Client Portal /portal shows portal-figures-card containing LocationFields + full VitalsEditor, address save works and Test-the-link chip href updates live. Non-member scoping verified via API: throwaway user gets 403/404 for GET/PUT vitals, GET/PUT site-mode and vitals/import.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Site Mode > Live site iframe", "issues": ["Rapid save iterations trigger 429 rate-limit on /public/site/{token} refetch as the iframe reloads with a bumped key — cosmetic; recovers on next call. Consider debouncing or caching a single re-render token."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter82_directions_portal.py",
+    "/app/test_reports/pytest/iter82.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "map_url validation is length-clamped to 400 BEFORE the http(s) check — a 500-char https URL is silently truncated to 400 chars (still valid https, so accepted). Acceptable but worth noting: no explicit >400 rejection.",
+    "case_study._app_or_404 falls back to a raw db lookup only when get_user_app is falsy (not registered); when registered it raises 403 correctly, so no permission bypass. Confirmed by non-member tests.",
+    "IndustryVitals.LocationMap renders sample-tag only when both `sample` and `address` are truthy — this is correct: sample tag hides once real address is entered, matches iter81 behaviour.",
+    "industry_vitals.import_vitals: the row filter drops any row whose first numeric cell is None, so a header row like ('Label','C1','C2') is silently skipped (str→float fails → None) — good. Blank rows also skipped. Good coverage."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter82_directions_portal.py (new)",
+    "/app/test_reports/iteration_82.json (new)"
+  ],
+  "success_rate": {"backend": "100% (18/18 new + 18/18 regression)", "frontend": "100% on tested flows"},
+  "test_credentials": "Admin jaybernabe@luciodigital.com/Lucio2026! + throwaway TEST_iter82_<uuid>@example.com/Test82!Pass created dynamically per run for non-member scoping (register endpoint).",
+  "seed_data_creation": "None persistent — throwaway user is created per pytest module run and never granted membership; state reset on teardown (vitals/reset + site-mode address='', map_url='').",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "app_testlab vitals + address + map_url reset at end of runs. Test suites now: iter80 (vitals import + 33 templates), iter81 (address propagation + source labels), iter82 (map_url + 3-col import + variants unchanged + non-member 403). Preview token pv_c3b797fcdafc58d4e70e320f. Portal card testid is portal-figures-card; Site Mode is at /apps/{id} → tab-builder-btn (yes, builder tab renders SiteModePanel — the tab is labelled Site Mode in the UI)."
+}

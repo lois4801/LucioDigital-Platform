@@ -291,27 +291,41 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Old .xls files are not supported — save as .xlsx or .csv")
         else:
             rows = list(csv.reader(io.StringIO(raw.decode("utf-8", "ignore"))))
-        labels, series = [], []
+        labels, cols = [], []
         for r in rows:
             if not r or len(r) < 2:
                 continue
-            try:
-                v = float(str(r[1]).replace(",", "").replace("%", "").replace("$", "").strip())
-            except (TypeError, ValueError):
+            nums = []
+            for cell in r[1:4]:
+                try:
+                    nums.append(round(float(str(cell).replace(",", "").replace("%", "").replace("$", "").strip()), 2))
+                except (TypeError, ValueError):
+                    nums.append(None)
+            if nums and nums[0] is None:
                 continue    # header rows and blanks are skipped
             lab = str(r[0] if r[0] is not None else "").strip()[:18]
             if not lab:
                 continue
             labels.append(lab)
-            series.append(round(v, 2))
-        if len(series) < 2:
+            cols.append(nums)
+        if len(cols) < 2:
             raise HTTPException(400, "Need at least two rows of label,value data")
-        labels, series = labels[:12], series[:12]
-        sfx = "2" if target == "series2" else ""
-        cur = {**(app.get("vitals") or {}), f"labels{sfx}": labels, f"series{sfx}": series,
-               "source": "imported", "imported_at": datetime.now(timezone.utc).isoformat(),
+        labels, cols = labels[:12], cols[:12]
+        first = [c[0] for c in cols]
+        second = [c[1] for c in cols] if all(len(c) > 1 and c[1] is not None for c in cols) else None
+        cur = {**(app.get("vitals") or {}), "source": "imported",
+               "imported_at": datetime.now(timezone.utc).isoformat(),
                "imported_file": file.filename}
+        if target == "series2":
+            cur.update({"labels2": labels, "series2": first})
+            charts = 1
+        else:
+            cur.update({"labels": labels, "series": first})
+            charts = 1
+            if second:      # a third column auto-fills the second chart in the same upload
+                cur.update({"labels2": labels, "series2": second})
+                charts = 2
         await db.apps.update_one({"app_id": app_id}, {"$set": {"vitals": cur}})
         await log_activity(app_id, user["user_id"], "vitals.import",
-                           f"Imported {len(series)} figures from {file.filename}")
-        return {"ok": True, "points": len(series), **_resolved({**app, "vitals": cur})}
+                           f"Imported {len(first)} figures from {file.filename}")
+        return {"ok": True, "points": len(first), "charts": charts, **_resolved({**app, "vitals": cur})}

@@ -156,7 +156,7 @@ export default function PublicPreview() {
       {!iso && site.app?.motion_profile?.hero && (
         <IndustryVitals templateKey={site.app.motion_profile.template_key || site.app.industry}
           industry={site.app.industry} accent={site.theme?.primary}
-          brand={site.app.name} vitals={site.app.vitals}
+          brand={site.app.name} vitals={site.app.vitals} mapUrl={site.app.map_url}
           address={site.app.address || (() => {
             // the real address lives in the tenant's own contact / footer block
             for (const p of site.pages || []) {
