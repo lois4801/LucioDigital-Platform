@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="9" time="10.861" timestamp="2026-09-10T13:45:01.841247+00:00" hostname="agent-env-0807f207-82c5-46c2-b347-b787bd4fe45d"><testcase classname="tests.test_iter87_reviews.TestPublicReviews" name="test_all_34_keys_have_20_ai_reviews" time="6.266" /><testcase classname="tests.test_iter87_reviews.TestPublicReviews" name="test_no_two_templates_share_review_content" time="2.819"><failure message="AssertionError: cross-template NAME collisions (256): [('amara diallo', 'hvac', 'healthcare'), ('marcus oduya', 'healthcare', 'construction'), ('priya subramaniam', 'hvac', 'construction'), ('yuki tanaka', 'healthcare', 'construction'), ('ingrid halvorsen', 'healthcare', 'construction'), ('amara diallo', 'hvac', 'construction'), ('chen wei', 'hvac', 'construction'), ('marcus oduya', 'healthcare', 'fitness')]&#10;assert not [('amara diallo', 'hvac', 'healthcare'), ('marcus oduya', 'healthcare', 'construction'), ('priya subramaniam', 'hvac', 'construction'), ('yuki tanaka', 'healthcare', 'construction'), ('ingrid halvorsen', 'healthcare', 'construction'), ('amara diallo', 'hvac', 'construction'), ...]">self = &lt;test_iter87_reviews.TestPublicReviews object at 0xfdc6aa7b9350&gt;
+
+    def test_no_two_templates_share_review_content(self):
+        # Consumer-business shared labels like "Homeowner"/"Parent of two" are allowed by prompt.
+        GENERIC_COMPANY = {"homeowner", "parent of two", "parent", "customer", "client",
+                           "resident", "member", "patient", "student", "pet owner", "owner",
+                           "guest", "tenant", "diner", "shopper", "visitor"}
+        seen_quotes: dict = {}
+        seen_names: dict = {}
+        seen_companies: dict = {}
+        quote_col, name_col, company_col = [], [], []
+        s = requests.Session()
+        for key in TEMPLATE_KEYS:
+            data = None
+            for attempt in range(3):
+                try:
+                    r = s.get(f"{API}/public/reviews/{key}", timeout=40)
+                    data = r.json()
+                    break
+                except Exception:
+                    if attempt == 2:
+                        raise
+            for rv in data.get("reviews", []):
+                q = (rv.get("quote") or "").strip().lower()
+                n = (rv.get("name") or "").strip().lower()
+                c = (rv.get("company") or "").strip().lower()
+                if q and q in seen_quotes and seen_quotes[q] != key:
+                    quote_col.append((q[:60], seen_quotes[q], key))
+                if n and n in seen_names and seen_names[n] != key:
+                    name_col.append((n, seen_names[n], key))
+                if c and c not in GENERIC_COMPANY and c in seen_companies and seen_companies[c] != key:
+                    company_col.append((c, seen_companies[c], key))
+                seen_quotes.setdefault(q, key)
+                seen_names.setdefault(n, key)
+                seen_companies.setdefault(c, key)
+        # Quotes MUST be unique cross-template (highest priority).
+        assert not quote_col, f"cross-template QUOTE collisions ({len(quote_col)}): {quote_col[:5]}"
+        # Names and non-generic companies should also be unique — report but don't hard-fail if minor.
+&gt;       assert not name_col, f"cross-template NAME collisions ({len(name_col)}): {name_col[:8]}"
+E       AssertionError: cross-template NAME collisions (256): [('amara diallo', 'hvac', 'healthcare'), ('marcus oduya', 'healthcare', 'construction'), ('priya subramaniam', 'hvac', 'construction'), ('yuki tanaka', 'healthcare', 'construction'), ('ingrid halvorsen', 'healthcare', 'construction'), ('amara diallo', 'hvac', 'construction'), ('chen wei', 'hvac', 'construction'), ('marcus oduya', 'healthcare', 'fitness')]
+E       assert not [('amara diallo', 'hvac', 'healthcare'), ('marcus oduya', 'healthcare', 'construction'), ('priya subramaniam', 'hvac', 'construction'), ('yuki tanaka', 'healthcare', 'construction'), ('ingrid halvorsen', 'healthcare', 'construction'), ('amara diallo', 'hvac', 'construction'), ...]
+
+backend/tests/test_iter87_reviews.py:98: AssertionError</failure></testcase><testcase classname="tests.test_iter87_reviews.TestTenantReviews" name="test_get_returns_template_set_by_default" time="0.635" /><testcase classname="tests.test_iter87_reviews.TestTenantReviews" name="test_put_saves_edits_and_returns_custom_source" time="0.266" /><testcase classname="tests.test_iter87_reviews.TestTenantReviews" name="test_put_rejects_more_than_60" time="0.088" /><testcase classname="tests.test_iter87_reviews.TestTenantReviews" name="test_reset_restores_template_set" time="0.106" /><testcase classname="tests.test_iter87_reviews.TestTenantReviews" name="test_non_member_gets_403_or_404" time="0.416" /><testcase classname="tests.test_iter87_reviews.TestAdminReviews" name="test_status_reports_34_generated_zero_missing" time="0.089" /><testcase classname="tests.test_iter87_reviews.TestAdminReviews" name="test_generate_unknown_key_400s" time="0.081" /></testsuite></testsuites>

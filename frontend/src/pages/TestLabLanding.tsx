@@ -8,6 +8,7 @@ import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import { useAuth } from "@/context/AuthContext";
 import Ribbon from "@/components/editorial/Ribbon";
 import BentoGrid from "@/components/editorial/BentoGrid";
+import ReviewsSection from "@/components/editorial/ReviewsSection";
 
 const RIBBON_TOP = ["Orbit SaaS", "Halo Studio", "Ledger Fintech", "Vanta Clinic", "Aura Spa", "Fleet Logistics", "Nexus Legal"];
 const RIBBON_BOTTOM = ["Site mode", "App mode", "AI media studio", "Stripe billing", "Custom domains", "Supabase export", "Handoff bundle"];
@@ -19,6 +20,10 @@ export default function TestLabLanding() {
   const mobile = useIsMobile();
   const [stats, setStats] = useState({ tenants: 0, templates: 0, live: 0 });
   const [templates, setTemplates] = useState([]);
+  const [platformReviews, setPlatformReviews] = useState([]);
+  useEffect(() => {
+    api.get("/public/reviews/luciodigital").then(r => setPlatformReviews(r.data.reviews || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     Promise.all([api.get("/public/landing/tenants"), api.get("/public/landing/templates")])
@@ -179,6 +184,14 @@ export default function TestLabLanding() {
           </div>
         </div>
       </section>
+
+      {/* Reviews from the agencies, studios and freelancers shipping on LucioDigital */}
+      {platformReviews.length > 0 && (
+        <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
+          <ReviewsSection reviews={platformReviews} limeLock
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on tenant management, template speed, motion quality and client handoff." }} />
+        </div>
+      )}
 
       {/* ── Close ──────────────────────────────────────────────────── */}
       <section className="relative z-10 px-6 sm:px-10 pb-28" data-testid="cta-section">

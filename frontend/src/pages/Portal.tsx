@@ -10,6 +10,7 @@ import { ExternalLink, Receipt, Inbox, MessageSquarePlus, Loader2, Layers, LogOu
 import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
+import ReviewsEditor from "@/components/ReviewsEditor";
 
 export default function Portal() {
   const nav = useNavigate();
@@ -60,6 +61,9 @@ export default function Portal() {
             <LocationFields appId={app.app_id} compact />
             <div className="mt-3 pt-3 border-t border-[var(--line)]">
               <AnimationControls appId={app.app_id} accent={app.color || "#10B981"} compact />
+            </div>
+            <div className="mt-3 pt-3 border-t border-[var(--line)]">
+              <ReviewsEditor appId={app.app_id} accent={app.color || "#10B981"} compact />
             </div>
             <div className="mt-2 border-t border-[var(--line)]">
               <VitalsEditor appId={app.app_id} accent={app.color || "#10B981"} />

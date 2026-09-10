@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext } from "react";
+import ReviewsSection from "@/components/editorial/ReviewsSection";
 import * as Icons from "lucide-react";
 import { SwapOverlay } from "@/components/builder/ImageSwap";
 import { EditableText } from "@/components/InlineTextTools";
@@ -94,7 +95,7 @@ const Kicker = ({ children }) => <div className="text-xs font-bold uppercase tra
 const isYouTube = (u = "") => /youtube\.com|youtu\.be/.test(u);
 const absUrl = (u = "") => u.startsWith("/api/") ? `${process.env.REACT_APP_BACKEND_URL}${u}` : u;
 
-export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [], bookingMode = "period", siteToken = null }) {
+export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImage, collections = [], bookingMode = "period", siteToken = null, reviews = null }) {
   const v2 = useV2();
   const p = block.props || {}, s = block.style || {};
   // Database-driven sections: after "Convert to Web App" the items live in a collection.
@@ -255,7 +256,13 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
       <T as="p" value={p.caption} {...E("caption")} className={`block mt-3 text-sm ${m}`} />
     </section>
   );
-  if (block.type === "testimonials") return (
+  if (block.type === "testimonials") {
+    // The 3-quote block is replaced in place by the full reviews section when a set exists.
+    if (reviews?.reviews?.length) return (
+      <ReviewsSection reviews={reviews.reviews} style={reviews.style || {}}
+        accent={reviews.accent || "var(--tp)"} limeLock={reviews.limeLock} />
+    );
+    return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>
         {(dyn("items") || []).map((it, i) => (
@@ -267,7 +274,8 @@ export default function BlockPreview({ block, onEdit, onNavigate, onLead, onImag
         ))}
       </div>
     </section>
-  );
+    );
+  }
   if (block.type === "pricing") return (
     <section className={cls}><H2 value={p.heading} {...E("heading")} className="text-center block" />
       <div className={`grid md:grid-cols-3 gap-5 mt-10 text-left ${stag}`}>

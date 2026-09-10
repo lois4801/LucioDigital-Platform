@@ -9,6 +9,7 @@ import ChatWidget from "@/components/ChatWidget";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { AdminText, MarqueeEditor, saveLanding } from "@/components/LandingAdmin";
+import ReviewsSection from "@/components/editorial/ReviewsSection";
 import { Settings2 } from "lucide-react";
 
 const LOGOS = ["Nexus", "Orbit", "Fleet", "Aura", "Ledger", "Studio", "Vanta", "Halo"];
@@ -102,6 +103,10 @@ export default function Landing() {
   const go = () => nav(user ? "/dashboard" : "/register");
   const [activeNav, setActiveNav] = useState("Showcase");
   const [showcase, setShowcase] = useState([]);
+  const [platformReviews, setPlatformReviews] = useState([]);
+  useEffect(() => {
+    api.get("/public/reviews/luciodigital").then(r => setPlatformReviews(r.data.reviews || [])).catch(() => {});
+  }, []);
   const [templates, setTemplates] = useState([]);
   const [modal, setModal] = useState(null);
   const [leaving, setLeaving] = useState(false);
@@ -349,6 +354,14 @@ export default function Landing() {
           </div>
         </motion.div>
       </section>
+      {/* Reviews from agencies, studios and freelancers who ship on LucioDigital */}
+      {platformReviews.length > 0 && (
+        <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
+          <ReviewsSection reviews={platformReviews} limeLock
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on tenant management, template speed, motion quality and client handoff." }} />
+        </div>
+      )}
+
 
       {/* Pricing teaser */}
       <section id="pricing" className="relative z-10 px-6 lg:px-14 py-24 lg:py-32 border-t border-white/5">

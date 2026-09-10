@@ -876,3 +876,30 @@ FastAPI/Mongo. No feature or UI changes.
   lock all (collapses).
 - `SiteModePanel`'s detailed controls (AnimationControls, LocationFields, VitalsEditor) are untouched.
 - Note: pytest iter80-86 must be run SEQUENTIALLY; parallel runs collide on the shared site_mode doc.
+
+## 2026-06 · Reviews & testimonials section, all 33 templates + landing page (iter87 -> iter88 retest, 131/131 backend, frontend 100%)
+- NEW `backend/reviews.py`: `BRIEFS` for 34 keys (33 templates + `luciodigital`), an AI pass
+  (Claude Sonnet 4.6 via the Emergent LLM key, strict JSON) writing 20 five-star reviews each with
+  name, title, company, one-line description, quote, 2 measurable outcome tags, city, country and
+  ISO flag code. `decorate()` stamps id, rating 5 and a portrait from the 25-image pool.
+  Generated ONCE by `gen_reviews.py` into `db.template_reviews` — no LLM call on page load.
+  `fallback_set()` keeps a template from ever rendering empty.
+- `dedupe_reviews.py` (run once) makes reviewer names and non-generic company names unique across
+  all 34 sets — iter87 found 256 name collisions because each template was generated in isolation.
+  If sets are ever regenerated, RE-RUN dedupe_reviews.py and respread_photos.py.
+- Endpoints: `GET /public/reviews/{key}`, `GET|PUT /apps/{id}/reviews`,
+  `POST /apps/{id}/reviews/reset`, `POST /admin/reviews/generate/{key}`, `GET /admin/reviews/status`.
+  PUT caps at 60 reviews and validates accent/card_bg/title_color against a hex/rgb regex.
+- NEW `editorial/ReviewsSection.tsx`: fixed title/subtitle, one rAF engine driving both the slow
+  left→right drift and arrow steering (`data-autoscroll` = on | steering | paused), hover pause,
+  per-card typing effect on viewport entry with an accent cursor, 5 stars top-right, flags via
+  flagcdn, tags, and a `limeLock` prop. It forces `scrollBehavior: auto` on the track — global CSS
+  smooth-scroll otherwise swallows the per-frame drift (that cost a debug cycle).
+- `BlockPreview` renders it IN PLACE of the old 3-quote `testimonials` block whenever a reviews set
+  is supplied (PublicPreview + TemplateGallery pass it, with the template accent).
+- NEW `components/ReviewsEditor.tsx` in Site Mode AND the client portal: edit every field, add,
+  delete, drag or arrow reorder, edit the section title/subtitle, override accent / card background /
+  title colour (each clearable) and Reset to template default. Saves instantly, no publish step.
+- Landing page (`TestLabLanding.tsx`, route `/`) renders the 20 agency/studio/freelancer reviews with
+  `limeLock` — lime (#BEF264) is reserved for the platform page and lois-tech.ca via the
+  `.lois-reviews` CSS scope; no tenant inherits it unless lime is its own accent.

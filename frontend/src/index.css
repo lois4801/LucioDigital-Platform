@@ -154,8 +154,10 @@ body {
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
 /* Tenant navigation strip — a scrollbar you can actually grab, always visible when it overflows. */
-.tenant-scroll {
-  overflow-x: auto;
+/* LucioDigital landing reviews — lime is reserved for the platform page and lois-tech.ca only. */
+.lois-reviews { --tbg: #08090a; --tbody: #f4f4f5; --tfg: #ffffff; --tfh: inherit; --tr: 16px; }
+
+.tenant-scroll {  overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: auto;
   scrollbar-color: #666666 #2a2a2a;

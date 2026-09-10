@@ -153,7 +153,8 @@ export default function PublicPreview() {
                     signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} onPaid={() => setHasPaid(true)} />
                 : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
                 <EffectWrap key={b.id} data-block-type={b.type} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
-                  <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null} />
+                  <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null}
+                    reviews={site.app?.reviews ? { ...site.app.reviews, accent: site.theme?.primary } : null} />
                 </EffectWrap>
               ))}
         </motion.div>

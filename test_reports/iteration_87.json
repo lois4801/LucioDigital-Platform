@@ -1,0 +1,38 @@
+{
+  "summary": "Iteration 87 — Reviews & testimonials section. Backend: 9 pytest cases in test_iter87_reviews.py, 8 pass. Verified all 34 keys (33 templates + luciodigital) return 20 AI reviews via GET /api/public/reviews/{key} with source='ai', full decorated fields (name/title/company/company_desc/quote, exactly 2 tags, rating 5, photo, city, country, lowercase 2-letter flag). GET /api/apps/{id}/reviews returns template set + style defaults + template_key='saas'; PUT saves edits/style and returns source='custom' with persistence verified; PUT with >60 reviews correctly 400s; POST /api/apps/{id}/reviews/reset restores template set and clears style overrides; unauthenticated hits get 401/403/404. GET /api/admin/reviews/status reports total=34, missing=0, and every key has count=20; POST /api/admin/reviews/generate/{unknown} 400s. Cross-template UNIQUENESS: quotes are unique across all 34 sets (spec's highest priority passes), but 256 reviewer NAME collisions and multiple non-generic COMPANY collisions were found (e.g. 'Amara Diallo' in hvac+healthcare+construction, 'Priya Subramaniam' in hvac+construction, 'Marcus Oduya' in healthcare+construction+fitness) — the AI reuses the same believable names across industries. Frontend: Landing page (/) renders data-testid=landing-reviews with 20 cards, title 'Loved by the studios shipping on it', 20 five-star reviews, working arrows (next click = 374px), auto-scroll drift measured 88px in 3.5s (~25px/s, matches ~28px/s spec), typing cursor '|' visible on in-view quotes. Tenant preview /p/pv_c3b797fcdafc58d4e70e320f: reviews-section renders 20 cards, reviews-count = '20 five-star reviews', 40 review-tag-* elements (2 per card), fixed header verified — title/subtitle moved 0.00px while track drifted 60px. Site Mode tab on app_testlab: reviews-editor mounts with 20 rows and reviews-add-btn, reviews-save-btn, reviews-reset-btn, reviews-title-input, reviews-colour-accent all present. Mobile 390px: title width 325px (no overflow), next arrow reachable and visible, card fully readable with flag + city + stars + tags + typing quote. Old 3-quote grid replaced in place as required.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/public/reviews/{key}", "issue": "Cross-template UNIQUENESS violated for reviewer NAMES (spec: 'no two templates share a quote, name or company'). 256 name collisions across the 34 sets. Examples: 'Amara Diallo' appears in hvac, healthcare AND construction; 'Priya Subramaniam' in hvac + construction; 'Marcus Oduya' in healthcare + construction + fitness; 'Yuki Tanaka', 'Ingrid Halvorsen', 'Chen Wei' repeat. Non-generic company labels also repeat across templates. Quotes ARE unique cross-template (verified). Root cause: the per-template AI pass in reviews.py has no awareness of other templates' output, and the model gravitates to the same believable multicultural names.", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter87_reviews.py",
+    "/app/test_reports/pytest/iter87.xml"
+  ],
+  "action_items": [
+    "Regenerate reviewer names so no name is reused across the 34 template sets. Simplest fix: in gen_reviews.py, pass the union of previously-used names into the prompt as a forbidden list, or post-process each set to detect collisions with prior sets and re-roll only the offending name field (keep the quote — quotes are already unique). Same treatment for the non-generic company field (leave consumer labels like 'Homeowner'/'Parent of two' alone).",
+    "Optional: add a validation check to admin/reviews/status that surfaces cross-template name/company collisions so future regenerations don't silently reintroduce them."
+  ],
+  "critical_code_review_comments": [
+    "reviews.py _ai_set() has no cross-template awareness — every key is generated in isolation, so the same model bias produces the same names. The system prompt says 'vary gender and nationality across the 20' but nothing about being distinct FROM OTHER templates.",
+    "reviews.py put_reviews style validation truncates values to 120 chars but does not validate CSS colour format for accent/card_bg/title_color — a malformed value would render invisible on the site. Low risk (editor UI controls the input) but worth a hex/rgb sanity check.",
+    "The 60-review cap is enforced only on PUT; POST-style /reset always writes 20 from the template set, so no separate cap needed there — correct.",
+    "decorate() picks portrait deterministically from PORTRAITS (17 images) so a 20-review set will reuse 3 photos — acceptable for the spec, but consider expanding PORTRAITS to >=20 to avoid photo repeats within a single template card grid."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter87_reviews.py (new)"
+  ],
+  "success_rate": {"backend": "89% (8/9 pytest cases; the failing case is a real spec violation, not a test bug)", "frontend": "100% of exercised flows (landing lime version, tenant preview, site-mode editor mount, mobile)"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (from problem statement)",
+  "seed_data_creation": "During test run created a temporary tenant reviews override on app_testlab with quote/name containing 'TEST_ITER87' — TEARDOWN performed: POST /api/apps/app_testlab/reviews/reset returned 200, confirmed the tenant is back on the template AI set with default style.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend suite lives at /app/backend/tests/test_iter87_reviews.py. Run sequentially with `pytest ... -n 0` because it mutates app_testlab.reviews. All 8 non-uniqueness cases pass reliably; the uniqueness case (test_no_two_templates_share_review_content) will only pass once the main agent regenerates the 34 sets with a cross-template unique-names constraint. When re-running after the fix, also verify tags remain len==2 and quotes remain unique. NOT covered in this iteration due to auth-form flakiness in Playwright: end-to-end drag reorder in the Site Mode editor, per-card add/delete via reviews-add-btn/reviews-del-N, and the client portal /portal editor — the components mount correctly (verified) but I did not click through every reorder+save cycle. Colour override live-recolour and reduced-motion path also not visually confirmed.",
+  "rca of the issue": "Bug: reviewer names repeat across template sets. Reproduction: GET /api/public/reviews/hvac and /api/public/reviews/healthcare — both contain 'Amara Diallo'. Same happens for ~256 (name, template_a, template_b) triples across the 34 sets. RCA: reviews.py::_ai_set() generates each key independently via Claude Sonnet 4.6 with a prompt that only requires internal-to-20 distinctness ('All 20 must be distinct in name, company, quote and tags'). The model reuses the same set of believable multicultural names because there is no forbidden-names list carried between keys. Quotes stay unique because they are highly industry-specific; names are industry-agnostic and collide. Mitigation: modify gen_reviews.py to accumulate a used_names set across keys and include it in the prompt as '- DO NOT use any of these names: [...]', then re-run generate_and_store for each of the 34 keys."
+}

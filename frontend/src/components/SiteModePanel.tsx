@@ -8,6 +8,7 @@ import MotionTuner from "@/components/editorial/MotionTuner";
 import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
+import ReviewsEditor from "@/components/ReviewsEditor";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -157,6 +158,8 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
         </div>
 
         <AnimationControls appId={appId} accent={sm.accent || "#10B981"} onSaved={() => setRenderV(v => v + 1)} />
+
+        <ReviewsEditor appId={appId} accent={sm.accent || "#10B981"} />
 
         <LocationFields appId={appId} onSaved={() => setRenderV(v => v + 1)} />
 

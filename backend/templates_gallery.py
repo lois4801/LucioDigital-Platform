@@ -92,7 +92,11 @@ def register(api, db, get_current_user):
 
     @api.get("/public/templates/{key}")
     async def template_detail(key: str):
-        return build_template_site(key)
+        site = build_template_site(key)
+        doc = await db.template_reviews.find_one({"key": key}, {"_id": 0})
+        from reviews import DEFAULT_STYLE, fallback_set
+        site["reviews"] = {"reviews": (doc or {}).get("reviews") or fallback_set(key), "style": DEFAULT_STYLE}
+        return site
 
     # ---------- Client preview links (no login, expire after 7 days) ----------
     @api.post("/template-shares")

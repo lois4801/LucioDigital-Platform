@@ -484,6 +484,11 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         from industry_vitals import spec_for
         _vk = prof.get("template_key") or doc.get("site_niche") or ""
         vitals = {**spec_for(_vk, doc.get("industry") or ""), **(doc.get("vitals") or {})}
+        _rv = await api.state_reviews_stored(_vk)
+        _own = doc.get("reviews") or {}
+        from reviews import DEFAULT_STYLE as _RVS
+        reviews_out = {"reviews": _own.get("reviews") or _rv["reviews"],
+                       "style": {**_RVS, **(_own.get("style") or {})}}
         # Address: the tenant's own field wins, then its contact/footer copy, then the template sample.
         _addr = (sm.get("address") or (doc.get("brand_profile") or {}).get("address") or "").strip()
         if not _addr:
@@ -503,6 +508,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
                         "app_id": doc["app_id"],
                         "site_mode": sm,
                         "vitals": vitals,
+                        "reviews": reviews_out,
                         "address": _addr,
                         "map_url": (sm.get("map_url") or "").strip() or (
                             f"https://www.google.com/maps/search/?api=1&query={quote_plus(_addr)}" if _addr else ""),
