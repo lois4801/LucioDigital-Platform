@@ -706,3 +706,14 @@ FastAPI/Mongo. No feature or UI changes.
     (dark pages) or deepens (light pages) the accent until the contrast ratio reaches 2.6, so no
     accent can wash out against its own background.
   * `measured` now stores the luminance value (not a boolean) to feed the guard.
+- FIX (blinking / vibrating motion, iter76 verified): `withStrokeRhythm()` cycled its weight and
+  radius counters CONTINUOUSLY, so every element got a different thickness/size each frame — that was
+  the flicker. It now returns `{paint, reset}` and `frame()` resets the counters first, so element N
+  always draws at the same weight and radius. Also added a 40fps ceiling (`minStep`), skip while
+  `document.hidden`, DPR capped at 1.75, and softened the light boost (1.9 -> 1.55) with a 1px stroke
+  floor on light pages vs 0.6 on dark.
+- Test report iteration_76: flicker FIXED (max direction-flips 7/12 vs >=11/12 for strobe), 39.4fps
+  page throughput, 14 light/multiply + 19 dark/screen with zero mismatches, off-screen pause works,
+  reduced-motion draws one frame, mobile clean. Follow-up applied: `calm-pulse-wave` had a 10x
+  density swing (read as pulsing on the healthcare card) — rings raised 4 -> 6, evenly staggered, with
+  a 0.09 alpha floor so the field stays continuously present.

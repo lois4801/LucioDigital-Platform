@@ -43,12 +43,13 @@ const orbitalConstellation: Engine = (accent, mobile) => {
 
 /** healthcare — slow, calm heartbeat rings + a steady ECG trace. */
 const calmPulseWave: Engine = (accent, mobile) => {
-  const rings = dens(4, mobile);
+  const rings = dens(6, mobile);
   return (ctx, w, h, t) => {
     const cx = w * 0.5, cy = h * 0.5, max = Math.hypot(w, h) * 0.55;
     for (let i = 0; i < rings; i++) {
-      const p = loop(t, 5.2, i, 1.3);
-      ctx.strokeStyle = A(accent, 0.22 * (1 - p));
+      const p = loop(t, 5.2, i, 5.2 / rings);
+      // a floor keeps the field continuously present instead of dipping to nothing
+      ctx.strokeStyle = A(accent, 0.09 + 0.13 * (1 - p));
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(cx, cy, easeOutExpo(p) * max, 0, Math.PI * 2); ctx.stroke();
     }

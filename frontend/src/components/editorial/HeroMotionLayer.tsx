@@ -59,10 +59,10 @@ const rhythmFor = (hero: string) =>
   RHYTHMS[Math.abs([...(hero || "x")].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7)) % RHYTHMS.length];
 
 /** Engines set ctx.lineWidth freely; we scale it for legibility and vary it for depth. */
-const withStrokeRhythm = (ctx: CanvasRenderingContext2D, boost: number, weights: number[]) => {
+const withStrokeRhythm = (ctx: CanvasRenderingContext2D, boost: number, weights: number[], min = 0.5) => {
   let i = 0, j = 0;
   const radii = [0.82, 1.18, 0.94, 1.4];      // gentle size variation on dots, rings and glows
-  return new Proxy(ctx, {
+  const proxy = new Proxy(ctx, {
     get(t, k) {
       if (k === "arc") {
         return (x: number, y: number, r: number, a0: number, a1: number, ccw?: boolean) =>
@@ -73,11 +73,14 @@ const withStrokeRhythm = (ctx: CanvasRenderingContext2D, boost: number, weights:
     },
     set(t, k, v) {
       (t as any)[k] = k === "lineWidth"
-        ? Math.max(0.5, (v as number) * boost * weights[i++ % weights.length])
+        ? Math.max(min, (v as number) * boost * weights[i++ % weights.length])
         : v;
       return true;
     },
   }) as CanvasRenderingContext2D;
+  // Counters reset every frame, so element N always gets the SAME weight and radius.
+  // Without this the pattern walks each frame and the motion flickers / vibrates.
+  return { paint: proxy, reset: () => { i = 0; j = 0; } };
 };
 
 /** Relative luminance of any CSS colour string, or null when it is transparent. */
@@ -123,10 +126,12 @@ export default function HeroMotionLayer({
       && matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isMobile = mobile ?? (typeof innerWidth === "number" && innerWidth < 768);
     const draw = engineFor(hero)(tint, isMobile);
-    const paint = withStrokeRhythm(ctx, light ? 1.9 : 1.15, rhythmFor(hero));
+    const { paint, reset } = withStrokeRhythm(
+      ctx, light ? 1.55 : 1.15, rhythmFor(hero), light ? 1 : 0.6);
 
-    let w = 0, h = 0, raf = 0, start = 0, visible = true;
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    let w = 0, h = 0, raf = 0, start = 0, visible = true, last = 0;
+    const minStep = 1000 / 40;                    // steady 40fps ceiling: smooth, never thrashing
+    const dpr = Math.min(devicePixelRatio || 1, 1.75);
     const resize = () => {
       const r = cv.getBoundingClientRect();
       w = Math.max(1, r.width); h = Math.max(1, r.height);
@@ -138,6 +143,7 @@ export default function HeroMotionLayer({
     ro.observe(cv);
 
     const frame = (t: number) => {
+      reset();
       ctx.clearRect(0, 0, w, h);
       // dark pages add light; light pages darken, so motion is visible either way
       ctx.globalCompositeOperation = light ? "source-over" : "lighter";
@@ -158,7 +164,10 @@ export default function HeroMotionLayer({
 
     const loop = (now: number) => {
       if (!start) start = now;
-      if (visible) frame(((now - start) / 1000) * sp);
+      if (visible && !document.hidden && now - last >= minStep) {
+        last = now;
+        frame(((now - start) / 1000) * sp);
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
