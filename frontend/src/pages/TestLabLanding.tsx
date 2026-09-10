@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { Counter, HeadingWipe, OvershootWords, Reveal, useIsMobile } from "@/components/editorial/motion";
 import HeroCards from "@/components/editorial/HeroCards";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
+import { useAuth } from "@/context/AuthContext";
 import Ribbon from "@/components/editorial/Ribbon";
 import BentoGrid from "@/components/editorial/BentoGrid";
 
@@ -13,6 +14,8 @@ const RIBBON_BOTTOM = ["Site mode", "App mode", "AI media studio", "Stripe billi
 
 export default function TestLabLanding() {
   const nav = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = !!user;
   const mobile = useIsMobile();
   const [stats, setStats] = useState({ tenants: 0, templates: 0, live: 0 });
   const [templates, setTemplates] = useState([]);
@@ -28,12 +31,15 @@ export default function TestLabLanding() {
 
   return (
     <div className="ed-scope min-h-screen relative overflow-x-hidden" data-testid="testlab-landing">
-      {/* Sandbox banner — this design is scoped to the Test Lab tenant until pushed. */}
-      <div className="sticky top-0 z-40 bg-[var(--ed-lime)] text-black text-[11px] font-semibold tracking-wide px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="testlab-sandbox-banner">
-        <span>LucioDigital Test Lab · editorial redesign preview</span>
-        <span className="opacity-70">Not applied to lois-tech.ca or any live tenant</span>
-        <Link to="/dashboard" className="underline ml-auto">Back to dashboard</Link>
-      </div>
+      {/* Admin-only quick links — invisible to visitors. */}
+      {isAdmin && (
+        <div className="sticky top-0 z-40 bg-[var(--ed-lime)] text-black text-[11px] font-semibold tracking-wide px-4 py-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="testlab-sandbox-banner">
+          <span>Admin · live landing page</span>
+          <Link to="/hero-gallery" className="underline">Hero gallery</Link>
+          <Link to="/accent-audit" className="underline">Accent audit</Link>
+          <Link to="/dashboard" className="underline ml-auto">Dashboard</Link>
+        </div>
+      )}
 
       <header className="relative z-30 px-6 sm:px-10 py-6 flex items-center justify-between gap-4">
         <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="inline-flex items-center gap-3 cursor-pointer group">
@@ -53,7 +59,7 @@ export default function TestLabLanding() {
       <section className="relative min-h-[86vh] flex items-center px-6 sm:px-10 pb-20" data-testid="hero-section">
       <HeroCards />
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <HeroMotionLayer hero="platform-drift-cards" accent="#B6FF3B" />
+        <HeroMotionLayer hero="platform-drift-cards" accent="#84FF00" />
       </div>
       <div className="absolute inset-0 z-10 pointer-events-none" aria-hidden="true"
         style={{ background: "radial-gradient(60% 55% at 38% 45%, rgba(8,8,8,0.92) 0%, rgba(8,8,8,0.6) 45%, rgba(8,8,8,0) 78%)" }} />
@@ -172,8 +178,8 @@ export default function TestLabLanding() {
       </section>
 
       <footer className="relative z-10 px-6 sm:px-10 py-10 border-t border-white/[0.07] text-white/35 text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span>© 2026 Lois-Tech · Test Lab preview</span>
-        <span>Editorial motion system</span>
+        <span>© 2026 Lois-Tech · lois-tech.ca</span>
+        <span>Editorial motion system · platform identity</span>
       </footer>
     </div>
   );

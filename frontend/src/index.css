@@ -253,7 +253,7 @@ html { scroll-behavior: smooth; }
 /* ── Editorial motion system (Test Lab landing only) ───────────────────── */
 .ed-scope {
   --ed-bg: #080808;
-  --ed-lime: #B6FF3B;
+  --ed-lime: #84FF00;   /* exclusive to lois-tech.ca */
   --ed-teal: #2BE8D6;
   --ed-orange: #FF6A2B;
   background: var(--ed-bg);

@@ -53,7 +53,8 @@ function AppRouter() {
   return (
     <AnimatePresence mode="wait" initial={false}>
     <Routes location={location} key={location.pathname}>
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={<TestLabLanding />} />
+      <Route path="/classic-landing" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<ProtectedRoute><PageTransition testid="page-dashboard"><Dashboard /></PageTransition></ProtectedRoute>} />
@@ -62,7 +63,7 @@ function AppRouter() {
       <Route path="/leads" element={<ProtectedRoute><PageTransition testid="page-leads"><Leads /></PageTransition></ProtectedRoute>} />
       <Route path="/templates" element={<ProtectedRoute><PageTransition testid="page-templates"><TemplateGallery /></PageTransition></ProtectedRoute>} />
       <Route path="/rollout-history" element={<ProtectedRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></ProtectedRoute>} />
-      <Route path="/test-lab/landing" element={<ProtectedRoute><TestLabLanding /></ProtectedRoute>} />
+      <Route path="/test-lab/landing" element={<TestLabLanding />} />
       <Route path="/redesign-review" element={<ProtectedRoute><RedesignReview /></ProtectedRoute>} />
       <Route path="/hero-gallery" element={<ProtectedRoute><HeroGallery /></ProtectedRoute>} />
       <Route path="/accent-audit" element={<ProtectedRoute><AccentAudit /></ProtectedRoute>} />

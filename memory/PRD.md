@@ -557,3 +557,16 @@ FastAPI/Mongo. No feature or UI changes.
 - Frontend: HeroGallery gained star buttons, favourites-first ordering, a Template selector and a
   per-card "Template" apply button next to "Tenant"; AccentAudit gained "Brighten all dull (n)";
   CaseStudyEditor gained "Sync real metrics".
+
+## 2026-06 · Editorial landing promoted to the permanent lois-tech.ca landing page
+- `/` now renders the editorial page (`pages/TestLabLanding.tsx`, public — no auth); the previous
+  landing is preserved at `/classic-landing` and `/test-lab/landing` still resolves to the same
+  editorial page. The sandbox banner was replaced with an admin-only quick-link bar (hidden from
+  visitors); footer reads "© 2026 Lois-Tech · lois-tech.ca".
+- Lime is now `#84FF00` (`--ed-lime` in index.css, PLATFORM_PROFILE accent, platform hero layer)
+  and is EXCLUSIVE to lois-tech.ca: backend `RESERVED_ACCENTS = {#84FF00, #B6FF3B}` rejects both on
+  any tenant with 400 "That accent is reserved for the platform site"; tenant-facing fallbacks in
+  CaseStudy/Showcase changed to #10B981; zero lime references remain outside the platform layer.
+- Landing identity stays distinct: platform-drift-cards hero + platform-bento layout +
+  platform-fade-rise reveal + platform-odometer counter, none of which any template uses.
+- No publish step: landing edits are the live state the moment they are saved.

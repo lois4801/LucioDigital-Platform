@@ -21,7 +21,8 @@ from pydantic import BaseModel
 
 logger = logging.getLogger("agency.editorial_rollout")
 
-LIME = "#B6FF3B"                 # platform-only accent
+LIME = "#84FF00"                 # platform-only accent (lois-tech.ca)
+RESERVED_ACCENTS = {"#84FF00", "#B6FF3B"}   # never applied to a tenant or template
 TEST_LAB_ID = "app_testlab"
 DEFAULTS_DOC = "site_mode_defaults"
 
@@ -155,7 +156,7 @@ def register(api, db, get_current_user):
             async for app in db.apps.find({}, {"_id": 0}):
                 theme = app.get("theme") or {}
                 accent = theme.get("primary") or "#10B981"
-                if str(accent).upper() == LIME:              # lime never leaves the platform site
+                if str(accent).upper() in RESERVED_ACCENTS:              # lime never leaves the platform site
                     accent = "#10B981"
                 sm = dict(app.get("site_mode") or {})
                 sm.update({"style": "editorial", "animation": "full"})
@@ -176,7 +177,7 @@ def register(api, db, get_current_user):
                 if look is None:
                     continue
                 accent = (NICHES.get(key) or {}).get("primary") or prof["accent"]
-                if str(accent).upper() == LIME:
+                if str(accent).upper() in RESERVED_ACCENTS:
                     accent = prof["accent"]
                 look.update({
                     "editorial": True, "ed_dark_base": True, "ed_bento": True,
@@ -272,7 +273,7 @@ def register(api, db, get_current_user):
                 "contrast_on_080808": contrast,
                 "verdict": "dull" if contrast < 3.0 else ("ok" if contrast < 4.5 else "vivid"),
                 "suggested": _brighten(accent) if contrast < 3.0 else accent.upper(),
-                "is_platform_lime": accent.upper() == LIME,
+                "is_platform_lime": accent.upper() in RESERVED_ACCENTS,
             })
         rows.sort(key=lambda r: r["contrast_on_080808"])
         return {"base": "#080808", "tenants": rows, "dull": sum(1 for r in rows if r["verdict"] == "dull")}
@@ -378,7 +379,7 @@ async def backfill_new_tenants(db) -> int:
     async for app in db.apps.find({"motion_profile": {"$exists": False}}, {"_id": 0}):
         theme = app.get("theme") or {}
         accent = theme.get("primary") or "#10B981"
-        if str(accent).upper() == LIME:
+        if str(accent).upper() in RESERVED_ACCENTS:
             accent = "#10B981"
         sm = dict(app.get("site_mode") or {})
         sm.setdefault("style", DEFAULT_SITE_MODE["style"])

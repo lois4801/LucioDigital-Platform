@@ -28,7 +28,7 @@ export default function CaseStudy() {
   );
   if (!cs) return <div className="ed-scope min-h-screen grid place-items-center text-white/40 text-sm">Loading…</div>;
 
-  const accent = cs.accent || "#B6FF3B";
+  const accent = cs.accent || "#10B981";
   const shots = cs.shots || [];
   const stats = cs.stats || [];
 

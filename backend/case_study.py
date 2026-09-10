@@ -221,10 +221,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Publish status must be draft, preview or live")
         if patch.get("mode") and patch["mode"] not in ("light", "dark"):
             raise HTTPException(400, "Mode must be light or dark")
-        from editorial_rollout import HERO_NAMES, LIME
+        from editorial_rollout import HERO_NAMES, RESERVED_ACCENTS
         if patch.get("hero") and patch["hero"] not in HERO_NAMES:
             raise HTTPException(400, "Unknown hero motion")
-        if patch.get("accent") and patch["accent"].upper() == LIME:
+        if patch.get("accent") and patch["accent"].upper() in RESERVED_ACCENTS:
             raise HTTPException(400, "That accent is reserved for the platform site")
         cur.update(patch)
         cur["updated_at"] = _now()

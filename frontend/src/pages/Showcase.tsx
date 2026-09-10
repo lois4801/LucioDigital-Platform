@@ -46,7 +46,7 @@ export default function Showcase() {
             <Reveal key={c.slug} i={i} className={`${span(i)} min-w-0`} testid={`showcase-card-${i}`}>
               <button onClick={() => nav(`/work/${c.slug}`)}
                 className="ed-bento group h-full w-full text-left rounded-2xl overflow-hidden relative"
-                style={{ ["--ed-tone"]: c.accent || "#B6FF3B" }}>
+                style={{ ["--ed-tone"]: c.accent || "#10B981" }}>
                 {c.thumbnail && (
                   <div className={`overflow-hidden ${i === 0 ? "aspect-[16/9]" : "aspect-[16/10]"}`}>
                     <img src={c.thumbnail} alt="" loading="lazy" onError={e => { e.currentTarget.style.display = "none"; }}
@@ -55,13 +55,13 @@ export default function Showcase() {
                 )}
                 <div className="p-6">
                   <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.accent || "#B6FF3B" }} />
+                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.accent || "#10B981" }} />
                     <span className="text-[10px] uppercase tracking-[0.18em] text-white/40">{c.industry}</span>
                   </div>
                   <div className="mt-3 font-display text-2xl font-semibold tracking-tight">{c.tenant_name}</div>
                   <div className="mt-2 text-sm text-white/45 line-clamp-2">{c.tagline}</div>
                   <div className="mt-5 flex items-center justify-between gap-3">
-                    <div className="font-mono text-sm" style={{ color: c.accent || "#B6FF3B" }}>
+                    <div className="font-mono text-sm" style={{ color: c.accent || "#10B981" }}>
                       <Counter to={Number(c.headline_stat?.value) || 0} />{c.headline_stat?.suffix || ""}
                       <span className="text-white/35 ml-2 text-[10px] uppercase tracking-[0.16em]">{c.headline_stat?.label}</span>
                     </div>
