@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 /** Live, scaled render of a template's real pages — same renderer the tenant sites use. */
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
+import ContentMotion from "@/components/editorial/ContentMotion";
 
 function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260, motion: mo = null }) {
   const vars = themeVars(detail.theme);
@@ -33,7 +34,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
   const page = detail.pages?.find(p => p.slug === slug) || detail.pages?.[0];
   useEffect(() => { loadFonts(detail.theme); }, [detail]);
   return (
-    <div className="fixed inset-0 z-[70] bg-[var(--bg)] flex flex-col" data-testid="template-full-preview">
+    <div className="fixed inset-0 z-[70] bg-[var(--bg)] flex flex-col" data-testid="template-full-preview" data-content-motion>
       <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--line)] shrink-0 flex-wrap">
         <button data-testid="template-preview-close" onClick={onClose} className="btn-ghost text-sm !py-1.5 !px-3 flex items-center gap-1"><X size={14} /> Close</button>
         <div>
@@ -56,6 +57,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
       <div className={`flex-1 overflow-y-auto ${isV2(detail.theme) ? "dsv2" : ""} ${modeCls(detail.theme)}`}
         style={{ ...themeVars(detail.theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
         <DesignCtx.Provider value={isV2(detail.theme)}>
+          <ContentMotion deps={[detail.key, slug]} />
           <div className="relative">
             {motionProfile?.hero && (
               /* above the hero artwork, never intercepting clicks, screen-blended so copy stays readable */

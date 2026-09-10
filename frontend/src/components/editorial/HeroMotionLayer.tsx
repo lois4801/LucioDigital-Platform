@@ -130,7 +130,7 @@ export default function HeroMotionLayer({
       ctx, light ? 1.55 : 1.15, rhythmFor(hero), light ? 1 : 0.6);
 
     let w = 0, h = 0, raf = 0, start = 0, visible = true, last = 0;
-    const minStep = 1000 / 40;                    // steady 40fps ceiling: smooth, never thrashing
+    const minStep = 1000 / 30;                    // 30fps ceiling keeps the cursor and scroll smooth
     const dpr = Math.min(devicePixelRatio || 1, 1.75);
     const resize = () => {
       const r = cv.getBoundingClientRect();

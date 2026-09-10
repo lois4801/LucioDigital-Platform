@@ -1,0 +1,23 @@
+{
+  "summary": "Frontend-only verification of Lois-Tech background-removal + content-motion refactor (iteration 77). Confirmed: (a) animated page background fully removed across /templates, template full previews (creative_studio, healthcare, saas, legal), the Test Lab public site /p/pv_c3b797fcdafc58d4e70e320f and /motion — data-testid='ambient-backdrop' count is 0 and there are 0 '.amb-blob' nodes everywhere; (b) content boxes are tagged '.cm-box' and reliably transition to '.cm-in' as they scroll into view with staggered delays; (c) hero motion layer still present over hero only, 30fps ceiling and pause off-screen/hidden work; (d) prefers-reduced-motion path skips tagging and no content stays hidden (0/16 hidden); (e) 390x780 mobile has no horizontal overflow and reveals work; (f) no permanently invisible '.cm-box' in viewport was observed once IntersectionObserver + 1.4s safety net had a chance to run.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ContentMotion safety net fires only at 1400ms after the last of two tag() runs (60ms and 700ms). If the user scrolls a lot within the first ~2s, some newly-in-viewport boxes can appear un-revealed for a short window before the IntersectionObserver fires. In practice this cleared within ~1.5-2.5s in every test I did, but a more robust approach would be to re-run the safety-net check on scroll (throttled) or lower the observer threshold from 0.12 to 0.05 on the initial pass.",
+  "Only 240 boxes are tagged (slice(0,240)). Fine for current templates (max 26 boxes) but worth documenting so no one wonders later."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (from review request; no /app/memory/test_credentials.md required change)",
+  "seed_data_creation": "none",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Detailed measurements from this iteration:\n- /templates: 33 template-card + 33 hero-motion-layer, amb=0, blobs=0. Whole-page rAF: fps=41, p50=16.7ms, p95=33.4ms, max=33.4ms.\n- Full preview (first template): cm=16, cm-in progression 0 -> 6 (scroll 900) -> 13 (scroll +2000) -> all 16 at bottom. stuck-in-viewport = 0. preview rAF: fps=37.9, p50=33.3ms (30fps cap holds), max=49.9ms.\n- Tabs services/about/contact: 100% cm-in, 0 stuck.\n- Templates verified with amb=0, blobs=0, stuck=0: creative_studio (26/26 in dark), healthcare (19/19 dark), saas (18/18 dark), legal (19/19 dark). Note: the '_light' legal variant (Whitfield & Grant LLP) was visible in the gallery but not opened here — the dark 'legal' card was clicked. Main agent may re-verify a *_light template if desired but nothing in the reveal path is mode-specific.\n- Public tenant /p/pv_c3b797fcdafc58d4e70e320f: 1 hero layer, amb=0, blobs=0. All 16 cm-boxes reveal after scroll-to-bottom + 2.5s. Initial test with only 1.5s wait after scroll transiently reported 4 stuck-in-viewport; retest with 2.5s wait was clean, so this is a normal observer/safety-net timing window, not a bug (already documented as a code-review note).\n- prefers-reduced-motion: cm-box count 0 (ContentMotion no-ops), 0/16 content sections hidden.\n- Mobile 390x780: no horizontal overflow, cm boxes still tag and reveal on scroll (0 -> 5).\n- /motion: 44 hero-motion-layers render, amb=0, blobs=0.\n- Hover on .cm-box.cm-in shows the transform + box-shadow transition strings expected from index.css (-4px lift on hover).",
+  "rca of the issue": "n/a"
+}

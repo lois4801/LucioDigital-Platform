@@ -9,6 +9,7 @@ import ChatWidget from "@/components/ChatWidget";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import MotionSwitcher from "@/components/editorial/MotionSwitcher";
 import MotionStage from "@/components/editorial/MotionStage";
+import ContentMotion from "@/components/editorial/ContentMotion";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
@@ -75,7 +76,7 @@ export default function PublicPreview() {
   return (
     <DesignCtx.Provider value={v2}>
     <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: setOpenForm, editMode: false }}>
-    <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.app?.site_mode?.style === "editorial" ? "ed-scope" : ""} ${site.app?.site_mode?.animation === "none" ? "ed-static" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" data-site-style={site.app?.site_mode?.style || "original"} data-site-animation={site.app?.site_mode?.animation || "full"} data-hero-motion={site.app?.motion_profile?.hero || ""} style={{ ...themeVars(site.theme), ["--ed-lime"]: site.app?.motion_profile?.accent || site.theme?.primary, background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
+    <div className={`min-h-screen ${v2 ? "dsv2" : ""} ${site.app?.site_mode?.style === "editorial" ? "ed-scope" : ""} ${site.app?.site_mode?.animation === "none" ? "ed-static" : ""} ${modeCls(site.theme)} ${site.theme?.grain !== false ? "tgrain" : ""}`} data-testid="public-preview-page" data-content-motion data-site-style={site.app?.site_mode?.style || "original"} data-site-animation={site.app?.site_mode?.animation || "full"} data-hero-motion={site.app?.motion_profile?.hero || ""} style={{ ...themeVars(site.theme), ["--ed-lime"]: site.app?.motion_profile?.accent || site.theme?.primary, background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
       {!iso && site.app?.motion_profile?.hero && site.app?.site_mode?.animation !== "none" && (
         <div className="absolute inset-x-0 top-0 h-[100vh] pointer-events-none z-[5]" aria-hidden="true">
           <HeroMotionLayer hero={site.app.motion_profile.hero}
@@ -133,6 +134,7 @@ export default function PublicPreview() {
         </div>
       )}
       {!iso && navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
+      <ContentMotion deps={[slug, iso]} />
       {!iso && <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>

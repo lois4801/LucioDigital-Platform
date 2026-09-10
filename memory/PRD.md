@@ -717,3 +717,17 @@ FastAPI/Mongo. No feature or UI changes.
   reduced-motion draws one frame, mobile clean. Follow-up applied: `calm-pulse-wave` had a 10x
   density swing (read as pulsing on the healthcare card) — rings raised 4 -> 6, evenly staggered, with
   a 0.09 alpha floor so the field stays continuously present.
+
+## 2026-06 · Background removed, content animates instead (iter77 verified)
+- `AmbientBackdrop.tsx` DELETED and its `.amb-blob` CSS stripped — no animated page background on any
+  template, tenant site or the motion index. Only the single hero motion layer remains, over the hero.
+- `ContentMotion.tsx` (NEW): one shared IntersectionObserver inside a `[data-content-motion]` root tags
+  `section [class*=grid] > *, section article, section figure` as `.cm-box`, staggers
+  `transitionDelay` by `(i%6)*70ms`, adds `.cm-in` on intersect (transform+opacity only) and lifts
+  boxes -4px on hover. A 1.4s safety net reveals anything already on screen so content can never be
+  left invisible. Skipped entirely under `prefers-reduced-motion`.
+- Mounted in the template full preview (`TemplateGallery`) and the tenant site (`PublicPreview`).
+- `HeroMotionLayer` frame ceiling lowered 40fps -> 30fps for pointer/scroll smoothness.
+- Test report iteration_77: 0 ambient nodes anywhere, boxes reveal with stagger, 30fps cap and
+  off-screen/hidden pause confirmed, 0 permanently hidden boxes, reduced-motion clean, mobile clean,
+  no regressions. No open issues.
