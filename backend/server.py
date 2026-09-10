@@ -18,7 +18,7 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Optional, Literal, Any, Dict
 
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
@@ -282,6 +282,7 @@ async def login(body: LoginIn, response: Response):
     access = create_access_token(user["user_id"], email)
     refresh = create_refresh_token(user["user_id"])
     set_auth_cookies(response, access, refresh)
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"last_login_at": now_utc().isoformat()}})
     user.pop("password_hash", None)
     user.pop("_id", None)
     return user
@@ -1135,6 +1136,29 @@ VIDEO_HOOKS = register_videos(api, db, get_current_user, get_user_app, log_activ
 _web_import.place_video = VIDEO_HOOKS["place_video"]
 _web_import.search_stock = VIDEO_HOOKS["search_stock"]
 _web_import.store_video = VIDEO_HOOKS["store_video"]
+
+from membership import register as register_membership, is_gated as _is_gated, resolve_access as _resolve_access
+MEMBERSHIP_WEBHOOK = register_membership(api, db, get_current_user, log_activity)
+import extras as _extras
+_extras.MEMBERSHIP_WEBHOOK = MEMBERSHIP_WEBHOOK
+
+
+@app.middleware("http")
+async def membership_gate(request: Request, call_next):
+    """Free accounts may browse; everything else needs a paid membership (or client access)."""
+    if request.method == "OPTIONS" or not _is_gated(request.url.path):
+        return await call_next(request)
+    try:
+        user = await get_current_user(request)
+    except HTTPException:
+        return await call_next(request)          # let the route's own auth answer with 401
+    access = await _resolve_access(db, user)
+    if access not in ("admin", "paid", "client"):
+        return JSONResponse(status_code=402, content={
+            "detail": "Your LucioDigital membership is not active yet — upgrade to unlock this.",
+            "access": access, "upgrade_required": True})
+    return await call_next(request)
+
 
 @app.get("/health")
 @api.get("/health")

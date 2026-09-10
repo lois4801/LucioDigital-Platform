@@ -1,3 +1,4 @@
+import { useMembership } from "@/lib/membership";
 import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -18,6 +19,7 @@ const RIBBON_BOTTOM = ["Site mode", "App mode", "AI media studio", "Stripe billi
 export default function TestLabLanding() {
   const nav = useNavigate();
   const { user } = useAuth();
+  const { member } = useMembership();
   const isAdmin = !!user;
   const mobile = useIsMobile();
   const [stats, setStats] = useState({ tenants: 0, templates: 0, live: 0 });
@@ -56,19 +58,21 @@ export default function TestLabLanding() {
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
           <Link to="/work" className="hover:text-white transition-colors">Client work</Link>
-          {/* Always available: unauthenticated visitors are sent to sign-in by the route guard. */}
-          <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
-          {!isAdmin && <Link to="/login" data-testid="nav-signin-link" className="hover:text-white transition-colors">Sign in</Link>}
+          <Link to="/templates" data-testid="nav-templates-link" className="hover:text-white transition-colors">Templates</Link>
+          {member?.full_access
+            ? <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
+            : <Link to="/upgrade" data-testid="nav-upgrade-btn" className="px-3.5 py-1.5 rounded-full bg-[var(--ed-lime)] text-black font-semibold hover:brightness-110 transition-all">Upgrade</Link>}
+          {!member && <Link to="/login" data-testid="nav-signin-link" className="hover:text-white transition-colors">Sign in</Link>}
         </nav>
-        {/* Mobile: always one tap from the dashboard. */}
-        <Link to="/dashboard" data-testid="nav-dashboard-mobile" aria-label="Dashboard"
+        {/* Mobile: workspace for members, upgrade for everyone else. */}
+        <Link to={member?.full_access ? "/dashboard" : "/upgrade"} data-testid="nav-dashboard-mobile" aria-label={member?.full_access ? "Dashboard" : "Upgrade"}
           className="md:hidden ml-auto mr-1 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-[var(--ed-lime)]">
-          Dashboard
+          {member?.full_access ? "Dashboard" : "Upgrade"}
         </Link>
         <div className="flex items-center gap-2 md:ml-4">
-          <button data-testid="nav-cta" onClick={() => nav(isAdmin ? "/dashboard" : "/register")}
+          <button data-testid="nav-cta" onClick={() => nav(member?.full_access ? "/dashboard" : member ? "/upgrade" : "/register")}
             className="ed-cta shrink-0 rounded-full bg-white text-black font-semibold text-xs sm:text-sm py-2 !px-4 sm:!px-7">
-            {isAdmin ? <><span className="hidden sm:inline">My workspace</span><span className="sm:hidden">Workspace</span></> : "Start free"}
+            {member?.full_access ? <><span className="hidden sm:inline">My workspace</span><span className="sm:hidden">Workspace</span></> : member ? "Upgrade" : "Start free"}
           </button>
         </div>
       </header>

@@ -31,6 +31,11 @@ import Showcase from "@/pages/Showcase";
 import RedesignReview from "@/pages/RedesignReview";
 import HeroGallery from "@/pages/HeroGallery";
 import AccentAudit from "@/pages/AccentAudit";
+import Upgrade from "@/pages/Upgrade";
+import Account from "@/pages/Account";
+import AdminMembers from "@/pages/AdminMembers";
+import PaidRoute from "@/components/PaidRoute";
+import { MembershipProvider } from "@/lib/membership";
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -59,17 +64,17 @@ function AppRouter() {
       <Route path="/classic-landing" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
-      <Route path="/dashboard" element={<ProtectedRoute><PageTransition testid="page-dashboard"><Dashboard /></PageTransition></ProtectedRoute>} />
-      <Route path="/apps/:appId" element={<ProtectedRoute><PageTransition testid="page-app"><AppDetail /></PageTransition></ProtectedRoute>} />
-      <Route path="/deploy" element={<ProtectedRoute><PageTransition testid="page-deploy"><DeployHub /></PageTransition></ProtectedRoute>} />
-      <Route path="/leads" element={<ProtectedRoute><PageTransition testid="page-leads"><Leads /></PageTransition></ProtectedRoute>} />
-      <Route path="/templates" element={<ProtectedRoute><PageTransition testid="page-templates"><TemplateGallery /></PageTransition></ProtectedRoute>} />
-      <Route path="/rollout-history" element={<ProtectedRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></ProtectedRoute>} />
+      <Route path="/dashboard" element={<PaidRoute><PageTransition testid="page-dashboard"><Dashboard /></PageTransition></PaidRoute>} />
+      <Route path="/apps/:appId" element={<PaidRoute><PageTransition testid="page-app"><AppDetail /></PageTransition></PaidRoute>} />
+      <Route path="/deploy" element={<PaidRoute><PageTransition testid="page-deploy"><DeployHub /></PageTransition></PaidRoute>} />
+      <Route path="/leads" element={<PaidRoute><PageTransition testid="page-leads"><Leads /></PageTransition></PaidRoute>} />
+      <Route path="/templates" element={<PageTransition testid="page-templates"><TemplateGallery /></PageTransition>} />
+      <Route path="/rollout-history" element={<PaidRoute><PageTransition testid="page-history"><RolloutHistory /></PageTransition></PaidRoute>} />
       <Route path="/test-lab/landing" element={<TestLabLanding />} />
-      <Route path="/redesign-review" element={<ProtectedRoute><RedesignReview /></ProtectedRoute>} />
+      <Route path="/redesign-review" element={<PaidRoute><RedesignReview /></PaidRoute>} />
       <Route path="/hero-gallery" element={<HeroGallery />} />
       <Route path="/motion" element={<HeroGallery />} />
-      <Route path="/accent-audit" element={<ProtectedRoute><AccentAudit /></ProtectedRoute>} />
+      <Route path="/accent-audit" element={<PaidRoute><AccentAudit /></PaidRoute>} />
       <Route path="/work" element={<Showcase />} />
       <Route path="/work/:slug" element={<CaseStudy />} />
       <Route path="/choose/:token" element={<TemplateGallery clientMode />} />
@@ -78,6 +83,9 @@ function AppRouter() {
       <Route path="/site-admin/:token" element={<SiteAdmin />} />
       <Route path="/compare/:code" element={<Compare />} />
       <Route path="/embed/chat/:token" element={<ChatEmbed />} />
+      <Route path="/upgrade" element={<Upgrade />} />
+      <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+      <Route path="/admin/members" element={<PaidRoute admin><AdminMembers /></PaidRoute>} />
       <Route path="/payment/success" element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} />
       <Route path="/payment/cancel" element={<ProtectedRoute><PaymentCancel /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -91,11 +99,13 @@ export default function App() {
     <div className="App">
       <BrowserRouter>
         <AuthProvider>
+          <MembershipProvider>
           <CursorFXProvider>
             <AppRouter />
             <Toaster theme="dark" position="top-right" richColors closeButton />
             <CursorTrailThemed />
           </CursorFXProvider>
+          </MembershipProvider>
         </AuthProvider>
       </BrowserRouter>
     </div>

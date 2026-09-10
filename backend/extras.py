@@ -483,6 +483,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             await db.payment_transactions.update_one({"session_id": obj["id"]}, {"$set": {"status": "failed", "payment_status": "failed", "updated_at": now_iso()}})
         elif t == "checkout.session.expired":
             await db.payment_transactions.update_one({"session_id": obj["id"]}, {"$set": {"status": "expired", "payment_status": "expired", "updated_at": now_iso()}})
+        hook = globals().get("MEMBERSHIP_WEBHOOK")
+        if hook:
+            await hook(event)                      # platform membership events share this endpoint
         return {"status": "ok"}
 
     @api.get("/billing/transactions")

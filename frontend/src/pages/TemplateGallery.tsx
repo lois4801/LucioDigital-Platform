@@ -1,9 +1,10 @@
 import Logo from "@/components/Logo";
+import { useMembership } from "@/lib/membership";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Check, Clock, Eye, FlaskConical, Layers, Link2, Loader2, Rocket, Share2, Sparkles, X } from "lucide-react";
+import { ArrowLeft, Check, Clock, Eye, FlaskConical, Layers, Link2, Loader2, Rocket, Share2, Sparkles, Star, X } from "lucide-react";
 import api from "@/lib/api";
 import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
@@ -101,7 +102,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
   );
 }
 
-function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [], motionProfile = null }) {
+function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [], motionProfile = null, favorite = false, onFavorite = null }) {
   const isTest = t.key === "test_template";
   const ref = useRef(null);
   return (
@@ -125,8 +126,13 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [
           <span className="chip">{t.mode === "light" ? "Light" : "Dark"}</span>
           {motionProfile?.hero && <span className="chip font-mono !text-[9px]" data-testid={`template-motion-badge-${t.key}`}>{motionProfile.hero}</span>}
         </div>
-        <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="chip chip-active flex items-center gap-1"><Eye size={11} /> Full preview</span>
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5">
+          {onFavorite && (
+            <button data-testid={`template-favorite-${t.key}`} title={favorite ? "Remove from favourites" : "Save to favourites"}
+              onClick={e => { e.stopPropagation(); onFavorite(t.key); }}
+              className={`chip cursor-pointer ${favorite ? "chip-active" : ""}`}><Star size={11} /></button>
+          )}
+          <span className="chip chip-active items-center gap-1 hidden group-hover:flex"><Eye size={11} /> Full preview</span>
         </div>
       </div>
       <div className="p-4">
@@ -155,6 +161,7 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [
 
 export default function TemplateGallery({ clientMode = false }) {
   const nav = useNavigate();
+  const { member, setMember } = useMembership();
   const { token } = useParams();
   const [list, setList] = useState([]);  const [cats, setCats] = useState([]);
   const [cat, setCat] = useState("All");
@@ -174,12 +181,12 @@ export default function TemplateGallery({ clientMode = false }) {
   const [motions, setMotions] = useState({});   // template_key -> { hero, accent }
 
   const loadStates = () => {
-    if (clientMode) return;
+    if (clientMode || !member?.full_access) return;
     api.get("/templates/rollout-status")
       .then(({ data }) => setStates(Object.fromEntries(data.templates.map((t) => [t.key, t]))))
       .catch(() => { /* non-blocking */ });
   };
-  useEffect(loadStates, [clientMode]);
+  useEffect(loadStates, [clientMode, member?.full_access]);
 
   useEffect(() => {
     api.get("/public/templates").then(r => {
@@ -248,9 +255,19 @@ export default function TemplateGallery({ clientMode = false }) {
       } catch (e) { toast.error(e.response?.data?.detail || "Could not send your choice"); }
       return;
     }
+    if (!member) { toast.message("Create a free account to start building"); nav("/register?next=/templates"); return; }
+    if (!member.full_access) { toast.message("Starting a project needs an active membership"); nav("/upgrade"); return; }
     setFull(null);
     setUseOpen(t);
     setForm({ name: "", description: t.summary });
+  }
+
+  async function toggleFavorite(key: string) {
+    if (!member) { nav("/register?next=/templates"); return; }
+    try {
+      const { data } = await api.post(`/membership/favorites/${key}`);
+      setMember(m => ({ ...m, favorites: data.favorites }));
+    } catch { toast.error("Could not save that favourite"); }
   }
 
   async function createFromTemplate() {
@@ -291,7 +308,7 @@ export default function TemplateGallery({ clientMode = false }) {
     <div className="min-h-screen px-6 lg:px-10 py-8" data-testid={clientMode ? "client-template-gallery" : "template-gallery"}>
       <div className="flex flex-wrap items-end justify-between gap-4 mb-7">
         <div>
-          {!clientMode && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
+          {!clientMode && member?.full_access && <button data-testid="gallery-back-btn" onClick={() => nav("/dashboard")} className="text-sm text-[var(--mut)] hover:text-white inline-flex items-center gap-1 mb-3"><ArrowLeft size={14} /> Dashboard</button>}
           <div className="overline mb-1 flex items-center gap-2"><Sparkles size={12} className="text-[var(--acc)]" /> {clientMode ? `Choose a design${shareInfo?.client_name ? ` · ${shareInfo.client_name}` : ""}` : `Template gallery · ${list.length} designs`}
           </div>
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
@@ -299,9 +316,12 @@ export default function TemplateGallery({ clientMode = false }) {
             ? "Browse every design side by side, open any one full screen to scroll the whole site, then send your pick to the team."
             : "Every template is a complete, distinct build — its own palette, typography, hero and section style. Pick one and the client is created with that design applied instantly."}</p>
         </div>
-        {!clientMode && (
-          <button data-testid="preview-for-client-btn" onClick={() => setShareOpen(true)} className="btn-ghost text-sm flex items-center gap-2"><Share2 size={14} /> Preview for client</button>
-        )}
+        {!clientMode && (member?.full_access
+          ? <button data-testid="preview-for-client-btn" onClick={() => setShareOpen(true)} className="btn-ghost text-sm flex items-center gap-2"><Share2 size={14} /> Preview for client</button>
+          : <div className="flex items-center gap-2">
+              <span className="text-xs text-[var(--mut)] max-w-[220px]">Browsing is free. Building a client site needs a membership.</span>
+              <Link to="/upgrade" data-testid="gallery-upgrade-btn" className="btn-primary text-sm">Upgrade</Link>
+            </div>)}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 mb-6 border-b border-[var(--line)] pb-4">
@@ -320,6 +340,7 @@ export default function TemplateGallery({ clientMode = false }) {
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5">
           {shown.map(t => (
             <Card key={t.key} t={t} detail={details[t.key]} onOpen={openFull} onUse={useTemplate}
+              favorite={(member?.favorites || []).includes(t.key)} onFavorite={clientMode ? null : toggleFavorite}
               state={states[t.key]}
               motionProfile={motions[t.key]}
               allKeys={list.filter((x) => x.key !== "test_template").map((x) => x.key)}

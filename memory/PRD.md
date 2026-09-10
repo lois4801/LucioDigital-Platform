@@ -1006,3 +1006,36 @@ FastAPI/Mongo. No feature or UI changes.
   rewrote 5 documents (site_settings landing CMS + chat_messages), and `landing_cms._get()` now rewrites
   any residual legacy brand string on read. Lesson: a rename needs a data migration, not just source.
 - Lime #84FF00 remains reserved for the platform site (client accent PUT still 400s).
+
+## 2026-06 · Membership, gating & payments (iter95, backend 20/20, frontend 95%)
+Requirement: free browsing for visitors and free accounts, everything else behind a one-time $1,000
+agency setup fee plus $300/month hosting. User choices: grandfather the admin + existing agency
+accounts (invited client users stay free), enforce on server AND client, FULL lockout on suspension,
+free accounts can star favourite templates, admin can paste their own Stripe keys, and offer manual
+Interac e-Transfer + Stripe pre-authorised bank debit alongside card (Apple/Google Pay ride along on
+the Stripe Checkout card path automatically).
+
+- `backend/membership.py` (NEW): `PLANS` (`lucio_setup_fee` $1,000 one-time, `lucio_monthly_hosting`
+  $300/month, idempotent Product+Price creation by lookup key), `resolve_access()` ->
+  `admin | paid | client | setup_paid | suspended | free`, Stripe Checkout for card (managed payments,
+  falling back to Stripe Tax) and bank/ACSS (explicit method list, no `currency` in payment mode and no
+  automatic_tax — the sandbox has no head-office address), `/membership/*` endpoints (plans, me,
+  checkout, status reconcile, interac declare, cancel, resume, payments, favourites) and the admin
+  surface (`/admin/members`, per-member payments, tier, suspend, reactivate, email, manual-payment
+  confirm/reject, `/admin/stripe-keys` which never returns the secret).
+- Gate: `membership_gate` HTTP middleware in `server.py` returns **402 upgrade_required** for anything
+  outside `PUBLIC_PREFIXES`; `PaidRoute` + `MembershipProvider` mirror it in the browser. `/templates`
+  is now a public route. `last_login_at` is stamped on login.
+- Webhooks: the shared `/api/stripe/webhook` now also calls `membership.handle_event` for
+  checkout completion, `invoice.paid` (extends the period), `invoice.payment_failed` /
+  `subscription.deleted` (suspend) and `subscription.updated` (cancel-at-period-end, status sync).
+- Frontend: `pages/Upgrade.tsx` (two tiers, three payment methods, Interac reference panel, suspended
+  banner), `pages/Account.tsx` (status, billing date, cancel/resume, payment history),
+  `pages/AdminMembers.tsx` (all accounts with signup/last login/clients/payments, search, tier up/down,
+  suspend/reactivate, member drawer with Stripe records + custom email, e-Transfer queue, payment
+  settings), gated `useTemplate` + favourites star in the gallery, nav Upgrade button, and the
+  setup -> monthly hand-off in `PaymentResult.tsx`.
+- `scripts/grandfather_members.py` ran: admin + `lois4801@gmail.com` marked paid; invited client users
+  resolve to `client` and keep Portal access for free.
+- Fixed during testing: admin "email this member" 500 (`send_email` returns a str on one provider path)
+  and a `resolve_access` edge where a manual month with no end date never expired.

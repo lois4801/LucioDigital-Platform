@@ -1,3 +1,4 @@
+import { useMembership } from "@/lib/membership";
 import Logo, { LogoMark } from "@/components/Logo";
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -6,7 +7,7 @@ import { CountUp, fast, stagger, fadeUp } from "@/components/motion";
 import { useAuth } from "@/context/AuthContext";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical, Loader2, ExternalLink } from "lucide-react";
+import { Layers, Plus, Search, LogOut, Bell, Grid3x3, List, Play, Star, Archive, RotateCcw, Trash2, Sparkles, Check, Rocket, FlaskConical, Loader2, ExternalLink, CreditCard, Users } from "lucide-react";
 import ShowcaseManager from "@/components/ShowcaseManager";
 import RolloutModal from "@/components/RolloutModal";
 import PushToOnePicker from "@/components/PushToOnePicker";
@@ -30,6 +31,7 @@ const STATUS_META = {
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
+  const { member } = useMembership();
   const nav = useNavigate();
   const [apps, setApps] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -296,6 +298,14 @@ export default function Dashboard() {
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>{user?.name}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem data-testid="nav-account" onClick={() => nav("/account")}>
+                  <CreditCard size={14} className="mr-2" /> Account & billing
+                </DropdownMenuItem>
+                {member?.is_admin && (
+                  <DropdownMenuItem data-testid="nav-admin-members" onClick={() => nav("/admin/members")}>
+                    <Users size={14} className="mr-2" /> Members
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem data-testid="nav-logout" onClick={async () => { nav("/login", { replace: true }); await logout(); }}>
                   <LogOut size={14} className="mr-2" /> Sign out
                 </DropdownMenuItem>

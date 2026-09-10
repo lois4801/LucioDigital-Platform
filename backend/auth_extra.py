@@ -72,6 +72,8 @@ async def send_email(*, to: str, subject: str, html: str):
                                 headers={"X-Email-Key": key}, json=payload)
     if res.is_error:
         logger.error("email send failed: %s %s", res.status_code, res.text[:200])
+        if res.status_code == 429:
+            raise HTTPException(429, "Email sending is rate limited right now — try again in a few minutes")
         raise HTTPException(502, "Could not send the email — try again in a moment")
     return res.json().get("id")
 
