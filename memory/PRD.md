@@ -579,3 +579,23 @@ FastAPI/Mongo. No feature or UI changes.
   unconditionally — lime "Dashboard" in the desktop nav and a chip in the mobile header. Logged-out
   clicks route to /login via the route guard. Verified logged out: link present, click → /login;
   mobile chip right edge 276/390, CTA 374/390, no overflow.
+
+## 2026-06 · 44 bespoke hero motion engines (iter70, frontend 100%)
+- Replaced the shared `.hm-*` CSS keyframe families with ONE bespoke canvas render function per
+  hero. New files: `components/editorial/heroUtils.ts` (easings easeOutExpo/Back/Elastic/
+  easeInOutQuint, `loop()` with 60-100ms staggers, `dens()` 50% mobile density, roundRect,
+  dashedPath, quadAt, softGlow), `heroEnginesCore.ts` (16 core industry heroes),
+  `heroEnginesStudio.ts` (17 studio-pack heroes), `heroEnginesReserved.ts` (10 reserved +
+  `platform-drift-cards`, platform-only), `heroEngines.ts` (registry + `engineFor()`).
+- `HeroMotionLayer.tsx` rewritten: single `<canvas data-testid="hero-motion-canvas">`, DPR-capped,
+  ResizeObserver, IntersectionObserver pauses off-screen heroes, `prefers-reduced-motion` /
+  `reduced` draws ONE still frame with no rAF loop, `pointer-events:none` + `z-index:0`.
+- Every effect now matches its name (helix strands + base pairs, katakana rain, steam wisps,
+  gear ring + accelerating streaks, blueprint dash draw-on, stadium crowd wave, aperture blades,
+  ledger rules, paw prints, pipe flow dashes, terminal type-on, museum spotlight cone, etc.).
+- Dead `.hm-*` engine keyframes removed from index.css; canvas opacity .62 desktop / .42 mobile.
+- Verified (testing agent iter70): 44/44 canvases paint with 44 UNIQUE pixel signatures at both
+  1920x1080 and a fresh 390x780 load; landing platform hero paints; pointer-events/z-index correct
+  and CTAs clickable; hero apply to Test Lab works; SiteModePanel inline preview paints.
+- Open (minor, unrelated): SiteModePanel "Preview Site" click did not open PublicPreview in the
+  automated run — worth a look next pass.
