@@ -87,6 +87,9 @@ PLATFORM_PROFILE = {   # lois-tech.ca only — shares nothing with the 42 templa
     "reveal": "platform-fade-rise", "counter": "platform-odometer", "accent": LIME,
 }
 
+HERO_NAMES = sorted({v["hero"] for v in list(MOTION_PROFILES.values()) + list(RESERVED_PROFILES.values())}
+                    | {PLATFORM_PROFILE["hero"]})
+
 DEFAULT_SITE_MODE = {"style": "editorial", "mode": "dark", "animation": "full"}
 
 
@@ -228,6 +231,50 @@ def register(api, db, get_current_user):
     async def profiles(user: dict = Depends(get_current_user)):
         return {"templates": MOTION_PROFILES, "reserved": RESERVED_PROFILES, "platform": PLATFORM_PROFILE,
                 "defaults": DEFAULT_SITE_MODE, "total": len(MOTION_PROFILES) + len(RESERVED_PROFILES)}
+
+    @api.get("/editorial/heroes")
+    async def heroes(user: dict = Depends(get_current_user)):
+        by_template = {v["hero"]: k for k, v in MOTION_PROFILES.items()}
+        by_template.update({v["hero"]: f"reserved · {k}" for k, v in RESERVED_PROFILES.items()})
+        by_template[PLATFORM_PROFILE["hero"]] = "lois-tech.ca (platform only)"
+        return {"heroes": [{"hero": h, "used_by": by_template.get(h, "")} for h in HERO_NAMES],
+                "total": len(HERO_NAMES)}
+
+    def _lum(hex_c: str) -> float:
+        h = (hex_c or "").lstrip("#")
+        if len(h) != 6:
+            return 0.0
+        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        f = lambda c: c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4   # noqa: E731
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+
+    def _brighten(hex_c: str, factor: float = 1.55) -> str:
+        h = (hex_c or "").lstrip("#")
+        if len(h) != 6:
+            return "#10B981"
+        rgb = [min(255, int(int(h[i:i + 2], 16) * factor) + 18) for i in (0, 2, 4)]
+        return "#" + "".join(f"{c:02X}" for c in rgb)
+
+    @api.get("/editorial/accent-audit")
+    async def accent_audit(user: dict = Depends(get_current_user)):
+        base = _lum("#080808")
+        rows = []
+        async for app in db.apps.find({}, {"_id": 0}):
+            prof = app.get("motion_profile") or {}
+            sm = app.get("site_mode") or {}
+            accent = sm.get("accent") or prof.get("accent") or (app.get("theme") or {}).get("primary") or "#10B981"
+            l = _lum(accent)
+            contrast = round((max(l, base) + 0.05) / (min(l, base) + 0.05), 2)
+            rows.append({
+                "app_id": app["app_id"], "name": app.get("name"), "accent": accent.upper(),
+                "hero": prof.get("hero") or "", "template_key": prof.get("template_key") or "",
+                "contrast_on_080808": contrast,
+                "verdict": "dull" if contrast < 3.0 else ("ok" if contrast < 4.5 else "vivid"),
+                "suggested": _brighten(accent) if contrast < 3.0 else accent.upper(),
+                "is_platform_lime": accent.upper() == LIME,
+            })
+        rows.sort(key=lambda r: r["contrast_on_080808"])
+        return {"base": "#080808", "tenants": rows, "dull": sum(1 for r in rows if r["verdict"] == "dull")}
 
     @api.get("/public/motion-profile/{app_id}")
     async def public_profile(app_id: str):

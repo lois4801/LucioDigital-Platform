@@ -161,6 +161,14 @@ export default function Landing() {
             className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
             Test Lab redesign
           </button>
+          <button data-testid="landing-hero-gallery-btn" onClick={() => nav("/hero-gallery")}
+            className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
+            Hero gallery
+          </button>
+          <button data-testid="landing-accent-audit-btn" onClick={() => nav("/accent-audit")}
+            className="shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold bg-white/5 text-white/80 border border-white/15 hover:text-white transition-colors">
+            Accent audit
+          </button>
         </div>
       )}
       <div className="absolute inset-0 grid-bg pointer-events-none" />

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 import api from "@/lib/api";
 import { CheckCircle2, Loader2, Rocket } from "lucide-react";
 
 // Runs the platform-wide editorial rollout with a live progress indicator.
 export default function EditorialRolloutCard() {
+  const nav = useNavigate();
   const [job, setJob] = useState(null);
   const [busy, setBusy] = useState(false);
   const timer = useRef(0);
@@ -47,10 +49,14 @@ export default function EditorialRolloutCard() {
             Snapshots everything, then pushes the editorial system to all active tenants and every industry template. Undoable.
           </div>
         </div>
-        <button data-testid="editorial-rollout-start" disabled={busy} onClick={start}
-          className="ml-auto btn-primary text-xs !py-2 !px-4 inline-flex items-center gap-2 disabled:opacity-60">
-          {busy ? <Loader2 size={12} className="animate-spin" /> : <Rocket size={12} />} {busy ? "Rolling out…" : "Run rollout"}
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button data-testid="dash-hero-gallery-btn" onClick={() => nav("/hero-gallery")} className="btn-ghost text-xs !py-1.5 !px-3">Hero gallery</button>
+          <button data-testid="dash-accent-audit-btn" onClick={() => nav("/accent-audit")} className="btn-ghost text-xs !py-1.5 !px-3">Accent audit</button>
+          <button data-testid="editorial-rollout-start" disabled={busy} onClick={start}
+            className="btn-primary text-xs !py-2 !px-4 inline-flex items-center gap-2 disabled:opacity-60">
+            {busy ? <Loader2 size={12} className="animate-spin" /> : <Rocket size={12} />} {busy ? "Rolling out…" : "Run rollout"}
+          </button>
+        </div>
       </div>
       {job && (
         <div className="mt-4" data-testid="editorial-rollout-progress">

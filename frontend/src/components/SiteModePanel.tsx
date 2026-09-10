@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { Loader2, ShieldCheck } from "lucide-react";
 import SitePreviewOverlay, { PreviewSiteButton } from "@/components/SitePreviewOverlay";
+import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -33,10 +34,12 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
   const [sm, setSm] = useState(null);
   const [busy, setBusy] = useState(false);
   const [preview, setPreview] = useState(false);
+  const [heroes, setHeroes] = useState([]);
 
   useEffect(() => {
     if (!appId) return;
     api.get(`/apps/${appId}/site-mode`).then(r => setSm(r.data)).catch(() => {});
+    api.get("/editorial/heroes").then(r => setHeroes(r.data.heroes || [])).catch(() => {});
   }, [appId]);
 
   async function patch(next) {
@@ -76,6 +79,45 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           value={sm.animation} options={ANIMS} onPick={v => patch({ animation: v })} />
         <Row testid="sm-publish" label="Publishing status" hint="Draft is private, Preview is link-only, Live is public."
           value={sm.publish} options={PUB} onPick={v => patch({ publish: v })} />
+        <div className="py-4 border-b border-[var(--line)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">Signature hero motion</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Swap this tenant's hero animation. Applies to Preview, Live and Demo.</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <select data-testid="sm-hero-select" value={sm.hero || ""} onChange={e => patch({ hero: e.target.value })}
+                className="bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2 text-sm outline-none focus:border-[var(--acc)] max-w-[240px]">
+                <option value="">— inherit from template —</option>
+                {heroes.map(h => <option key={h.hero} value={h.hero}>{h.hero}</option>)}
+              </select>
+              <a href="/hero-gallery" data-testid="sm-hero-gallery-link" className="chip cursor-pointer hover:!text-white">See all {heroes.length}</a>
+            </div>
+          </div>
+          {sm.hero && (
+            <div className="mt-3 relative h-28 rounded-xl overflow-hidden bg-[#080808] border border-[var(--line)]" data-testid="sm-hero-preview">
+              <HeroMotionLayer hero={sm.hero} accent={sm.accent || "#10B981"} />
+              <div className="absolute inset-0 grid place-items-center font-mono text-[11px] text-white/40">{sm.hero}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="py-4 border-b border-[var(--line)]">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">Accent colour</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Drives every motion layer on this tenant. Lime is reserved for lois-tech.ca.</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input type="color" data-testid="sm-accent-picker" value={sm.accent || "#10B981"}
+                onChange={e => patch({ accent: e.target.value.toUpperCase() })}
+                className="w-10 h-10 rounded-xl bg-transparent border border-[var(--line)] p-0 cursor-pointer" />
+              <span className="font-mono text-xs" style={{ color: sm.accent }}>{sm.accent}</span>
+              <a href="/accent-audit" data-testid="sm-accent-audit-link" className="chip cursor-pointer hover:!text-white">Audit all</a>
+            </div>
+          </div>
+        </div>
+
         {templates.length > 0 && (
           <div className="py-4">
             <div className="text-sm font-semibold">Active template</div>

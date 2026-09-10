@@ -92,6 +92,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         animation: Optional[str] = None        # full | reduced | none
         publish: Optional[str] = None          # draft | preview | live
         template_key: Optional[str] = None     # which of the industry templates drives the look
+        hero: Optional[str] = None             # signature hero motion for this tenant
+        accent: Optional[str] = None           # tenant accent used by every motion layer
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -174,6 +176,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "animation": sm.get("animation") or "full",
             "publish": sm.get("publish") or ("live" if app.get("status") == "active" else "draft"),
             "template_key": sm.get("template_key") or app.get("site_niche") or "",
+            "hero": sm.get("hero") or (app.get("motion_profile") or {}).get("hero") or "",
+            "accent": sm.get("accent") or (app.get("motion_profile") or {}).get("accent") or theme.get("primary") or "",
             "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS), "publish": list(PUBLISH_STATES)},
         }
 
@@ -190,8 +194,20 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Publish status must be draft, preview or live")
         if patch.get("mode") and patch["mode"] not in ("light", "dark"):
             raise HTTPException(400, "Mode must be light or dark")
+        from editorial_rollout import HERO_NAMES, LIME
+        if patch.get("hero") and patch["hero"] not in HERO_NAMES:
+            raise HTTPException(400, "Unknown hero motion")
+        if patch.get("accent") and patch["accent"].upper() == LIME:
+            raise HTTPException(400, "That accent is reserved for the platform site")
         cur.update(patch)
         cur["updated_at"] = _now()
+        prof = dict(app.get("motion_profile") or {})
+        if patch.get("hero"):
+            prof["hero"] = patch["hero"]
+        if patch.get("accent"):
+            prof["accent"] = patch["accent"]
+        if prof:
+            await db.apps.update_one({"app_id": app_id}, {"$set": {"motion_profile": prof}})
         # Scoped to this one tenant only — never written to any other app document.
         await db.apps.update_one({"app_id": app_id}, {"$set": {"site_mode": cur}})
         if log_activity:

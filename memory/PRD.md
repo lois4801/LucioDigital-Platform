@@ -519,3 +519,24 @@ FastAPI/Mongo. No feature or UI changes.
 - NOTE: heroes are grouped into engine families with per-hero parameters (duration, density, angle,
   direction, colour), so every template animates differently, but heroes in the same family share
   the underlying engine rather than each having wholly bespoke code.
+
+## 2026-06 · Hero swap + hero gallery + accent audit (all live)
+- Backend (`case_study.py` site-mode + `editorial_rollout.py`):
+  `site_mode.hero` and `site_mode.accent` are now settable per tenant and write straight into
+  `motion_profile`. Validation: unknown hero → 400 "Unknown hero motion"; lime accent → 400
+  "That accent is reserved for the platform site".
+  New: `GET /api/editorial/heroes` (44 heroes + which template uses each) and
+  `GET /api/editorial/accent-audit` (per-tenant accent, WCAG contrast vs #080808,
+  verdict dull/ok/vivid, suggested brighter hex).
+- Frontend:
+  `pages/HeroGallery.tsx` at `/hero-gallery` — 44 live hero previews, tenant selector, one-click
+  Apply, active hero highlighted.
+  `pages/AccentAudit.tsx` at `/accent-audit` — each tenant's accent rendered on the real #080808
+  base with contrast ratio, colour picker and "Brighten to #XXXXXX" for dull accents.
+  `SiteModePanel` gained a Signature hero motion row (dropdown + live inline preview + "See all 44")
+  and an Accent colour row (picker + "Audit all"), alongside the existing Preview Site button.
+  Entry points added to the dashboard rollout card and the landing admin bar.
+- Verified live: gallery renders 44 cards/44 motion layers, applying `aurora-wave` to Test Lab
+  showed "ACTIVE" + toast; audit shows Test Lab #8B5CF6 at 4.73:1 "vivid"; Site Mode panel shows
+  hero select + inline particle-network preview + accent picker. Test Lab hero reset to its
+  template default (particle-network).
