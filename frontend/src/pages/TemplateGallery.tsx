@@ -58,8 +58,9 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
         <DesignCtx.Provider value={isV2(detail.theme)}>
           <div className="relative">
             {motionProfile?.hero && (
-              <div className="absolute inset-x-0 top-0 h-[70vh] pointer-events-none z-[1]" data-testid="template-preview-motion">
-                <HeroMotionLayer hero={motionProfile.hero} accent={motionProfile.accent} intensity={0.6} />
+              /* above the hero artwork, never intercepting clicks, screen-blended so copy stays readable */
+              <div className="absolute inset-x-0 top-0 h-[85vh] pointer-events-none z-[5] mix-blend-screen" data-testid="template-preview-motion">
+                <HeroMotionLayer hero={motionProfile.hero} accent={motionProfile.accent} intensity={0.75} />
               </div>
             )}
             <div className="relative z-[2]">

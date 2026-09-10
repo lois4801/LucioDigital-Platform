@@ -670,3 +670,11 @@ FastAPI/Mongo. No feature or UI changes.
 - Follow-up: the delete (trash) button on tenant cards is now ALWAYS visible (no longer hover-only),
   outlined in red; on the master workspace it renders greyed out and disabled with a tooltip
   explaining it is permanent. Verified visible without hover on both cards.
+- FIX (motion missing after selecting a template): the hero motion layer sat at z-0/z-1 BEHIND the
+  opaque hero sections, so it only showed on the scaled gallery thumbnails. Both the template full
+  preview (`TemplateGallery.tsx` `template-preview-motion`) and the tenant public site
+  (`PublicPreview.tsx`) now render the layer at `z-[5]` with `mix-blend-screen` and
+  `pointer-events:none`. PublicPreview no longer gates motion on `site_mode.style === "editorial"` —
+  any tenant with a `motion_profile.hero` animates unless animation is set to "none".
+  Verified: particles visible over the SaaS template preview (tabs + Use this template still clickable)
+  and circuit traces live on the Test Lab public site.
