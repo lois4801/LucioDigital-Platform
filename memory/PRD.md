@@ -574,3 +574,8 @@ FastAPI/Mongo. No feature or UI changes.
   "Dashboard" chip in the mobile header, and the primary CTA switches to "My workspace" →
   /dashboard. Visitors still see "Sign in" + "Start free". Admin quick-link bar also links to
   Hero gallery / Accent audit / Dashboard. All three paths verified navigating to /dashboard.
+- FIX: the landing Dashboard link was conditional on `useAuth().user`, which is null inside the
+  Emergent preview iframe (session cookie not sent), so it appeared missing. It is now rendered
+  unconditionally — lime "Dashboard" in the desktop nav and a chip in the mobile header. Logged-out
+  clicks route to /login via the route guard. Verified logged out: link present, click → /login;
+  mobile chip right edge 276/390, CTA 374/390, no overflow.

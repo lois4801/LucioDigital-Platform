@@ -51,17 +51,15 @@ export default function TestLabLanding() {
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform", "Pricing"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
           <Link to="/work" className="hover:text-white transition-colors">Client work</Link>
-          {isAdmin
-            ? <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
-            : <Link to="/login" data-testid="nav-signin-link" className="hover:text-white transition-colors">Sign in</Link>}
+          {/* Always available: unauthenticated visitors are sent to sign-in by the route guard. */}
+          <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
+          {!isAdmin && <Link to="/login" data-testid="nav-signin-link" className="hover:text-white transition-colors">Sign in</Link>}
         </nav>
-        {/* Mobile: always one tap from the dashboard when signed in. */}
-        {isAdmin && (
-          <Link to="/dashboard" data-testid="nav-dashboard-mobile" aria-label="Dashboard"
-            className="md:hidden ml-auto mr-2 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-[var(--ed-lime)]">
-            Dashboard
-          </Link>
-        )}
+        {/* Mobile: always one tap from the dashboard. */}
+        <Link to="/dashboard" data-testid="nav-dashboard-mobile" aria-label="Dashboard"
+          className="md:hidden ml-auto mr-1 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-[var(--ed-lime)]">
+          Dashboard
+        </Link>
         <div className="flex items-center gap-2 md:ml-4">
           <button data-testid="nav-cta" onClick={() => nav(isAdmin ? "/dashboard" : "/register")}
             className="ed-cta shrink-0 rounded-full bg-white text-black font-semibold text-xs sm:text-sm py-2 !px-4 sm:!px-7">
