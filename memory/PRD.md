@@ -570,3 +570,7 @@ FastAPI/Mongo. No feature or UI changes.
 - Landing identity stays distinct: platform-drift-cards hero + platform-bento layout +
   platform-fade-rise reveal + platform-odometer counter, none of which any template uses.
 - No publish step: landing edits are the live state the moment they are saved.
+- Landing navigation: signed-in admins get a lime "Dashboard" link in the desktop nav, a
+  "Dashboard" chip in the mobile header, and the primary CTA switches to "My workspace" →
+  /dashboard. Visitors still see "Sign in" + "Start free". Admin quick-link bar also links to
+  Hero gallery / Accent audit / Dashboard. All three paths verified navigating to /dashboard.

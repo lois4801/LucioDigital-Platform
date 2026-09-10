@@ -41,18 +41,33 @@ export default function TestLabLanding() {
         </div>
       )}
 
-      <header className="relative z-30 px-6 sm:px-10 py-6 flex items-center justify-between gap-4">
+      <header className="relative z-30 px-4 sm:px-10 py-6 flex items-center gap-2 sm:gap-4">
         <Link to="/" data-testid="brand-home-link" title="Back to the Lois-Tech home page" className="inline-flex items-center gap-3 cursor-pointer group">
           <span className="w-9 h-9 rounded-lg border border-white/12 bg-white/[0.04] flex items-center justify-center group-hover:border-[var(--ed-lime)]/60 transition-colors">
             <Layers size={18} className="text-[var(--ed-lime)]" />
           </span>
-          <span className="font-display font-semibold tracking-tight text-lg">Lois-<span className="text-[var(--ed-lime)]">Tech</span></span>
+          <span className="font-display font-semibold tracking-tight text-lg whitespace-nowrap">Lois-<span className="text-[var(--ed-lime)]">Tech</span></span>
         </Link>
-        <nav className="hidden md:flex items-center gap-7 text-sm text-white/50">
+        <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
           {["Work", "Platform", "Pricing"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
+          <Link to="/work" className="hover:text-white transition-colors">Client work</Link>
+          {isAdmin
+            ? <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
+            : <Link to="/login" data-testid="nav-signin-link" className="hover:text-white transition-colors">Sign in</Link>}
         </nav>
-        <button data-testid="nav-cta" onClick={() => nav("/register")}
-          className="ed-cta rounded-full bg-white text-black font-semibold text-sm py-2">Start free</button>
+        {/* Mobile: always one tap from the dashboard when signed in. */}
+        {isAdmin && (
+          <Link to="/dashboard" data-testid="nav-dashboard-mobile" aria-label="Dashboard"
+            className="md:hidden ml-auto mr-2 rounded-full border border-white/15 px-3 py-1.5 text-xs font-semibold text-[var(--ed-lime)]">
+            Dashboard
+          </Link>
+        )}
+        <div className="flex items-center gap-2 md:ml-4">
+          <button data-testid="nav-cta" onClick={() => nav(isAdmin ? "/dashboard" : "/register")}
+            className="ed-cta shrink-0 rounded-full bg-white text-black font-semibold text-xs sm:text-sm py-2 !px-4 sm:!px-7">
+            {isAdmin ? <><span className="hidden sm:inline">My workspace</span><span className="sm:hidden">Workspace</span></> : "Start free"}
+          </button>
+        </div>
       </header>
 
       {/* ── Hero ───────────────────────────────────────────────────── */}
