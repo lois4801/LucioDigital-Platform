@@ -73,9 +73,9 @@
 /* ---------- Staggered reveals (run when the section scrolls into view) ---------- */
 /* Reveals start at 0.4 opacity in the correct text colour — never invisible, never white-on-white
    and never bleached on a light background. If the observer never fires, content stays legible. */
-.dsv2 .tstagger > * { opacity: 0.4; transform: translateY(16px); }
-.dsv2 .tstagger-in .tstagger > *,
-.dsv2 .tstagger-in.tstagger > * { animation: tfadeup .65s cubic-bezier(.22,1,.36,1) both; }
+.dsv2 .tstagger > *:not(.cm-box) { opacity: 0.4; transform: translateY(16px); }
+.dsv2 .tstagger-in .tstagger > *:not(.cm-box),
+.dsv2 .tstagger-in.tstagger > *:not(.cm-box) { animation: tfadeup .65s cubic-bezier(.22,1,.36,1) both; }
 .dsv2 .tstagger > *:nth-child(1) { animation-delay: 0ms; }
 .dsv2 .tstagger > *:nth-child(2) { animation-delay: 80ms; }
 .dsv2 .tstagger > *:nth-child(3) { animation-delay: 160ms; }
@@ -86,9 +86,9 @@
 @keyframes tfadeup { from { opacity: 0.4; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 /* Safety net: if the section reveal never triggers (e.g. rendered inside a scroll container),
    content settles at full opacity instead of staying faded. */
-.dsv2 .tstagger > * { animation: tsettle .01s 1.6s linear both; }
+.dsv2 .tstagger > *:not(.cm-box) { animation: tsettle .01s 1.6s linear both; }
 @keyframes tsettle { to { opacity: 1; transform: none; } }
-.dsv2 .tstagger-in .tstagger > *, .dsv2 .tstagger-in.tstagger > * { animation: tfadeup .65s cubic-bezier(.22,1,.36,1) both; }
+.dsv2 .tstagger-in .tstagger > *:not(.cm-box), .dsv2 .tstagger-in.tstagger > *:not(.cm-box) { animation: tfadeup .65s cubic-bezier(.22,1,.36,1) both; }
 @media (prefers-reduced-motion: reduce) { .dsv2 .tstagger > * { opacity: 1; transform: none; } }
 
 /* ---------- Media ---------- */

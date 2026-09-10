@@ -58,7 +58,7 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
       <div className={`flex-1 overflow-y-auto ${isV2(detail.theme) ? "dsv2" : ""} ${modeCls(detail.theme)}`}
         style={{ ...themeVars(detail.theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }}>
         <DesignCtx.Provider value={isV2(detail.theme)}>
-          <ContentMotion deps={[detail.key, slug]} />
+          <ContentMotion deps={[detail.key, slug]} templateKey={detail.key} />
           <div className="relative">
             {motionProfile?.hero && (
               /* above the hero artwork, never intercepting clicks, screen-blended so copy stays readable */

@@ -809,3 +809,28 @@ FastAPI/Mongo. No feature or UI changes.
 - Per the user's choice, chart DESIGNS stay fixed per template: no chart-type picker, no auto-switching.
 - Known cosmetic (non-blocking): saving repeatedly in quick succession can 429 the public-site refetch
   as the Site Mode iframe remounts; it recovers on the next call.
+
+## 2026-06 · PowerPoint-style box entrance animations (iter83 + iter84 retest, backend 79/79, frontend 100%)
+- NEW `frontend/src/lib/boxAnims.ts`: 39 PowerPoint-style entrances (appear, fade, fly-in, float-in,
+  split, wipe, shape, wheel, random-bars, grow-turn, zoom, swivel, bounce, pulse, spin, grow-shrink,
+  teeter, dissolve, blinds, checkerboard, box-in, plus-in, diamond, peek-in, rise-up, stretch,
+  compress, whip, spiral-in, darken, lighten, desaturate, transparency, wave, bold-flash,
+  bold-reveal, color-pulse, credits, none), each with its own balanced duration (260-900ms).
+  `TEMPLATE_ANIM` assigns all 33 templates a UNIQUE animation; `teamAnimFor()` gives the team
+  section a different one from the rest of that template.
+- `ContentMotion.tsx` rewritten: one group per box (the card animates as a whole with its icon,
+  heading and copy), section headings and standalone copy animate as their own group, decorative
+  layers (position absolute/fixed, empty elements) are never tagged, and the IntersectionObserver
+  REMOVES `cm-in` at ratio 0 so the entrance REPLAYS on every scroll-in, in both directions.
+  90ms stagger via `--cm-delay`, duration via `--cm-dur`.
+- `index.css`: `.cm-box` base + 39 `.cm-a-<key>.cm-in` rules + 38 `@keyframes cma-*`, reduced-motion
+  kill switch. Timing properties carry `!important`.
+- FIX (iter83 HIGH): `tenant-v2.css`'s `.dsv2 .tstagger-in.tstagger > *` tfadeup rule (specificity
+  0,3,1) was overriding the new keyframes on every `.tcard`. All four tstagger rules are now scoped
+  with `:not(.cm-box)`. Never remove that guard or every card silently reverts to the old fade-up.
+- Backend `case_study.py`: `site_mode.box_anim` validated against the 39-key `BOX_ANIMS` tuple,
+  returned by `GET /apps/{id}/site-mode` along with `options.box_anims`; empty string = inherit.
+- `SiteModePanel`: `sm-boxanim-select` (39 + inherit) with a live 3-box preview
+  (`sm-boxanim-preview`, `sm-boxanim-replay`); `patch()` now retries once after 1.3s on a 429.
+- Not verified live: the team-section override (app_testlab renders no `block-team` block) — logic is
+  confirmed in code and by review.

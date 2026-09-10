@@ -1,13 +1,23 @@
 import { useEffect } from "react";
+import { animForTemplate, teamAnimFor, durFor } from "@/lib/boxAnims";
 
-/** Animates the CONTENT instead of the background: every card, stat and service box in the
- *  rendered site rises into place on scroll with a staggered rhythm. One shared
- *  IntersectionObserver, CSS transforms/opacity only — no per-frame work, so the cursor stays smooth.
- */
-export default function ContentMotion({ scopeSelector = "[data-content-motion]", deps = [] as any[] }) {
+/** PowerPoint-style entrance animations for the CONTENT: every card, stat box, heading and
+ *  paragraph group plays the template's (or the tenant's) chosen entrance each time it scrolls
+ *  into view. One shared IntersectionObserver, CSS animations only, so the cursor stays smooth. */
+export default function ContentMotion({
+  scopeSelector = "[data-content-motion]",
+  templateKey = "",
+  anim = "",              // tenant override; falls back to the template's own entrance
+  teamAnim = "",
+  deps = [] as any[],
+}) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const main = anim || animForTemplate(templateKey);
+    const team = teamAnim || (anim ? anim : teamAnimFor(templateKey));
+    if (main === "none" && team === "none") return;
 
     let io: IntersectionObserver | null = null;
     let counters: IntersectionObserver | null = null;
@@ -40,7 +50,6 @@ export default function ContentMotion({ scopeSelector = "[data-content-motion]",
         entries.forEach(e => {
           const el = e.target as HTMLElement;
           if (!e.isIntersecting) { el.dataset.cmOut = "1"; return; }
-          // re-count on EVERY re-entry: only fire once the element has actually left the viewport
           if (el.dataset.cmRan && !el.dataset.cmOut) return;
           delete el.dataset.cmOut;
           el.dataset.cmRan = "1";
@@ -58,25 +67,49 @@ export default function ContentMotion({ scopeSelector = "[data-content-motion]",
         counters!.observe(el);
       });
     };
+
+    const register = (el: HTMLElement, i: number) => {
+      if (el.dataset.cm) return;
+      // never animate decorative layers (scrims, blur blobs, motion canvases) — text groups only
+      const cs = getComputedStyle(el);
+      if (cs.position === "absolute" || cs.position === "fixed") return;
+      if (!(el.textContent || "").trim() && !el.querySelector("img, svg, canvas")) return;
+      const inTeam = !!el.closest('[data-testid="block-team"]');
+      const key = inTeam ? team : main;
+      if (key === "none") return;
+      el.dataset.cm = "1";
+      el.classList.add("cm-box", `cm-a-${key}`);
+      el.style.setProperty("--cm-dur", `${durFor(key)}ms`);
+      el.style.setProperty("--cm-delay", `${(i % 6) * 90}ms`);
+      io!.observe(el);
+    };
+
     const tag = () => {
       const root = document.querySelector(scopeSelector);
       if (!root) return;
-      io = new IntersectionObserver((entries) => {
-        entries.forEach(e => {
-          if (e.isIntersecting) { e.target.classList.add("cm-in"); io?.unobserve(e.target); }
-        });
-      }, { threshold: 0.12, rootMargin: "0px 0px -8% 0px" });
+      if (!io) {
+        io = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            const el = e.target as HTMLElement;
+            // replays on every re-entry, in both scroll directions
+            if (e.isIntersecting) el.classList.add("cm-in");
+            else if (e.intersectionRatio === 0) el.classList.remove("cm-in");
+          });
+        }, { threshold: [0, 0.16], rootMargin: "0px 0px -6% 0px" });
+      }
 
-      const boxes = root.querySelectorAll<HTMLElement>(
+      // one group per box: the card animates as a whole, carrying its icon, heading and copy
+      const boxes = Array.from(root.querySelectorAll<HTMLElement>(
         'section [class*="grid"] > *, section article, section figure',
-      );
-      Array.from(boxes).slice(0, 240).forEach((el, i) => {
-        if (el.dataset.cm) return;
-        el.dataset.cm = "1";
-        el.classList.add("cm-box");
-        el.style.transitionDelay = `${(i % 6) * 70}ms`;
-        io!.observe(el);
-      });
+      )).slice(0, 240);
+      boxes.forEach(register);
+
+      // headings and standalone copy get the same entrance, as their own group
+      Array.from(root.querySelectorAll<HTMLElement>("section > h1, section > h2, section > h3, section > p, section > div, section > blockquote"))
+        .slice(0, 160)
+        .filter(el => !el.dataset.cm && !el.closest(".cm-box") && !el.querySelector(".cm-box"))
+        .forEach(register);
+
       tagCounters(root);
     };
 
@@ -86,11 +119,11 @@ export default function ContentMotion({ scopeSelector = "[data-content-motion]",
     const t3 = setTimeout(() => {
       document.querySelectorAll<HTMLElement>(".cm-box:not(.cm-in)").forEach(el => {
         const r = el.getBoundingClientRect();
-        if (r.top < innerHeight * 1.1) el.classList.add("cm-in");
+        if (r.top < innerHeight * 1.1 && r.bottom > 0) el.classList.add("cm-in");
       });
     }, 1400);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); io?.disconnect(); counters?.disconnect(); };
-  }, [scopeSelector, ...deps]);
+  }, [scopeSelector, templateKey, anim, teamAnim, ...deps]);
 
   return null;
 }

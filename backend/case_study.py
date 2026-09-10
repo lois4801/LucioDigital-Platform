@@ -21,6 +21,13 @@ CURRENT_REDESIGN = "editorial-motion-v1"
 ANIMATION_LEVELS = ("full", "reduced", "none")
 PUBLISH_STATES = ("draft", "preview", "live")
 SITE_STYLES = ("original", "editorial")
+# PowerPoint-style entrance animations for content boxes (mirrors frontend/src/lib/boxAnims.ts)
+BOX_ANIMS = ("appear", "fade", "fly-in", "float-in", "split", "wipe", "shape", "wheel",
+             "random-bars", "grow-turn", "zoom", "swivel", "bounce", "pulse", "spin",
+             "grow-shrink", "teeter", "dissolve", "blinds", "checkerboard", "box-in",
+             "plus-in", "diamond", "peek-in", "rise-up", "stretch", "compress", "whip",
+             "spiral-in", "darken", "lighten", "desaturate", "transparency", "wave",
+             "bold-flash", "bold-reveal", "color-pulse", "credits", "none")
 
 
 def _now() -> str:
@@ -98,6 +105,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         motion_intensity: Optional[float] = None   # 0.2 (subtle) – 1.5 (bold) presence
         address: Optional[str] = None          # real business address: map + contact/footer blocks
         map_url: Optional[str] = None          # optional custom "Get directions" link
+        box_anim: Optional[str] = None         # PowerPoint-style entrance for content boxes
 
     class RedesignIn(BaseModel):
         note: str = ""
@@ -231,10 +239,12 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "motion_intensity": float(sm.get("motion_intensity") or 1.0),
             "address": sm.get("address") or (app.get("brand_profile") or {}).get("address") or "",
             "map_url": sm.get("map_url") or "",
+            "box_anim": sm.get("box_anim") or "",
             "template_address": _template_address(sm.get("template_key") or app.get("site_niche") or ""),
             "preview_token": app.get("preview_token") or "",
             "preview_enabled": bool(app.get("preview_enabled")),
-            "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS), "publish": list(PUBLISH_STATES)},
+            "options": {"styles": list(SITE_STYLES), "animations": list(ANIMATION_LEVELS),
+                        "publish": list(PUBLISH_STATES), "box_anims": list(BOX_ANIMS)},
         }
 
     @api.put("/apps/{app_id}/site-mode")
@@ -259,6 +269,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             raise HTTPException(400, "Motion speed must be between 0.25x and 2x")
         if patch.get("motion_intensity") is not None and not 0.2 <= patch["motion_intensity"] <= 1.5:
             raise HTTPException(400, "Motion intensity must be between 0.2 and 1.5")
+        if patch.get("box_anim") and patch["box_anim"] not in BOX_ANIMS:
+            raise HTTPException(400, "Unknown box entrance animation")
         if "address" in patch:
             patch["address"] = patch["address"].strip()[:160]
         if "map_url" in patch:

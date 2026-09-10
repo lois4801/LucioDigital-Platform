@@ -1,0 +1,47 @@
+{
+  "summary": "Iteration 83 — PowerPoint-style content-box entrance animations. Backend 22/22 pass on new test_iter83_boxanim.py (18 valid keys accepted+persisted, unknown rejected with 'Unknown box entrance animation', empty '' clears override, GET returns box_anim + options.box_anims of length 18, public /public/site/{token} carries the tenant's chosen box_anim). Regression 36/36 green on iter80+81+82. Frontend on /p/pv_c3b797fcdafc58d4e70e320f (app_testlab): 44 .cm-box elements tagged, 0 .cm-box.absolute/fixed leaks, 0 nested .cm-box inside .cm-box, all 44 uniformly carry the same cm-a-<key> class. Switching the API override to bounce/spin/pulse/'' via PUT flips the class on the next public load (verified all four transitions). IntersectionObserver replay works in both directions: cm-in toggles false→true (enter) → false (out of view) → true again on re-entry, and getAnimations() reports a live animation both times. Site Mode picker (SiteModePanel): [data-testid=sm-boxanim-select] is a <select> with 19 values ('' + 18 keys, all matching backend BOX_ANIMS). Preview renders 3 dummy boxes carrying cm-a-<chosen>, sm-boxanim-replay button toggles them and works. Reduced-motion: ContentMotion short-circuits so no .cm-box classes are added and the CSS kill-switch keeps content fully visible with no animation/clip-path. Mobile 390px: 44 boxes tagged, no horizontal overflow, no absolute leaks.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Public site .tcard boxes (tenant-v2.css)",
+        "issue": "CSS specificity conflict: `.dsv2 .tstagger-in.tstagger > *` (specificity 0,3,1) declares `animation: tfadeup .65s ...` and OVERRIDES `.cm-a-<key>.cm-in { animation-name: cma-<key>; }` (specificity 0,2,0). Verified live: a .tcard element with class `tcard cm-a-bounce cm-in` reports computed animationName='tfadeup' duration=0.65s, whereas a sibling H2 with `cm-a-bounce cm-in` correctly reports animationName='cma-bounce' duration=0.9s. Net effect: every card on every tenant site keeps the old tfadeup entrance regardless of box_anim / TEMPLATE_ANIM, breaking the user's core requirement that each template (and each tenant's Site Mode choice) actually change what the boxes do. Only headings/standalone paragraphs animate with the new PowerPoint keyframes.",
+        "selector": ".dsv2 .tstagger-in.tstagger > *.tcard.cm-box.cm-a-<key>.cm-in",
+        "priority": "HIGH"
+      },
+      {
+        "component": "SiteModePanel save",
+        "issue": "Selecting a value in sm-boxanim-select emitted a red toast 'Could not save Site Mode' during rapid interaction (same rate-limit family observed in iter82 during rapid iframe refetches). The API accepts the value fine when called directly. Consider a debounced save or a longer client-side retry.",
+        "selector": "[data-testid=\"sm-boxanim-select\"]",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter83_boxanim.py",
+    "/app/test_reports/pytest/iter83.xml"
+  ],
+  "action_items": [
+    "Fix the tcard/tfadeup override in /app/frontend/src/styles/tenant-v2.css: either scope tfadeup off .cm-box, bump the .cm-a-*.cm-in rules with an ancestor selector like `.dsv2 .cm-box.cm-a-<key>.cm-in { animation-name: cma-<key> !important; }`, or move the ContentMotion CSS after tenant-v2.css and add a specificity boost such as `.cm-box.cm-a-<key>.cm-in.cm-a-<key> { animation-name: cma-<key>; }`. Without this fix the entire feature is invisible on cards.",
+    "Debounce or coalesce the Site Mode box_anim save to avoid the 'Could not save Site Mode' toast under rapid selection changes."
+  ],
+  "critical_code_review_comments": [
+    "ContentMotion.tsx line 108-111: standalone `section > div` and `section > blockquote` get tagged as their own group after the .grid children pass. Filter `.closest('.cm-box')` prevents nesting, but the wrapper `section > div` that CONTAINS the grid of cards may still get tagged BEFORE the grid pass (order is grid-children first, then standalone) — so the check `!el.querySelector('.cm-box')` protects against this. Verified: 0 nested leaks in the wild. Correct.",
+    "boxAnims.ts TEMPLATE_ANIM has 33 templates but only 15 unique animation values — several templates intentionally share (hvac==hvac_plumbing='fly-in', fitness==pet_grooming='bounce', construction==accounting==architecture='wipe', hospitality==wellness='fade', creative_studio==landscaping='shape', logistics==automotive='wheel', retail==photography='zoom', it_services==cleaning='random-bars', saas==coworking='grow-turn', education==music_school='swivel', real_estate==nonprofit='grow-shrink', restaurant==beauty='pulse', finance==insurance='split', dental==healthcare='float-in'). The user requirement was 'each template has one unique animation' — clarify whether this pairing is intentional or if all 33 must be individually unique (would need >18 keyframes).",
+    "case_study.py put_site_mode: `box_anim` validation only runs when `patch.get('box_anim')` is truthy, so empty string '' passes through and clears the override (intended). Confirmed by test_empty_string_clears_override.",
+    "ContentMotion.tsx safety-net at 1.4s only ADDS cm-in to boxes on screen — good — but a slow-streaming block that mounts after 1.4s and above the fold could theoretically stay invisible until the user scrolls. In practice tag() runs at 60ms and 700ms so this is unlikely."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter83_boxanim.py (new)",
+    "/app/test_reports/iteration_83.json (new)"
+  ],
+  "success_rate": {"backend": "100% (22/22 new + 36/36 regression on iter80+81+82)", "frontend": "core wiring 100% (tagging, override, replay, picker, reduced-motion, mobile). Visual per-template uniqueness BLOCKED on .tcard by CSS specificity conflict — see HIGH bug."},
+  "test_credentials": "Admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based auth on /api/auth/login).",
+  "seed_data_creation": "None. Every backend test parametrises across the 18 keys and the fixture teardown resets box_anim to '' on app_testlab. Frontend runs also PUT box_anim='' at the end.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Test suites now: iter80 (vitals), iter81 (address+source), iter82 (directions+portal), iter83 (box_anim, 22 tests). Preview token: pv_c3b797fcdafc58d4e70e320f (app_testlab). To reach the Site Mode picker: login → cookies → GET /apps/app_testlab → click [data-testid=tab-builder-btn] → scroll to sm-boxanim-select. Team-section verification could not be completed on app_testlab because its rendered pages don't include a [data-testid=block-team] block; verify on a template preview once /templates auth flow is reachable (currently Cloudflare-gated for anonymous /templates/{key} direct URLs). Logic is confirmed sound in code (ContentMotion.tsx inTeam check + teamAnimFor()).",
+  "rca of the issue": "PowerPoint animation feature is wired correctly end-to-end (backend accepts+persists+returns; frontend tags cm-box + cm-a-<key>; observer replays cm-in on scroll). However on production tenant pages the pre-existing tenant-v2.css rule `.dsv2 .tstagger-in.tstagger > * { animation: tfadeup .65s ...; }` has specificity (0,3,1) which beats the ContentMotion rule `.cm-a-<key>.cm-in { animation-name: cma-<key>; }` at (0,2,0). Therefore every .tcard keeps the old fade-up animation and none of the 17 new keyframes ever run on cards, only on headings/paragraphs. Reproduction: PUT /api/apps/app_testlab/site-mode {box_anim:'bounce'} → open /p/pv_c3b797fcdafc58d4e70e320f → getComputedStyle on any .tcard.cm-box.cm-a-bounce.cm-in reports animationName='tfadeup'. Mitigation: raise specificity of ContentMotion rules (e.g. add a body-level class selector or `!important` on animation-name/duration), OR scope the tenant-v2 tstagger rule to `:not(.cm-box)`, OR unset animation on `.cm-box` inside .dsv2 stagger containers."
+}

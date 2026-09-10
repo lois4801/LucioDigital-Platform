@@ -135,7 +135,9 @@ export default function PublicPreview() {
         </div>
       )}
       {!iso && navbar && <BlockPreview block={navbar} onNavigate={navigate} collections={site.collections || []} />}
-      <ContentMotion deps={[slug, iso]} />
+      <ContentMotion deps={[slug, iso]}
+        templateKey={site.app?.motion_profile?.template_key || site.app?.industry || ""}
+        anim={site.app?.site_mode?.box_anim || ""} />
       {!iso && <AnimatePresence mode="wait">
         <motion.div key={page?.slug || "home"} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}>
