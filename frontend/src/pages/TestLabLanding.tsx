@@ -7,6 +7,7 @@ import HeroCards from "@/components/editorial/HeroCards";
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import { useAuth } from "@/context/AuthContext";
 import Ribbon from "@/components/editorial/Ribbon";
+import MarqueeRibbon from "@/components/editorial/MarqueeRibbon";
 import BentoGrid from "@/components/editorial/BentoGrid";
 import ReviewsSection from "@/components/editorial/ReviewsSection";
 
@@ -119,6 +120,9 @@ export default function TestLabLanding() {
 
       <Ribbon top={RIBBON_TOP} bottom={RIBBON_BOTTOM} />
 
+      <MarqueeRibbon testid="marquee-ribbon-top" accent="#84FF00" mode="dark"
+        text="LUCIODIGITAL · SHIP · SHOWCASE · HAND OFF" />
+
       {/* ── Bento features ─────────────────────────────────────────── */}
       <section id="platform" className="relative z-10 px-6 sm:px-10 py-24 sm:py-32" data-testid="platform-section">
         <div className="max-w-7xl mx-auto">
@@ -169,6 +173,8 @@ export default function TestLabLanding() {
       )}
 
       {/* ── Close ──────────────────────────────────────────────────── */}
+      <MarqueeRibbon testid="marquee-ribbon-bottom" accent="#84FF00" mode="dark"
+        text="EVERY CLIENT APP · FROM ONE MASTER WORKSPACE" />
       <section className="relative z-10 px-6 sm:px-10 pb-28" data-testid="cta-section">
         <Reveal className="max-w-5xl mx-auto rounded-3xl border border-white/[0.09] bg-white/[0.02] p-10 sm:p-16 text-center">
           <HeadingWipe className="font-display text-3xl sm:text-5xl font-bold tracking-[-0.03em]">Launch your agency workspace today.</HeadingWipe>

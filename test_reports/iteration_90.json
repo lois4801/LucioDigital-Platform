@@ -1,0 +1,46 @@
+{
+  "summary": "Iteration 90 — Section-set save/apply/delete (shared across accounts), instant-save section-reorder handles, and the Client Onboarding Checklist (backend + UI on Site Mode and portal). BACKEND (14/14 new pass in test_iter90_onboarding_saveset.py + 145/146 regression across iter80-89): SaveAsSet — empty page 400 'no sections', blank label 400, unknown page_type 'blog' 400, valid save returns {id,label,page_type,hint,blocks} with navbar/footer excluded, appears in another scratch page's section-sets list (saved_count>=1), apply-set on the second page rebuilds blocks from that page's niche copy (no 'lorem'), delete returns 200 then 404 on second try. Onboarding — GET /apps/{id}/onboarding returns 6 steps with done/skipped/auto/manual/label/hint plus done/total/complete; unknown step 400 'Unknown step', invalid state 400; manual 'done' increments done, 'reset' falls back to auto (returns to base), 'skipped' shrinks total by 1. Auth-required check: onboarding & save-as-set both 401 without cookie. FRONTEND (Playwright, live URL, admin login): Site Mode of app_testlab renders [data-testid=onboarding-checklist] with '0 of 6 done', 6 onboarding-tick-<id> + 6 onboarding-skip-<id> buttons; page-save-set-btn opens dialog with save-set-name + save-set-type + save-set-confirm (confirm correctly disabled while name empty); page-sections-btn opens section-picker showing 5 entries (4 built-in + blank); 14 builder-drag-handle-N outline handles AND 14 canvas-drag-handle-<type> canvas handles rendered; canvas handle opacity=0.6 (60% per spec), text 'Drag'. Portal /portal: portal-onboarding-card visible with inner onboarding-checklist widget for the client. Tick/skip/unskip flow: tick logo → '1 of 6 done'; skip figures → '1 of 5 done'; onboarding-unskip-figures then appears; unskipping → '1 of 6 done'. Teardown ran POST reset on all 6 steps (final done=0, total=6, complete=false).",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "GET /api/apps/app_testlab/onboarding (during regression)", "issue": "test_iter86_page_nav.test_nav_end_appends fails with stale nav data ('T86Dup'/'T86After' leftover scratch pages from a prior run polluting the site nav). Not a regression from iter90 — a test-cleanup gap in test_iter86. All other 145 regression + 14 new iter90 tests pass."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Site Mode onboarding card", "issues": ["When a checked step is re-clicked via onboarding-tick-<id> the manual state is toggled off (done -> reset) rather than being a no-op. This is a defensible UX (single button for tick/untick) but there is no data-testid=onboarding-untick-<id> alias, so tests must know that onboarding-tick-<id> is a toggle. Consider documenting or splitting into tick/untick if the product intent is 'tick means always mark done'."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter90_onboarding_saveset.py",
+    "/app/test_reports/pytest/iter90.xml",
+    "/app/test_reports/pytest/iter90_regression.xml"
+  ],
+  "action_items": [
+    "(Optional cleanup) In test_iter86_page_nav.py add a teardown that deletes any scratch pages beginning with 'T86' — pre-existing leftover 'T86Dup','T86After','T86Start' pages in app_testlab currently make test_nav_end_appends fail. Not a product bug, but blocks the full 146/146 regression pass.",
+    "(Optional polish) In OnboardingChecklist.tsx clarify whether onboarding-tick-<id> is a strict tick or a toggle; if a toggle, provide data-testid=onboarding-untick-<id> to give tests a stable name."
+  ],
+  "critical_code_review_comments": [
+    "page_sections.py::save_as_set generates the doc.id from the label slug ('saved-<slug>') and does an upsert on that id — two different clients naming their sets identically (e.g. 'Home layout') will overwrite each other GLOBALLY because sets are shared. This is a real conflict path; consider salting the id with a short uid or the app_id so distinct saves are always distinct.",
+    "page_sections.py::save_as_set does not enforce a maximum number of saved sets per page_type — a malicious or careless user could flood db.section_sets and every future client's picker would show them. Consider a soft cap or an 'is_platform' flag.",
+    "onboarding.py::_status treats a step as 'done' when manual != 'reset' AND auto is True; but manual='skipped' does not clear the 'done' flag on the step (skipped counts are excluded from total, so it still displays correct N of M). The step object will report done=True AND skipped=True at the same time for an auto-detected step that the user skipped — the UI must pick one; today the checklist relies on this being fine but that combo is semantically confusing.",
+    "Builder.tsx onDragEnd immediate PATCH + rollback path was not exercised in the browser this iteration (react-dnd Playwright drag is unreliable). The handles render with correct opacity/testids; the persistence logic should be spot-checked with a real drag by the main agent or in a follow-up test that uses page.mouse.move + dispatchEvent for HTML5 DnD.",
+    "SectionPicker.tsx does not distinguish saved sets from built-in ones except via the 'Saved' chip — the delete link is a <span role='button'> nested inside the parent <button> template card. HTML disallows nested interactive buttons; browsers may or may not fire the outer click after e.stopPropagation. In this run stopPropagation worked, but this is fragile — consider restructuring as a card container with two sibling buttons.",
+    "PageManager.tsx save-set dialog stores 'setType' with a default of 'any' but the select's 'general' option maps to 'general' rather than being labelled 'Any custom page'. The wording in the option list ('Custom pages') may confuse users into thinking 'general' means 'any' when 'any' is a distinct value above."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter90_onboarding_saveset.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100% new (14/14) + 99.3% regression (145/146; the 1 failure is test-cleanup pollution in iter86, not a regression)",
+    "frontend": "100% of exercised flows (onboarding checklist in Site Mode + portal, tick/skip/unskip/complete progress, save-set dialog + validation, section picker with built-in sets, canvas + outline drag-handle rendering with 60% opacity)"
+  },
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (from /app/memory/test_credentials.md)",
+  "seed_data_creation": "test_iter90 creates 5 scratch pages (/iter90-empty, /iter90-nolabel, /iter90-badtype, /iter90-save, /iter90-src, /iter90-dst, /iter90-del) — every one deleted in finally blocks. 3 saved section sets created ('TEST_iter90 launch', 'TEST_shared_set', 'TEST_delme') — every one deleted via DELETE /section-sets/{id} in finally blocks or by the test itself. Onboarding was mutated during UI test (all 6 steps ticked) then reset via API in the same script — final GET returned done=0/total=6/complete=false.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "iter90 suite at /app/backend/tests/test_iter90_onboarding_saveset.py — run with -n 0 (mutates app_testlab pages + onboarding + section_sets, all torn down). The instant section-reorder save-and-rollback UI behaviour was NOT exercised via actual mouse drag (HTML5 DnD in Playwright is unreliable); the presence, count, testids and opacity of both builder-drag-handle-N (14 outline handles) and canvas-drag-handle-<type> (14 canvas handles) were verified in Site Mode of app_testlab. The rollback branch depends on Builder.tsx onDragEnd calling PATCH /apps/{id}/pages/{pageId} and restoring on failure — worth a targeted test if a future iteration adds a rollback flow. Save-set dialog testids confirmed: page-save-set-btn, save-set-name, save-set-type, save-set-confirm (disabled when empty). Section-set delete: verified at API level; in-picker section-set-delete-<id> link renders (see SectionPicker.tsx line 73) but was not clicked because we cleaned up saved sets via API after each test. Onboarding tick appears to be a toggle (clicking a ticked step un-ticks it) — plan test scripts accordingly.",
+  "rca of the issue": "N/A — no product bugs found in iter90. test_iter86 regression failure is pre-existing test-data pollution: previous runs of test_iter86_page_nav.py left pages named T86Dup/T86After/T86Start in app_testlab, and the assertion 'links[-1] == (T86End, /test86-end)' now fails because those old pages remain last. Fix is a teardown in test_iter86, not in product code."
+}

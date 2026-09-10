@@ -9,6 +9,8 @@ import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
 import ReviewsEditor from "@/components/ReviewsEditor";
+import MarqueeEditor from "@/components/MarqueeEditor";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -159,7 +161,12 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
 
         <AnimationControls appId={appId} accent={sm.accent || "#10B981"} onSaved={() => setRenderV(v => v + 1)} />
 
+        <OnboardingChecklist appId={appId} />
+
         <ReviewsEditor appId={appId} accent={sm.accent || "#10B981"} />
+
+        <MarqueeEditor appId={appId} accent={sm.accent || "#10B981"}
+          mode={sm.mode === "light" ? "light" : "dark"} onSaved={() => setRenderV(v => v + 1)} />
 
         <LocationFields appId={appId} onSaved={() => setRenderV(v => v + 1)} />
 

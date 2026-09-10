@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Plus, Trash2, FileText, Lock, Unlock, GripVertical, LayoutTemplate } from "lucide-react";
+import { Plus, Trash2, FileText, Lock, Unlock, GripVertical, LayoutTemplate, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** What each page is for, plus a short guide shown when it is selected. */
@@ -40,11 +40,14 @@ const rgba = (hex: string, a: number) => {
 
 /** Page Manager: every page as a tab with what it is for, an inline guide for the selected one,
  *  and an Add Page form that also places the page in the site navigation. */
-export default function PageManager({ pages = [], current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme, onReorder, onSections }) {
+export default function PageManager({ pages = [], current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme, onReorder, onSections, onSaveSet }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [where, setWhere] = useState("end");
   const [drag, setDrag] = useState<number | null>(null);
+  const [saveSet, setSaveSet] = useState(false);
+  const [setLabel, setSetLabel] = useState("");
+  const [setType, setSetType] = useState("any");
   const [over, setOver] = useState<number | null>(null);
   const press = useRef<any>(null);
   const active = pages.find(p => p.page_id === current);
@@ -139,6 +142,10 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
             className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1.5 shrink-0">
             <LayoutTemplate size={11} /> Apply a section template
           </button>
+          <button data-testid="page-save-set-btn" onClick={() => setSaveSet(true)}
+            className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1.5 shrink-0">
+            <Save size={11} /> Save as section set
+          </button>
         </div>
       )}
 
@@ -160,6 +167,30 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
           <button data-testid="page-create-btn" disabled={!name.trim()}
             onClick={() => { onCreate(name.trim(), where); setName(""); setWhere("end"); setOpen(false); }}
             className="btn-primary w-full disabled:opacity-50">Create page</button>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={saveSet} onOpenChange={setSaveSet}>
+        <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">
+          <DialogHeader><DialogTitle className="font-display">Save this page as a section set</DialogTitle></DialogHeader>
+          <p className="text-xs text-[var(--mut)] -mt-2">
+            It saves the section structure of <span className="font-semibold">{active?.name}</span>, so every future page and every future client fills it with their own copy, colours and motion.
+          </p>
+          <label className="block"><span className="overline block mb-1">Name it</span>
+            <input data-testid="save-set-name" value={setLabel} onChange={e => setSetLabel(e.target.value)} placeholder="Trade services layout"
+              className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--acc)]" /></label>
+          <label className="block"><span className="overline block mb-1">Show it for</span>
+            <select data-testid="save-set-type" value={setType} onChange={e => setSetType(e.target.value)}
+              className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--acc)]">
+              <option value="any">Any page</option>
+              <option value="home">Home pages</option>
+              <option value="about">About pages</option>
+              <option value="services">Services pages</option>
+              <option value="contact">Contact pages</option>
+              <option value="general">Custom pages</option>
+            </select></label>
+          <button data-testid="save-set-confirm" disabled={!setLabel.trim()}
+            onClick={() => { onSaveSet?.(active, setLabel.trim(), setType); setSetLabel(""); setSaveSet(false); }}
+            className="btn-primary w-full disabled:opacity-50">Save section set</button>
         </DialogContent>
       </Dialog>
     </div>

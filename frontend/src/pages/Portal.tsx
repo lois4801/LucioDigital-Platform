@@ -11,6 +11,7 @@ import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
 import ReviewsEditor from "@/components/ReviewsEditor";
+import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 export default function Portal() {
   const nav = useNavigate();
@@ -51,6 +52,9 @@ export default function Portal() {
               {app.custom_domain && <span className={`chip ${app.domain_status === "verified" ? "chip-active" : "chip-maint"}`}><Globe size={11} /> {app.custom_domain}</span>}
               {app.preview_token ? <a data-testid="portal-live-link" href={`/p/${app.preview_token}`} target="_blank" rel="noreferrer" className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><ExternalLink size={14} /> Open live site</a> : <span className="chip">Not published yet</span>}
             </div>
+          </div>
+          <div className="card-surface p-5" data-testid="portal-onboarding-card">
+            <OnboardingChecklist appId={app.app_id} compact />
           </div>
           <LookVoting appId={app.app_id} />
           <div className="card-surface p-5" data-testid="portal-figures-card">

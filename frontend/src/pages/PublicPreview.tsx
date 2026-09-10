@@ -11,6 +11,7 @@ import MotionSwitcher from "@/components/editorial/MotionSwitcher";
 import MotionStage from "@/components/editorial/MotionStage";
 import ContentMotion from "@/components/editorial/ContentMotion";
 import IndustryVitals from "@/components/editorial/IndustryVitals";
+import MarqueeRibbon, { ribbonPlan } from "@/components/editorial/MarqueeRibbon";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { AnimatePresence, motion } from "framer-motion";
 import MemberGate, { useMember } from "@/components/MemberGate";
@@ -151,12 +152,24 @@ export default function PublicPreview() {
               : paywalled
                 ? <Paywall token={token} jwt={member.jwt} user={member.user} paid={site.webapp.paid} pageName={page?.name}
                     signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} onPaid={() => setHasPaid(true)} />
-                : (page?.blocks || []).filter(b => b.type !== "navbar").map(b => (
-                <EffectWrap key={b.id} data-block-type={b.type} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
-                  <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null}
-                    reviews={site.app?.reviews ? { ...site.app.reviews, accent: site.theme?.primary } : null} />
-                </EffectWrap>
-              ))}
+                : (() => {
+                  const rows = (page?.blocks || []).filter(b => b.type !== "navbar");
+                  const mq = site.app?.marquee || {};
+                  const plan = mq.enabled === false ? { top: -1, bottom: -1 } : ribbonPlan(rows);
+                  const ribbon = (text, id) => (
+                    <MarqueeRibbon key={id} text={text} accent={site.theme?.primary} speed={mq.speed ?? 1}
+                      strokeOpacity={mq.stroke_opacity ?? 0.3} fontSize={mq.font_size ?? 1}
+                      mode={site.theme?.mode === "dark" ? "dark" : "light"} testid={id} />
+                  );
+                  return rows.flatMap((b, i) => [
+                    ...(i === plan.bottom ? [ribbon(mq.bottom_text, "marquee-ribbon-bottom")] : []),
+                    <EffectWrap key={b.id} data-block-type={b.type} v2={v2} effects={b.style?.effects} motionOn={site.theme.motion !== false}>
+                      <BlockPreview block={b} onNavigate={navigate} collections={site.collections || []} onLead={submitLead} bookingMode={site.webapp?.booking_mode} siteToken={site.webapp?.converted ? token : null}
+                        reviews={site.app?.reviews ? { ...site.app.reviews, accent: site.theme?.primary } : null} />
+                    </EffectWrap>,
+                    ...(i === plan.top ? [ribbon(mq.top_text, "marquee-ribbon-top")] : []),
+                  ]);
+                })()}
         </motion.div>
       </AnimatePresence>}
       {!iso && site.app?.motion_profile?.hero && (

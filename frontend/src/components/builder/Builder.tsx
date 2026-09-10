@@ -51,7 +51,9 @@ function OutlineItem({ block, index, selected, onSelect, onRemove }) {
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }} onClick={onSelect} data-testid={`builder-outline-${block.type}-${index}`}
       className={`flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer select-none group ${selected ? "bg-[var(--acc)]/10 border border-[var(--acc)]/30" : "hover:bg-white/5 border border-transparent"}`}>
-      <button {...attributes} {...listeners} data-testid={`builder-drag-handle-${index}`} onClick={e => e.stopPropagation()} className="text-[var(--dim)] hover:text-white cursor-grab active:cursor-grabbing p-0.5 touch-none"><GripVertical size={14} /></button>
+      <button {...attributes} {...listeners} data-testid={`builder-drag-handle-${index}`} title="Drag to reorder this section — it saves as soon as you drop it"
+        onClick={e => e.stopPropagation()}
+        className="shrink-0 w-6 h-6 rounded-md border border-[var(--line)] bg-[var(--bg-2)] text-[var(--mut)] hover:text-white hover:border-[var(--acc)] flex items-center justify-center cursor-grab active:cursor-grabbing touch-none transition-colors"><GripVertical size={13} /></button>
       <span className="text-sm capitalize flex-1 truncate">{block.type}</span>
       <LockToggle kind={block.type === "form" ? "form" : "block"} itemId={block.id} name={block.type} />
       <button onClick={e => { e.stopPropagation(); onRemove(); }} className="text-[var(--mut)] hover:text-red-400 p-0.5"><Trash2 size={12} /></button>
@@ -63,7 +65,9 @@ function CanvasItem({ block, selected, onSelect, onEdit, onImage, onNavigate, co
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   return (
     <div ref={setNodeRef} style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }} onClick={onSelect} className={`relative group ${selected ? "outline outline-2 outline-[var(--tp)]" : "hover:outline hover:outline-1 hover:outline-[var(--tp)]/40"}`}>
-      <button {...attributes} {...listeners} onClick={e => e.stopPropagation()} className="absolute left-2 top-2 z-10 w-8 h-8 rounded-lg bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing touch-none transition-opacity"><GripVertical size={14} /></button>
+      <button {...attributes} {...listeners} data-testid={`canvas-drag-handle-${block.type}`} title="Drag to reorder this section — it saves as soon as you drop it"
+        onClick={e => e.stopPropagation()}
+        className="absolute left-2 top-2 z-10 h-8 px-2.5 rounded-lg bg-black/80 text-white text-[10px] font-semibold uppercase tracking-wider flex items-center gap-1.5 opacity-60 group-hover:opacity-100 ring-1 ring-white/20 hover:ring-[var(--tp)] cursor-grab active:cursor-grabbing touch-none transition-opacity"><GripVertical size={13} /> Drag</button>
       <span className="absolute right-2 top-2 z-10 text-[10px] font-mono uppercase bg-black/70 text-white px-2 py-0.5 rounded opacity-0 group-hover:opacity-100">{block.type}</span>
       <DesignCtx.Provider value={!!v2}>
         <EffectWrap effects={block.style?.effects} motionOn={motionOn} v2={!!v2}><BlockPreview block={block} onEdit={onEdit} onImage={onImage} onNavigate={onNavigate} collections={collections} /></EffectWrap>
@@ -222,7 +226,18 @@ export default function Builder({ appId, appDoc, user }) {
   const removeBlock = (id) => { const next = blocks.filter(b => b.id !== id); mutate(next); if (selected === id) setSelected(next[0]?.id || null); };
   function onDragEnd({ active, over }) {
     if (!over || active.id === over.id) return;
-    mutate(arrayMove(blocks, blocks.findIndex(b => b.id === active.id), blocks.findIndex(b => b.id === over.id))); setSelected(active.id);
+    const before = blocks;
+    const next = arrayMove(blocks, blocks.findIndex(b => b.id === active.id), blocks.findIndex(b => b.id === over.id));
+    mutate(next);
+    setSelected(active.id);
+    // sections save the moment they land, exactly like page tabs
+    api.patch(`/apps/${appId}/pages/${pageId}`, { blocks: next })
+      .then(() => {
+        setPages(ps => ps.map(p => p.page_id === pageId ? { ...p, blocks: next } : p));
+        setDirty(false);
+        toast.success("Section order saved");
+      })
+      .catch(() => { mutate(before); toast.error("Could not save the new section order"); });
   }
   const editProps = (id, path, value) => mutate(blocks.map(b => b.id === id ? { ...b, props: setPath(b.props, path, value) } : b));
   const editStyle = (id, style, propsPatch) => mutate(blocks.map(b => b.id === id ? { ...b, style, props: { ...b.props, ...(propsPatch || {}) } } : b));
@@ -251,6 +266,14 @@ export default function Builder({ appId, appDoc, user }) {
       setSectionsFor(data.page_id);      // pick a section template before the blank editor loads
       toast.success(nav === "hidden" ? `${name} created` : `${name} created and added to the menu`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not create page"); }
+  }
+
+  async function saveAsSet(page, label, pageType) {
+    try {
+      const { data } = await api.post(`/apps/${appId}/pages/${page.page_id}/save-as-set`,
+        { label, page_type: pageType });
+      toast.success(`"${data.label}" saved — it is now in the section template picker`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not save that section set"); }
   }
 
   async function reorderPages(ids) {
@@ -309,7 +332,8 @@ export default function Builder({ appId, appDoc, user }) {
         <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-pages">
           <PageManager pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
             canLock={canLock} onToggleLock={toggleLock} theme={theme}
-            onReorder={reorderPages} onSections={p => setSectionsFor(p.page_id)} />
+            onReorder={reorderPages} onSections={p => setSectionsFor(p.page_id)}
+            onSaveSet={saveAsSet} />
         </div>
         <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-toolbar">
           <div className="flex items-center gap-2 mb-4">

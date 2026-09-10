@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import ContentMotion from "@/components/editorial/ContentMotion";
 import IndustryVitals from "@/components/editorial/IndustryVitals";
+import MarqueeRibbon, { ribbonPlan } from "@/components/editorial/MarqueeRibbon";
 
 function TemplateFrame({ detail, scale = 0.3, maxBlocks = 3, height = 260, motion: mo = null }) {
   const vars = themeVars(detail.theme);
@@ -68,12 +69,24 @@ function FullPreview({ detail, onClose, onUse, useLabel, motionProfile = null })
               </div>
             )}
             <div className="relative z-[2]">
-              {(page?.blocks || []).map((b, i) => (
-                <div key={b.block_id || i} data-block-type={b.type}>
-                  <BlockPreview block={b} collections={[]}
-                    reviews={detail.reviews ? { ...detail.reviews, accent: detail.theme?.primary } : null} />
-                </div>
-              ))}
+              {(() => {
+                const rows = page?.blocks || [];
+                const mq = detail.marquee || {};
+                const plan = ribbonPlan(rows);
+                const ribbon = (text, id) => (
+                  <MarqueeRibbon key={id} text={text} accent={detail.theme?.primary} speed={mq.speed ?? 1}
+                    strokeOpacity={mq.stroke_opacity ?? 0.3} fontSize={mq.font_size ?? 1}
+                    mode={detail.theme?.mode === "dark" ? "dark" : "light"} testid={id} />
+                );
+                return rows.flatMap((b, i) => [
+                  ...(i === plan.bottom ? [ribbon(mq.bottom_text, "marquee-ribbon-bottom")] : []),
+                  <div key={b.block_id || i} data-block-type={b.type}>
+                    <BlockPreview block={b} collections={[]}
+                      reviews={detail.reviews ? { ...detail.reviews, accent: detail.theme?.primary } : null} />
+                  </div>,
+                  ...(i === plan.top ? [ribbon(mq.top_text, "marquee-ribbon-top")] : []),
+                ]);
+              })()}
               <IndustryVitals templateKey={detail.key} industry={detail.industry} vitals={detail.vitals}
                 accent={detail.theme?.primary} brand={detail.brand} address={detail.address} sampleAddress />
             </div>

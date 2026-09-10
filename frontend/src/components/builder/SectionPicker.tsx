@@ -66,7 +66,19 @@ export default function SectionPicker({ appId, pageId, accent = "#10B981", open,
             <div className="grid sm:grid-cols-2 gap-3 mt-1">
               {data.sets.map((s: any) => (
                 <button key={s.id} data-testid={`section-set-${s.id}`} disabled={!!busy} onClick={() => apply(s.id)}
-                  className="text-left rounded-xl border border-[var(--line)] p-3 hover:border-[var(--acc)] transition-colors disabled:opacity-50">
+                  className="text-left rounded-xl border border-[var(--line)] p-3 hover:border-[var(--acc)] transition-colors disabled:opacity-50 relative">
+                  {s.saved && (
+                    <span className="absolute right-2 top-2 flex items-center gap-1.5">
+                      <span className="chip !px-1.5 text-[9px]">Saved</span>
+                      <span role="button" data-testid={`section-set-delete-${s.id}`}
+                        onClick={async e => {
+                          e.stopPropagation();
+                          try { await api.delete(`/section-sets/${s.id}`); toast.success("Section set removed"); setData(d => ({ ...d, sets: d.sets.filter(x => x.id !== s.id) })); }
+                          catch { toast.error("Could not remove that set"); }
+                        }}
+                        className="text-[var(--mut)] hover:text-red-400 text-[10px]">remove</span>
+                    </span>
+                  )}
                   <div className="flex gap-3">
                     <div className="w-16 shrink-0"><Thumb blocks={s.blocks} accent={accent} /></div>
                     <div className="min-w-0">

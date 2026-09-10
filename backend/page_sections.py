@@ -1,6 +1,8 @@
 """Section templates per page type + page reordering for the Site Mode Page Manager.
 Every set is built from the client's own niche copy, so it lands already on-brand: the palette,
 accent and motion system come from the client's Site Mode settings, not from the set."""
+import re
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import Depends, HTTPException
@@ -86,18 +88,24 @@ def register(api, db, get_current_user, get_user_app, log_activity, uid, now_iso
     class ApplyIn(BaseModel):
         set_id: str
 
-    def _build(set_id: str, page: dict, app: dict) -> List[dict]:
+    def _build(set_id: str, page: dict, app: dict, saved_blocks=None) -> List[dict]:
         """Blocks come from the client's own niche copy so the set is on-brand immediately."""
         from site_content import blocks_for_types, niche_for
-        types = None
-        for group in SETS.values():
-            for s in group:
-                if s["id"] == set_id:
-                    types = s["blocks"]
+        types = saved_blocks
+        if types is None:
+            for group in SETS.values():
+                for s in group:
+                    if s["id"] == set_id:
+                        types = s["blocks"]
         if types is None:
             raise HTTPException(400, f"Unknown section set: {set_id}")
         niche = (app.get("motion_profile") or {}).get("template_key") or niche_for(app)
         return blocks_for_types(types, niche, app.get("name") or "", page.get("name") or "", uid)
+
+    class SaveSetIn(BaseModel):
+        label: str
+        page_type: str = "general"
+        hint: str = ""
 
     @api.get("/apps/{app_id}/pages/{page_id}/section-sets")
     async def section_sets(app_id: str, page_id: str, user: dict = Depends(get_current_user)):
@@ -106,7 +114,42 @@ def register(api, db, get_current_user, get_user_app, log_activity, uid, now_iso
         if not pg:
             raise HTTPException(404, "Page not found")
         got = sets_for(pg.get("slug") or "", pg.get("name") or "")
-        return {**got, "empty": not (pg.get("blocks") or []), "page_name": pg.get("name")}
+        saved = [d async for d in db.section_sets.find(
+            {"page_type": {"$in": [got["page_type"], "any"]}}, {"_id": 0}).sort("created_at", -1)]
+        return {**got, "sets": got["sets"] + saved, "saved_count": len(saved),
+                "empty": not (pg.get("blocks") or []), "page_name": pg.get("name")}
+
+    @api.post("/apps/{app_id}/pages/{page_id}/save-as-set")
+    async def save_as_set(app_id: str, page_id: str, body: SaveSetIn, user: dict = Depends(get_current_user)):
+        """Saves the page's STRUCTURE, so every future client fills it with their own copy."""
+        await get_user_app(app_id, user)
+        pg = await db.pages.find_one({"app_id": app_id, "page_id": page_id}, {"_id": 0})
+        if not pg:
+            raise HTTPException(404, "Page not found")
+        blocks = [b.get("type") for b in (pg.get("blocks") or []) if b.get("type")
+                  and b.get("type") not in ("navbar", "footer")]
+        if not blocks:
+            raise HTTPException(400, "This page has no sections to save yet")
+        if body.page_type not in list(SETS.keys()) + ["any"]:
+            raise HTTPException(400, "Unknown page type")
+        label = body.label.strip()[:60]
+        if not label:
+            raise HTTPException(400, "Give the section set a name")
+        doc = {"id": f"saved-{re.sub(r'[^a-z0-9]+', '-', label.lower()).strip('-')}",
+               "label": label, "page_type": body.page_type, "saved": True,
+               "hint": body.hint.strip()[:120] or f"Saved from {pg.get('name')} — {len(blocks)} sections.",
+               "blocks": blocks, "created_by": user["user_id"],
+               "created_at": datetime.now(timezone.utc).isoformat()}
+        await db.section_sets.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
+        await log_activity(app_id, user["user_id"], "sections.saved", f"Saved '{label}' as a section set")
+        return doc
+
+    @api.delete("/section-sets/{set_id}")
+    async def delete_set(set_id: str, user: dict = Depends(get_current_user)):
+        res = await db.section_sets.delete_one({"id": set_id})
+        if not res.deleted_count:
+            raise HTTPException(404, "Section set not found")
+        return {"ok": True}
 
     @api.post("/apps/{app_id}/pages/{page_id}/apply-set")
     async def apply_set(app_id: str, page_id: str, body: ApplyIn, user: dict = Depends(get_current_user)):
@@ -117,7 +160,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, uid, now_iso
         if body.set_id == "blank":
             blocks = []
         else:
-            blocks = _build(body.set_id, pg, app)
+            saved = await db.section_sets.find_one({"id": body.set_id}, {"_id": 0})
+            blocks = _build(body.set_id, pg, app, saved.get("blocks") if saved else None)
         await db.pages.update_one({"app_id": app_id, "page_id": page_id},
                                   {"$set": {"blocks": blocks, "updated_at": now_iso()}})
         await log_activity(app_id, user["user_id"], "page.sections",

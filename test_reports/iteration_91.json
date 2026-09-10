@@ -1,0 +1,34 @@
+{
+  "summary": "Marquee text ribbon end-to-end verification. Backend: 17/17 pytest tests pass covering public spec, per-app resolve, PUT validation ranges, text 160-char cap, reset, and template/site payloads. Frontend: verified landing page (both ribbons, outline-only text, hover slowdown from 34s->113.3s), template gallery FullPreview modal on saas (dark, purple stroke) and dental (light, blue thicker stroke, data-marquee-mode='light'), Site Mode editor panel with all controls, client public site /p/{token} shows ribbons when enabled and hides when disabled.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "MarqueeEditor rapid concurrent saves",
+        "issue": "Text input onBlur save() and enabled-toggle save() can race: the full-payload onBlur PUT may overwrite an in-flight toggle PUT because save() is not sequenced/debounced and both fire independently. In manual UI stress test the toggle click did not persist (backend still enabled=true) when done immediately after a text edit's onBlur. Purely a UX/robustness issue; each control works fine when used in isolation and via backend PUT directly.",
+        "affected_selectors": ["[data-testid=\"marquee-enabled-toggle\"]", "[data-testid=\"marquee-top_text\"]"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter91_marquee.py",
+    "/app/test_reports/pytest/iter91.xml"
+  ],
+  "action_items": [
+    "(Nit, optional) In MarqueeEditor, debounce/serialize saves or await pending save before firing a new one, so rapid text-blur + toggle interactions can't clobber each other."
+  ],
+  "critical_code_review_comments": [
+    "MarqueeEditor.save() with no arg sends the whole current state — a stale field (e.g. speed changed only via keyboard slider without React state update) will be overwritten by whatever is in `d`. Consider sending only the changed field.",
+    "PublicPreview correctly gates on mq.enabled === false — good. TemplateGallery FullPreview always renders regardless of mq.enabled (fine because the preview is a designer surface).",
+    "MarqueeRibbon uses `mode === 'light'` correctly and its stroke width differs between light (1.6px) and dark (1.2px) — matches design intent."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter91_marquee.py"],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% functional; 1 minor race noted"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based)",
+  "seed_data_creation": "None. Test data written to app_testlab marquee was reset via POST /apps/app_testlab/marquee/reset at end.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Marquee ribbons render in all three surfaces: landing (/), template preview modal (/templates → click card → FullPreview), and public client site (/p/{preview_token}). The route for the public client site is /p/{token} (NOT /preview/{token} which is the landing). App tabs on /apps/{app_id} use data-testid tab-<key>-btn where <key>='builder' opens Site Mode where MarqueeEditor lives. Master workspace app_testlab preview token: pv_c3b797fcdafc58d4e70e320f. Backend endpoints all under /api prefix, cookie-based auth (POST /api/auth/login with email/password sets HttpOnly cookie)."
+}

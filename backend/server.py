@@ -1108,6 +1108,10 @@ register_reviews(api, db, get_current_user, get_user_app, log_activity)
 from page_sections import register as register_page_sections
 from cms import uid as _pg_uid, now_iso as _pg_now
 register_page_sections(api, db, get_current_user, get_user_app, log_activity, _pg_uid, _pg_now)
+from onboarding import register as register_onboarding
+register_onboarding(api, db, get_current_user, get_user_app, log_activity)
+from marquee import register as register_marquee
+register_marquee(api, db, get_current_user, get_user_app, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

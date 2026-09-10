@@ -96,6 +96,8 @@ def register(api, db, get_current_user):
         doc = await db.template_reviews.find_one({"key": key}, {"_id": 0})
         from reviews import DEFAULT_STYLE, fallback_set
         site["reviews"] = {"reviews": (doc or {}).get("reviews") or fallback_set(key), "style": DEFAULT_STYLE}
+        from marquee import spec_for as _mq
+        site["marquee"] = _mq(key, site.get("brand") or "")
         return site
 
     # ---------- Client preview links (no login, expire after 7 days) ----------

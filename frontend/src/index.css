@@ -157,6 +157,10 @@ body {
 /* LucioDigital landing reviews — lime is reserved for the platform page and lois-tech.ca only. */
 .lois-reviews { --tbg: #08090a; --tbody: #f4f4f5; --tfg: #ffffff; --tfh: inherit; --tr: 16px; }
 
+.marquee-track { animation-name: marquee-slide; animation-timing-function: linear; animation-iteration-count: infinite; }
+@keyframes marquee-slide { from { transform: translate3d(-50%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; transform: none; } }
+
 .tenant-scroll {  overflow-x: auto;
   overflow-y: hidden;
   scrollbar-width: auto;

@@ -928,3 +928,21 @@ FastAPI/Mongo. No feature or UI changes.
 - Rename gotcha to remember: a swapped string next to an untouched identifier breaks things.
   Three real breaks were found and fixed — `const [clients, setTenants]` in HeroGallery and
   RedesignReview, and `_ap['clients']` in server.py where the dict key is still `tenants`.
+
+## 2026-06 · Marquee Text Ribbon completed (iter91, backend 17/17, frontend 100%)
+- `backend/marquee.py`: per-template `PHRASES` (33 keys + `luciodigital` platform pair) + `DEFAULTS`
+  (speed 1.0, stroke_opacity 0.3, font_size 1.0, enabled true). Endpoints `GET /public/marquee/{key}`,
+  `GET|PUT /apps/{id}/marquee` (range-validated: speed 0.2-3, opacity 0.05-1, size 0.5-2.5, text capped
+  at 160 chars) and `POST /apps/{id}/marquee/reset`. `studio.public_site()` returns `app.marquee`;
+  `templates_gallery.template_detail()` returns `marquee`.
+- `components/editorial/MarqueeRibbon.tsx`: outline-only text (transparent fill + `WebkitTextStroke` in
+  the template accent), seamless loop via `.marquee-track` (-50% -> 0) and a hover slowdown to 30%
+  (34s -> 113s). Follows the template's own light/dark mode: light bands use #F6F6F3, a 1.6px stroke and
+  1.5x opacity so light designs stay intact. `ribbonPlan(blocks)` places one ribbon after the hero and
+  one before the closing CTA (falls back to footer/contact).
+- Mounted in all three render paths: `PublicPreview.tsx` (client sites, hidden when `enabled: false`),
+  `TemplateGallery.tsx` full preview (all 33 templates) and `TestLabLanding.tsx` (lois-tech.ca, lime
+  #84FF00, platform phrases).
+- `components/MarqueeEditor.tsx` in the Site Mode panel: both texts, speed / opacity / font-size
+  sliders, show-hide toggle, reset to template, live inline preview. Saves send only the changed field
+  so rapid edits cannot clobber each other (fix for the race the testing agent flagged).
