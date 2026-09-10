@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import Depends, HTTPException
+from pydantic import BaseModel
 
 logger = logging.getLogger("agency.editorial_rollout")
 
@@ -275,6 +276,71 @@ def register(api, db, get_current_user):
             })
         rows.sort(key=lambda r: r["contrast_on_080808"])
         return {"base": "#080808", "tenants": rows, "dull": sum(1 for r in rows if r["verdict"] == "dull")}
+
+    class HeroSwapIn(BaseModel):
+        hero: str
+        apply_to_tenants: bool = True
+
+    @api.put("/editorial/templates/{key}/hero")
+    async def swap_template_hero(key: str, body: HeroSwapIn, user: dict = Depends(get_current_user)):
+        """Swaps a template's signature hero. Future tenants inherit it; existing tenants on that
+        template are updated too unless they picked their own hero."""
+        from site_content import LOOKS
+        prof = MOTION_PROFILES.get(key)
+        if not prof:
+            raise HTTPException(404, "Unknown template")
+        if body.hero not in HERO_NAMES:
+            raise HTTPException(400, "Unknown hero motion")
+        previous = prof["hero"]
+        prof["hero"] = body.hero
+        look = LOOKS.get(key)
+        if look is not None:
+            look["ed_hero"] = body.hero
+            await db.template_looks.update_one({"key": key}, {"$set": {"key": key, "look": look}}, upsert=True)
+        updated = []
+        if body.apply_to_tenants:
+            async for app in db.apps.find({}, {"_id": 0}):
+                mp = app.get("motion_profile") or {}
+                sm = app.get("site_mode") or {}
+                if mp.get("template_key") != key or sm.get("hero"):     # respect per-tenant overrides
+                    continue
+                mp["hero"] = body.hero
+                await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"motion_profile": mp}})
+                updated.append(app.get("name"))
+        return {"template_key": key, "hero": body.hero, "previous": previous, "tenants_updated": updated}
+
+    @api.post("/editorial/accent-autotune")
+    async def accent_autotune(user: dict = Depends(get_current_user)):
+        """Brightens every dull accent in one pass."""
+        audit = await accent_audit(user)
+        changed = []
+        for r in audit["tenants"]:
+            if r["verdict"] != "dull" or r["is_platform_lime"]:
+                continue
+            sm = dict((await db.apps.find_one({"app_id": r["app_id"]}, {"_id": 0, "site_mode": 1}) or {}).get("site_mode") or {})
+            mp = dict((await db.apps.find_one({"app_id": r["app_id"]}, {"_id": 0, "motion_profile": 1}) or {}).get("motion_profile") or {})
+            sm["accent"] = r["suggested"]; sm["updated_at"] = _now(); mp["accent"] = r["suggested"]
+            await db.apps.update_one({"app_id": r["app_id"]}, {"$set": {"site_mode": sm, "motion_profile": mp}})
+            changed.append({"app_id": r["app_id"], "name": r["name"], "from": r["accent"], "to": r["suggested"]})
+        return {"tuned": changed, "count": len(changed)}
+
+    class FavIn(BaseModel):
+        hero: str
+
+    @api.get("/editorial/hero-favourites")
+    async def get_favs(user: dict = Depends(get_current_user)):
+        doc = await db.platform_settings.find_one({"_id": "hero_favourites"}) or {}
+        return {"favourites": doc.get("heroes") or []}
+
+    @api.post("/editorial/hero-favourites")
+    async def toggle_fav(body: FavIn, user: dict = Depends(get_current_user)):
+        if body.hero not in HERO_NAMES:
+            raise HTTPException(400, "Unknown hero motion")
+        doc = await db.platform_settings.find_one({"_id": "hero_favourites"}) or {}
+        favs = list(doc.get("heroes") or [])
+        favs.remove(body.hero) if body.hero in favs else favs.append(body.hero)
+        await db.platform_settings.update_one({"_id": "hero_favourites"}, {"$set": {"heroes": favs}}, upsert=True)
+        return {"favourites": favs}
 
     @api.get("/public/motion-profile/{app_id}")
     async def public_profile(app_id: str):

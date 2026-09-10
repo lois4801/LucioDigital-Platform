@@ -540,3 +540,20 @@ FastAPI/Mongo. No feature or UI changes.
   showed "ACTIVE" + toast; audit shows Test Lab #8B5CF6 at 4.73:1 "vivid"; Site Mode panel shows
   hero select + inline particle-network preview + accent picker. Test Lab hero reset to its
   template default (particle-network).
+
+## 2026-06 · Template hero overrides · accent auto-tune · hero favourites · case study metrics
+- `PUT /api/editorial/templates/{key}/hero` — swaps a template's signature hero; future tenants
+  inherit it via `profile_for`, and existing tenants on that template are updated too UNLESS they
+  set their own `site_mode.hero` (per-tenant overrides win). Verified: saas particle-network →
+  aurora-wave → reverted, `previous` reported both ways.
+- `POST /api/editorial/accent-autotune` — brightens every accent under 3:1 on #080808 in one pass,
+  skips the platform lime, returns from/to per tenant. Verified (0 dull right now).
+- `GET|POST /api/editorial/hero-favourites` — toggles a starred hero list in
+  `platform_settings/hero_favourites`; gallery sorts favourites first. Verified: aurora-wave and
+  particle-network starred, aurora-wave leads the grid.
+- `POST /api/apps/{id}/case-study/sync-metrics` — pulls real counts (leads + form submissions,
+  pages or blocks, days live) into the case study results row. Verified in the editor UI:
+  Leads 0 / Pages built 33 / Days live 1 with a success toast.
+- Frontend: HeroGallery gained star buttons, favourites-first ordering, a Template selector and a
+  per-card "Template" apply button next to "Tenant"; AccentAudit gained "Brighten all dull (n)";
+  CaseStudyEditor gained "Sync real metrics".

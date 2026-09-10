@@ -163,6 +163,33 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             await log_activity(app_id, user, "case_study.save", f"Case study updated ({patch.get('status', cur.get('status'))})")
         return await db.case_studies.find_one({"app_id": app_id}, {"_id": 0})
 
+    @api.post("/apps/{app_id}/case-study/sync-metrics")
+    async def sync_metrics(app_id: str, user: dict = Depends(get_current_user)):
+        """Pulls this tenant's real numbers into the case study results row."""
+        app = await _app_or_404(app_id, user)
+        cs = await _load(app)
+        leads = await db.leads.count_documents({"app_id": app_id})
+        subs = await db.form_submissions.count_documents({"app_id": app_id})
+        pages = await db.pages.count_documents({"app_id": app_id})
+        blocks = await db.blocks.count_documents({"app_id": app_id})
+        created = app.get("created_at") or ""
+        days = 0
+        try:
+            start = datetime.fromisoformat(str(created).replace("Z", "+00:00"))
+            days = max(1, (datetime.now(timezone.utc) - start).days)
+        except Exception:
+            days = 0
+        stats = [
+            {"label": "Leads generated", "value": leads + subs, "suffix": "+"},
+            {"label": "Pages built", "value": pages or blocks, "suffix": ""},
+            {"label": "Days live", "value": days, "suffix": ""},
+        ]
+        await db.case_studies.update_one({"app_id": app_id},
+                                         {"$set": {"stats": stats, "metrics_synced_at": _now()}}, upsert=True)
+        if log_activity:
+            await log_activity(app_id, user, "case_study.sync_metrics", f"Metrics synced: {stats}")
+        return {"stats": stats, "synced_at": _now(), "previous": cs.get("stats")}
+
     # ── per-tenant Site Mode (fully isolated) ─────────────────────────────
     @api.get("/apps/{app_id}/site-mode")
     async def get_site_mode(app_id: str, user: dict = Depends(get_current_user)):

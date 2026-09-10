@@ -31,8 +31,18 @@ export default function AccentAudit() {
     } finally { setBusy(""); }
   }
 
-  async function setAccent(r, hex) {
+  async function autotune() {
+    setBusy("all");
     try {
+      const { data } = await api.post("/editorial/accent-autotune");
+      toast.success(data.count ? `Brightened ${data.count} accent(s)` : "Nothing to brighten — all accents read well");
+      load();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Auto-tune failed");
+    } finally { setBusy(""); }
+  }
+
+  async function setAccent(r, hex) {    try {
       await api.put(`/apps/${r.app_id}/site-mode`, { accent: hex });
       load();
     } catch (e) { toast.error(e.response?.data?.detail || "Could not update the accent"); }
@@ -48,6 +58,10 @@ export default function AccentAudit() {
           <div className="overline">Tenant accent audit</div>
           <div className="font-display text-lg font-semibold">{rows.length} tenants · {dull} reading dull on {base}</div>
         </div>
+        <button data-testid="accent-autotune-btn" disabled={!dull || busy === "all"} onClick={autotune}
+          className="ml-auto btn-primary text-xs !py-2 !px-4 inline-flex items-center gap-2 disabled:opacity-50">
+          {busy === "all" ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />} Brighten all dull ({dull})
+        </button>
       </header>
 
       <main className="px-6 lg:px-10 py-8">
