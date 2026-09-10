@@ -160,7 +160,7 @@ export default function AppDetail() {
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
         {tab === "builder" && (
           <div className="space-y-6">
-            <SiteModePanel appId={appId} appName={appDoc?.name || ""} />
+            <SiteModePanel appId={appId} appName={appDoc?.name || ""} appDoc={appDoc} />
             <Builder appId={appId} appDoc={appDoc} user={user} />
           </div>
         )}

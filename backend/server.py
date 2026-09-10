@@ -998,6 +998,9 @@ async def startup():
         from case_study import ensure_seed as ensure_case_study_seed
         await ensure_case_study_seed(db)
         logger.info(f"Editorial layer staged on Test Template: {await test_template.apply_editorial_to_test_template(db)}")
+        from editorial_rollout import ensure_defaults, backfill_new_tenants
+        await ensure_defaults(db)
+        logger.info(f"Motion profile inherited by new tenants: {await backfill_new_tenants(db)}")
         await clear_synced_label_overrides(db)
     except Exception as e:
         logger.error(f"startup maintenance skipped: {e}")
@@ -1081,6 +1084,8 @@ from case_study import register as register_case_study
 register_case_study(api, db, get_current_user, get_user_app, log_activity)
 from sandbox_guard import register as register_sandbox_guard
 register_sandbox_guard(api, db, get_current_user)
+from editorial_rollout import register as register_editorial
+register_editorial(api, db, get_current_user)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

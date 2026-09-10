@@ -432,7 +432,10 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         pages = await db.pages.find({"app_id": doc["app_id"]}, {"_id": 0}).to_list(50)
         pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
         cols = await hooks["public_collections"](doc["app_id"]) if hooks.get("public_collections") else []
-        return {"app": {k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
+        return {"app": {**{k: doc.get(k) for k in ("name", "industry", "description", "color", "status", "custom_domain")},
+                        "app_id": doc["app_id"],
+                        "site_mode": doc.get("site_mode") or {},
+                        "motion_profile": doc.get("motion_profile") or {}},
                 "theme": {**DEFAULT_THEME, **(doc.get("theme") or {})}, "pages": pages, "collections": cols, "chat_enabled": True,
                 "webapp": {"converted": bool((doc.get("webapp") or {}).get("converted")),
                            "signup_mode": (doc.get("webapp") or {}).get("signup_mode", "open")}}

@@ -17,6 +17,7 @@ import { pollImport, ImportProgress, ImportReport } from "@/components/builder/W
 import { LockStateBadge } from "@/components/locks/LockContext";
 import SkinToggle from "@/components/SkinToggle";
 import CaseStudyEditor from "@/components/CaseStudyEditor";
+import EditorialRolloutCard from "@/components/EditorialRolloutCard";
 
 const INDUSTRIES = ["All", "E-commerce", "SaaS Portals", "Internal Tools", "Service Booking"];
 const KINDS = [["all", "All projects"], ["website", "Websites"], ["app", "Apps"]];
@@ -294,6 +295,7 @@ export default function Dashboard() {
         </div>
 
         {/* Mandatory redesign approval banner */}
+        <EditorialRolloutCard />
         {redesign?.pending && (
           <div data-testid="redesign-banner" className="card-surface p-4 mb-6 flex flex-wrap items-center gap-3 !border-[var(--acc)]/50">
             <FlaskConical size={16} className="text-[var(--acc)] shrink-0" />

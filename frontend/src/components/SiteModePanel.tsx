@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import { Loader2, ShieldCheck } from "lucide-react";
+import SitePreviewOverlay, { PreviewSiteButton } from "@/components/SitePreviewOverlay";
 
 const STYLES = [["original", "Original template"], ["editorial", "Editorial motion"]];
 const MODES = [["dark", "Dark"], ["light", "Light"]];
@@ -28,9 +29,10 @@ function Row({ label, hint, value, options, onPick, testid }) {
 }
 
 // Per-tenant Site Mode. Every write is scoped to this one app_id — no other tenant is touched.
-export default function SiteModePanel({ appId, appName, templates = [] }) {
+export default function SiteModePanel({ appId, appName, appDoc = null, templates = [] }) {
   const [sm, setSm] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState(false);
 
   useEffect(() => {
     if (!appId) return;
@@ -53,12 +55,16 @@ export default function SiteModePanel({ appId, appName, templates = [] }) {
 
   return (
     <div className="card-surface p-6" data-testid="site-mode-panel">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="overline">Site Mode</div>
           <div className="font-display text-xl font-semibold mt-1">{appName}</div>
+          <div className="text-xs text-[var(--mut)] mt-0.5">Public site · {sm.publish}</div>
         </div>
-        <span className="chip inline-flex items-center gap-1"><ShieldCheck size={11} /> Isolated to this tenant</span>
+        <div className="flex items-center gap-2">
+          <PreviewSiteButton onClick={() => setPreview(true)} />
+          <span className="chip inline-flex items-center gap-1"><ShieldCheck size={11} /> Isolated to this tenant</span>
+        </div>
       </div>
 
       <div className="mt-4">
@@ -83,6 +89,8 @@ export default function SiteModePanel({ appId, appName, templates = [] }) {
         )}
       </div>
       {busy && <div className="mt-3 text-xs text-[var(--mut)] flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Saving…</div>}
+      <SitePreviewOverlay open={preview} appId={appId} previewToken={appDoc?.preview_token}
+        onClose={() => setPreview(false)} />
     </div>
   );
 }

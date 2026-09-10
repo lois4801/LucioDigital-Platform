@@ -475,3 +475,27 @@ FastAPI/Mongo. No feature or UI changes.
   Push to One Tenant, Push to Staging (dashboard + template gallery) and Run Test. Verified all
   four test IDs return count 0. Rollout still reachable through the approval workflow at
   `/redesign-review` and the Test Template card.
+
+## 2026-06 · Editorial motion rollout (executed, undoable)
+- Pre-check: `sandbox/audit` clean — LucioDigital Test Lab is the only test site.
+- `backend/editorial_rollout.py`: 33 unique template motion profiles (hero/layout/reveal/counter,
+  each combination unique, each using its own accent — lime is platform-only) + 10 RESERVED
+  profiles auto-applied if those template keys ever exist + a distinct PLATFORM_PROFILE for
+  lois-tech.ca. Endpoints: `POST /api/editorial/rollout` (snapshot → tenants → templates →
+  defaults, with progress), `GET /api/editorial/rollout/{job_id}`, `GET /api/editorial/profiles`,
+  `GET /api/public/motion-profile/{app_id}` (Preview/Live/Demo all read the same profile).
+- Executed job `edjob_8c6cdc691192`: 34 snapshots, 1 tenant, 33 templates, undoable via the
+  existing "Undo Last Rollout" (it restores the whole `before` doc incl. site_mode + motion_profile).
+- Platform defaults stored in `platform_settings/site_mode_defaults` = editorial + dark + full;
+  `backfill_new_tenants()` runs at startup so future tenants inherit with no manual setup.
+- Frontend: `EditorialRolloutCard` (dashboard, live progress + completion toast),
+  `SitePreviewOverlay` + `PreviewSiteButton` in the Site Mode panel (full-screen, no editor chrome,
+  desktop/tablet/mobile toggles, X to close, mints a preview link if missing).
+- Public site renderer (`studio.py /public/site/{token}` + `PublicPreview.tsx`) now returns and
+  applies `site_mode` + `motion_profile`: `.ed-scope` when style=editorial, `.ed-static` when
+  animation=none, `--ed-lime` overridden with the tenant's own accent, and `data-hero-motion`
+  set to the profile's signature hero name.
+- KNOWN GAP: the 43 signature hero animations are registered per template (profile + data
+  attribute + accent) and the shared editorial layer renders (reveals, ribbon, counters, bento,
+  glow paths, parallax), but each hero's bespoke keyframe implementation is only fully built for
+  the Test Lab/platform set. Remaining per-template hero keyframes are the next build step.
