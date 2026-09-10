@@ -490,7 +490,9 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         reviews_out = {"reviews": _own.get("reviews") or _rv["reviews"],
                        "style": {**_RVS, **(_own.get("style") or {})}}
         from marquee import spec_for as _mq
-        marquee_out = {**_mq(_vk, doc.get("name") or ""), **(doc.get("marquee") or {})}
+        _own_mq = dict(doc.get("marquee") or {})
+        _mq_pages = _own_mq.pop("pages", {}) or {}
+        marquee_out = {**_mq(_vk, doc.get("name") or ""), **_own_mq, "pages": _mq_pages}
         # Address: the client's own field wins, then its contact/footer copy, then the template sample.
         _addr = (sm.get("address") or (doc.get("brand_profile") or {}).get("address") or "").strip()
         if not _addr:

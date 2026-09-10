@@ -154,7 +154,9 @@ export default function PublicPreview() {
                     signupMode={site.webapp?.signup_mode} onSignedIn={member.signIn} onPaid={() => setHasPaid(true)} />
                 : (() => {
                   const rows = (page?.blocks || []).filter(b => b.type !== "navbar");
-                  const mq = site.app?.marquee || {};
+                  const mqAll = site.app?.marquee || {};
+                  const mq = { ...mqAll, ...((mqAll.pages || {})[page?.slug || "/"] || {}) };
+                  delete mq.pages;
                   const plan = mq.enabled === false ? { top: -1, bottom: -1 } : ribbonPlan(rows);
                   const ribbon = (text, id) => (
                     <MarqueeRibbon key={id} text={text} accent={site.theme?.primary} speed={mq.speed ?? 1}

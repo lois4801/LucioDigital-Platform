@@ -946,3 +946,19 @@ FastAPI/Mongo. No feature or UI changes.
 - `components/MarqueeEditor.tsx` in the Site Mode panel: both texts, speed / opacity / font-size
   sliders, show-hide toggle, reset to template, live inline preview. Saves send only the changed field
   so rapid edits cannot clobber each other (fix for the race the testing agent flagged).
+
+## 2026-06 · Per-page ribbon wording + client portal ribbon access (iter92, backend 26/26, frontend 100%)
+- `marquee.py`: `PUT|DELETE /apps/{id}/marquee/pages/{slug:path}` store per-page overrides in
+  `apps.marquee.pages[slug]`. Only supplied non-blank fields are kept — a blank string REMOVES that
+  field so it inherits the site-wide ribbon; DELETE clears the whole page override. Same ranges as the
+  site-wide endpoint. `resolve_for_page()` does the merge; `GET /apps/{id}/marquee` also returns
+  `pages` and `pages_list` (home "/" first) to drive the page selector.
+- `studio.public_site()` returns `marquee.pages`; `PublicPreview.tsx` merges the current page's
+  override over the site-wide ribbon per render.
+- `MarqueeEditor.tsx` gained a page selector ("All pages (site-wide ribbon)" + every page, custom pages
+  tagged), inherit placeholders ("Inherits: …"), and a `textOnly` mode.
+- Client Portal now carries the ribbon editor with `textOnly compact`: clients reword the site-wide and
+  per-page ribbons; speed, outline opacity, font size and show/hide stay agency-only in Site Mode.
+- ElevenLabs: deliberately NOT wired this pass — the integration is real (key stored server-side via
+  `POST /media/config/elevenlabs`, live SDK calls in `extras.py`), the user will add the key themselves
+  in AI Media -> Connect ElevenLabs. Voice generation stays unavailable (503) until then.

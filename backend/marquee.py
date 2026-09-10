@@ -55,6 +55,17 @@ def spec_for(key: str, brand: str = "") -> Dict[str, Any]:
     return {**DEFAULTS, "top_text": top, "bottom_text": bottom}
 
 
+def resolve_for_page(marquee: Dict[str, Any], slug: str) -> Dict[str, Any]:
+    """Site-wide ribbon with that page's own overrides on top. Blank fields inherit."""
+    over = ((marquee or {}).get("pages") or {}).get(slug or "/") or {}
+    out = {k: v for k, v in (marquee or {}).items() if k != "pages"}
+    for k, v in over.items():
+        if v is None or (isinstance(v, str) and not v.strip()):
+            continue
+        out[k] = v
+    return out
+
+
 def register(api, db, get_current_user, get_user_app, log_activity):
 
     class MarqueeIn(BaseModel):
@@ -65,9 +76,27 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         font_size: Optional[float] = None
         enabled: Optional[bool] = None
 
+    class PageMarqueeIn(BaseModel):
+        top_text: Optional[str] = None
+        bottom_text: Optional[str] = None
+        speed: Optional[float] = None
+        stroke_opacity: Optional[float] = None
+        font_size: Optional[float] = None
+        enabled: Optional[bool] = None
+
     def _resolved(app: dict) -> Dict[str, Any]:
         key = (app.get("motion_profile") or {}).get("template_key") or app.get("site_niche") or ""
-        return {**spec_for(key, app.get("name") or ""), **(app.get("marquee") or {})}
+        own = dict(app.get("marquee") or {})
+        pages = own.pop("pages", {}) or {}
+        return {**spec_for(key, app.get("name") or ""), **own, "pages": pages}
+
+    def _check_ranges(patch: dict):
+        if patch.get("speed") is not None and not 0.2 <= patch["speed"] <= 3.0:
+            raise HTTPException(400, "Scroll speed must be between 0.2x and 3x")
+        if patch.get("stroke_opacity") is not None and not 0.05 <= patch["stroke_opacity"] <= 1.0:
+            raise HTTPException(400, "Stroke opacity must be between 0.05 and 1")
+        if patch.get("font_size") is not None and not 0.5 <= patch["font_size"] <= 2.5:
+            raise HTTPException(400, "Font size must be between 0.5x and 2.5x")
 
     @api.get("/public/marquee/{key}")
     async def public_marquee(key: str):
@@ -76,18 +105,16 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/apps/{app_id}/marquee")
     async def get_marquee(app_id: str, user: dict = Depends(get_current_user)):
         app = await get_user_app(app_id, user)
-        return _resolved(app)
+        rows = await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1, "name": 1, "order": 1}).to_list(200)
+        rows.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
+        return {**_resolved(app),
+                "pages_list": [{"slug": p.get("slug") or "/", "name": p.get("name") or p.get("slug")} for p in rows]}
 
     @api.put("/apps/{app_id}/marquee")
     async def put_marquee(app_id: str, body: MarqueeIn, user: dict = Depends(get_current_user)):
         app = await get_user_app(app_id, user)
         patch = {k: v for k, v in body.dict().items() if v is not None}
-        if "speed" in patch and not 0.2 <= patch["speed"] <= 3.0:
-            raise HTTPException(400, "Scroll speed must be between 0.2x and 3x")
-        if "stroke_opacity" in patch and not 0.05 <= patch["stroke_opacity"] <= 1.0:
-            raise HTTPException(400, "Stroke opacity must be between 0.05 and 1")
-        if "font_size" in patch and not 0.5 <= patch["font_size"] <= 2.5:
-            raise HTTPException(400, "Font size must be between 0.5x and 2.5x")
+        _check_ranges(patch)
         for f in ("top_text", "bottom_text"):
             if f in patch:
                 patch[f] = str(patch[f])[:160]
@@ -96,6 +123,43 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await db.apps.update_one({"app_id": app_id}, {"$set": {"marquee": cur}})
         await log_activity(app_id, user["user_id"], "marquee.save", "Updated the text ribbon")
         return _resolved({**app, "marquee": cur})
+
+    @api.put("/apps/{app_id}/marquee/pages/{slug:path}")
+    async def put_page_marquee(app_id: str, slug: str, body: PageMarqueeIn, user: dict = Depends(get_current_user)):
+        app = await get_user_app(app_id, user)
+        slug = "/" + slug.strip("/") if slug.strip("/") else "/"
+        patch = body.dict(exclude_unset=True)
+        _check_ranges({k: v for k, v in patch.items() if v is not None})
+        cur = dict(app.get("marquee") or {})
+        pages = dict(cur.get("pages") or {})
+        row = dict(pages.get(slug) or {})
+        for k, v in patch.items():
+            if v is None or (isinstance(v, str) and not v.strip()):
+                row.pop(k, None)                      # blank means "inherit the site-wide ribbon"
+            else:
+                row[k] = str(v)[:160] if isinstance(v, str) else v
+        if row:
+            pages[slug] = row
+        else:
+            pages.pop(slug, None)
+        cur["pages"] = pages
+        cur["updated_at"] = datetime.now(timezone.utc).isoformat()
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"marquee": cur}})
+        await log_activity(app_id, user["user_id"], "marquee.page", f"Updated the {slug} page ribbon")
+        return _resolved({**app, "marquee": cur})
+
+    @api.delete("/apps/{app_id}/marquee/pages/{slug:path}")
+    async def clear_page_marquee(app_id: str, slug: str, user: dict = Depends(get_current_user)):
+        app = await get_user_app(app_id, user)
+        slug = "/" + slug.strip("/") if slug.strip("/") else "/"
+        cur = dict(app.get("marquee") or {})
+        pages = dict(cur.get("pages") or {})
+        pages.pop(slug, None)
+        cur["pages"] = pages
+        await db.apps.update_one({"app_id": app_id}, {"$set": {"marquee": cur}})
+        await log_activity(app_id, user["user_id"], "marquee.page", f"Reset the {slug} page ribbon")
+        return _resolved({**app, "marquee": cur})
+
 
     @api.post("/apps/{app_id}/marquee/reset")
     async def reset_marquee(app_id: str, user: dict = Depends(get_current_user)):

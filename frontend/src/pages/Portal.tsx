@@ -11,6 +11,7 @@ import VitalsEditor from "@/components/VitalsEditor";
 import LocationFields from "@/components/LocationFields";
 import AnimationControls from "@/components/AnimationControls";
 import ReviewsEditor from "@/components/ReviewsEditor";
+import MarqueeEditor from "@/components/MarqueeEditor";
 import OnboardingChecklist from "@/components/OnboardingChecklist";
 
 export default function Portal() {
@@ -68,6 +69,9 @@ export default function Portal() {
             </div>
             <div className="mt-3 pt-3 border-t border-[var(--line)]">
               <ReviewsEditor appId={app.app_id} accent={app.color || "#10B981"} compact />
+            </div>
+            <div className="mt-3 pt-3 border-t border-[var(--line)]">
+              <MarqueeEditor appId={app.app_id} accent={app.color || "#10B981"} textOnly compact />
             </div>
             <div className="mt-2 border-t border-[var(--line)]">
               <VitalsEditor appId={app.app_id} accent={app.color || "#10B981"} />

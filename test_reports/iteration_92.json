@@ -1,0 +1,29 @@
+{
+  "summary": "Marquee per-page overrides + client-portal (text-only) access verified end-to-end. Backend: 9/9 new pytest tests pass (GET returns pages + pages_list with home first; PUT stores only supplied non-blank fields; range validation for speed/opacity/font_size; 160-char cap; blank string removes an override field; DELETE clears whole page override; public/site exposes marquee.pages; site-wide PUT preserves page overrides; slug path accepted with or without leading slash). Iter91 regression: 17/17 still green. Frontend: /portal MarqueeEditor renders with page selector + top/bottom text fields + Reset, and CORRECTLY hides marquee-speed/marquee-stroke_opacity/marquee-font_size/marquee-enabled-toggle (textOnly). Site Mode /apps/app_testlab -> builder tab shows the full editor with all 8 controls. Public site (/p/pv_c3b797fcdafc58d4e70e320f): with a /t-dental override set, home shows site-wide (ORBIT/ONBOARD), /t-dental shows the override (DENTAL_TOP_XYZ/DENTAL_BOT_XYZ), and /t-healthcare still shows site-wide. Portal save writes only to selected page (verified against admin GET), and Reset clears just that page override. All test overrides cleaned up.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter92_marquee_pages.py",
+    "/app/backend/tests/test_iter91_marquee.py",
+    "/app/test_reports/pytest/iter92.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/marquee.py: put_page_marquee uses `body.dict(exclude_unset=True)` (correct — omitted keys don't touch existing row, blank string removes). The site-wide PUT uses `{k:v for k,v in body.dict().items() if v is not None}` — that means clients can't clear a site-wide field by sending '' at the site-wide level; only by /reset. Not in scope of this feature but worth noting for consistency.",
+    "backend/studio.py public_site correctly pops 'pages' out of _own_mq before spreading fallback so page overrides survive across the merge and reach the client (verified).",
+    "frontend PublicPreview.tsx merges `mqAll` (site-wide) with `mqAll.pages[slug]` and deletes `mq.pages` before rendering — clean; matches spec.",
+    "MarqueeEditor.tsx: `reset()` on slug uses DELETE /marquee/pages{slug} for page reset, POST /marquee/reset for site-wide reset. Toast messaging distinguishes the two cases.",
+    "Portal.tsx passes `textOnly compact` — confirmed sliders + toggle are hidden in the DOM (not just visually)."
+  ],
+  "updated_files": ["/app/backend/tests/test_iter92_marquee_pages.py"],
+  "success_rate": {"backend": "100% (9/9 new + 17/17 iter91 regression = 26/26)", "frontend": "100% functional"},
+  "test_credentials": "admin jaybernabe@luciodigital.com / Lucio2026! (cookie-based)",
+  "seed_data_creation": "Temporary page overrides on app_testlab (/t-dental, /some-other-page, /app-showcase-pro-4) created and deleted during tests. Final state: pages={} (verified).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Per-page marquee overrides live at PUT/DELETE /api/apps/{id}/marquee/pages/{slug:path}. GET /api/apps/{id}/marquee returns a `pages_list` (home '/' first) for driving the page-selector UI. Public route is only /p/:token (no slug segment); page navigation is client-side state via the top page bar, buttons carry data-testid='preview-page-<slug_no_leading_slash|home>'. Site Mode MarqueeEditor lives on /apps/{app_id} builder tab (data-testid=tab-builder-btn). Portal (client) uses <MarqueeEditor textOnly compact/> which strips speed/opacity/font-size/toggle. app_testlab preview_token: pv_c3b797fcdafc58d4e70e320f. Master workspace is protected — DO NOT delete/archive/rename it. Always clean up any page overrides you create via DELETE /api/apps/app_testlab/marquee/pages/<slug>."
+}
