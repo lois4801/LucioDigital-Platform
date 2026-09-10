@@ -88,6 +88,7 @@ class ThemeIn(BaseModel):
 class PageCreateIn(BaseModel):
     name: str
     slug: str
+    nav: str = "end"        # end | start | after:<slug> | hidden
 
 
 class PageUpdateIn(BaseModel):
@@ -251,6 +252,30 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
                            "style": {"bg": "default", "align": "center", "padding": "lg"}}],
                "updated_at": now_iso()}
         await db.pages.insert_one(dict(doc))
+        # place the new page in the site navigation on every page's navbar menu
+        where = (body.nav or "end").strip()
+        if where != "hidden":
+            link = {"label": body.name, "href": slug}
+            async for pg in db.pages.find({"app_id": app_id}, {"_id": 0, "page_id": 1, "blocks": 1}):
+                blocks, touched = pg.get("blocks") or [], False
+                for b in blocks:
+                    if b.get("type") != "navbar":
+                        continue
+                    links = list((b.get("props") or {}).get("links") or [])
+                    if any((l or {}).get("href") == slug for l in links):
+                        continue
+                    if where == "start":
+                        links.insert(0, link)
+                    elif where.startswith("after:"):
+                        after = where.split(":", 1)[1]
+                        at = next((i for i, l in enumerate(links) if (l or {}).get("href") == after), len(links) - 1)
+                        links.insert(at + 1, link)
+                    else:
+                        links.append(link)
+                    b["props"]["links"] = links
+                    touched = True
+                if touched:
+                    await db.pages.update_one({"app_id": app_id, "page_id": pg["page_id"]}, {"$set": {"blocks": blocks}})
         await log_activity(app_id, user["user_id"], "page.created", f"Page '{body.name}' created")
         from content_lock import sync_overview
         await sync_overview(db, app_id)
@@ -307,6 +332,20 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         if pg.get("slug") == "/":
             raise HTTPException(400, "Home page cannot be deleted")
         await db.pages.delete_one({"page_id": page_id})
+        # keep the site navigation in sync — drop links pointing at the page we just removed
+        gone = pg.get("slug")
+        async for other in db.pages.find({"app_id": app_id}, {"_id": 0, "page_id": 1, "blocks": 1}):
+            blocks, touched = other.get("blocks") or [], False
+            for b in blocks:
+                if b.get("type") != "navbar":
+                    continue
+                links = list((b.get("props") or {}).get("links") or [])
+                kept = [l for l in links if (l or {}).get("href") != gone]
+                if len(kept) != len(links):
+                    b["props"]["links"] = kept
+                    touched = True
+            if touched:
+                await db.pages.update_one({"app_id": app_id, "page_id": other["page_id"]}, {"$set": {"blocks": blocks}})
         from content_lock import sync_overview
         await sync_overview(db, app_id)
         return {"ok": True}

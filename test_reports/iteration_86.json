@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 86 — Site Mode Page Manager + grouped toolbar. Backend: new POST /api/apps/{id}/pages `nav` placement (end/start/after:<slug>/hidden) tested end-to-end with 6 pytest cases (all pass) via /api/public/site/{token} navbar link ordering, duplicate slug 400, no double-add. Frontend: SITE MODE tab loaded on app_testlab: page-manager renders 33 page-tab-<slug> with page-desc-<slug> and page-add-btn; page-guide updates when a tab is clicked and aria-current flips to 'true'; Add Page dialog wires page-name-input, page-nav-select (36 options = 33 pages + start/end/hidden) and page-create-btn (disabled until a name is typed); scratch page created via UI then deleted via page-delete-<slug>. site-mode-toolbar shows sm-group-design (5), sm-group-publishing (2) and sm-group-tools (6) with visible label + hint; sm-group-more-tools shows '1 more' → expands to 6 items and toggles to 'Show less'. builder-undo-btn / builder-redo-btn / device-desktop|tablet|mobile-btn / builder-save-btn all present in the row above. sm-quick-mode toggled Light→Dark and the change persisted to GET /api/apps/{id}/site-mode after reload. Mobile 390px: pages strip is horizontally scrollable and toolbar groups wrap cleanly (screenshot captured). Regression: sequential run of iter80–85 suites → 43/43 pass; parallel run showed 2 flaky failures (test_iter83 stretch, test_iter85 stagger=0) caused by pytest-xdist writing the same site_mode doc concurrently — pre-existing, unrelated to this iteration.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "DELETE /api/apps/{id}/pages/{page_id}", "issue": "Deleting a page does NOT remove the corresponding link from any navbar block's props.links, so stale nav entries pointing to the deleted slug persist on every page. Discovered because scratch pages created by previous test runs left orphaned navbar links that broke a fresh test run until manually purged."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter86_page_nav.py",
+    "/app/test_reports/pytest/iter86.xml"
+  ],
+  "action_items": [
+    "Consider cleaning navbar-link entries when a page is deleted in studio.delete_page() so the site nav stays in sync with actual pages (minor, but caused test-data noise)."
+  ],
+  "critical_code_review_comments": [
+    "siteModeGroups.RULES is checked as substrings in declaration order — an id like 'save-lock' would land in tools (first match 'lock') which is fine, but an id containing both 'design' and 'publish' would resolve by first match; documented behaviour is fine, worth a comment. groupOf() correctly falls back to 'more' for unrecognised ids (verified by unit-shape reading of siteModeGroups.ts).",
+    "PageManager.tsx GUIDES map is keyed by slug (with a name fallback) — canonical copy for home/about/services/contact is correct; app_testlab has /t-<industry> pages only, so most tabs show the FALLBACK copy which matches the agent-to-agent note.",
+    "studio.create_page inserts links only into navbar blocks (not footer menus) despite the code comment mentioning 'navbar / footer menu' — behaviour matches spec but the comment is misleading."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter86_page_nav.py (new)"
+  ],
+  "success_rate": {"backend": "100% (6/6 iter86, 43/43 iter80-85 sequential)", "frontend": "100% of exercised flows"},
+  "test_credentials": "jaybernabe@luciodigital.com / Lucio2026! (from problem statement, /app/memory/test_credentials.md not consulted)",
+  "seed_data_creation": "Created and cleaned scratch pages: test86-end, test86-start, test86-after, test86-hidden, test86-dup, and a 'Scratch86 Test' page (all deleted). site_mode restored to mode=dark, style=editorial, animation=full, accent=#22D3EE, publish=draft as found. Also purged any residual /test86-*, /scratch* navbar links from all 33 pages' navbar blocks.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "app_testlab has 33 pages with slugs like /t-healthcare, so PageManager tabs display the FALLBACK guide (that is expected). Sequential pytest is more reliable than parallel for iter80–85 (shared site_mode doc collides). Any page you create via API/UI must be deleted AND its navbar link should be manually purged from every page's navbar block (see 'minor' backend issue) or later tests will see stale nav entries."
+}

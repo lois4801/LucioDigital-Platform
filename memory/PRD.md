@@ -853,3 +853,26 @@ FastAPI/Mongo. No feature or UI changes.
   `sm-boxanim-preview` / `sm-boxanim-replay` reacting to speed + stagger, and 9
   `sm-section-anim-<key>` selects whose "inherit" label names the effective fallback. One-shot 429
   retry retained. SiteModePanel's inline picker was replaced by this component.
+
+## 2026-06 · Site Mode Page Manager + grouped UI + auto-placement (iter86, backend 6/6 + 43/43 regression, frontend 100%)
+- NEW `builder/PageManager.tsx` replaces `PagesBar` in the Builder header: a labelled "Pages" group,
+  one card-tab per page carrying a one-line purpose (`GUIDES` map keyed by slug with a sensible
+  fallback), an inline 2-3 line guide for the selected page, page lock/delete affordances and an
+  `+ Add Page` dialog asking for the name and the nav position.
+- `POST /apps/{id}/pages` takes `nav`: `end` (default) | `start` | `after:<slug>` | `hidden`, and
+  inserts the link into every page's navbar block. `DELETE /apps/{id}/pages/{page_id}` now also
+  strips that page's link from every navbar block, so the menu never keeps a dead entry
+  (fixed after iter86 flagged stale links).
+- NEW `lib/siteModeGroups.ts` + `builder/SiteModeToolbar.tsx` implement the auto-organising layout:
+  `GROUPS` = Pages / Design / Publishing / Tools / More, each with a one-line description;
+  `groupOf(id)` classifies a control by keyword substrings in its id, so a NEW control is placed
+  automatically and an unknown id lands in "More" rather than orphaned; any group over
+  `MAX_VISIBLE` (5) collapses behind an "N more" expander. To add a control, just push
+  `{ id, node }` into the `items` array in Builder.tsx — no layout work needed.
+- Builder header is now: row 1 Page Manager, row 2 undo/redo + viewport toggles + Save (unchanged,
+  top-left as the user asked) followed by the grouped controls. Design group = light/dark, style,
+  animation level, accent colour, hero motion; Publishing = draft / preview link only / live plus
+  Open live site; Tools = generate with AI, import from URL, upload logo, try another look, history,
+  lock all (collapses).
+- `SiteModePanel`'s detailed controls (AnimationControls, LocationFields, VitalsEditor) are untouched.
+- Note: pytest iter80-86 must be run SEQUENTIALLY; parallel runs collide on the shared site_mode doc.

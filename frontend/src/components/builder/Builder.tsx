@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2, History, Globe, Lock } from "lucide-react";
+import { Plus, Trash2, GripVertical, Sparkles, Save, Type, LayoutGrid, DollarSign, Mail, BarChart3, Navigation, Quote, Images, Film, HelpCircle, Megaphone, PanelBottom, Award, Wand2, Monitor, Smartphone, Tablet, Eye, Loader2, Database, Palette, Undo2, Redo2, MousePointer2, History, Globe, Lock, Sun, Moon } from "lucide-react";
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -9,6 +9,8 @@ import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import EffectWrap from "@/components/builder/EffectWrap";
 import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
+import PageManager from "@/components/builder/PageManager";
+import SiteModeToolbar from "@/components/builder/SiteModeToolbar";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
 import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/builder/NicheSwitcher";
 import { LogoUpload } from "@/components/builder/LogoUpload";
@@ -111,6 +113,16 @@ export default function Builder({ appId, appDoc, user }) {
   const [draft, setDraft] = useState(null);
   const [logo, setLogo] = useState(appDoc?.logo || null);
   const [importOpen, setImportOpen] = useState(false);
+  const [siteMode, setSiteMode] = useState(null);
+  useEffect(() => { api.get(`/apps/${appId}/site-mode`).then(r => setSiteMode(r.data)).catch(() => {}); }, [appId]);
+  async function patchSiteMode(next) {
+    setSiteMode(s => ({ ...s, ...next }));
+    try {
+      const { data } = await api.put(`/apps/${appId}/site-mode`, next);
+      setSiteMode(s => ({ ...s, ...data }));
+      toast.success("Site Mode updated");
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not save that setting"); }
+  }
   useEffect(() => { setLogo(appDoc?.logo || null); }, [appDoc?.logo]);
   useEffect(() => { setLookVote(appDoc?.look_vote || null); }, [appDoc?.look_vote]);
   async function applyNiche() {
@@ -229,8 +241,8 @@ export default function Builder({ appId, appDoc, user }) {
       toast.success("Page & theme saved");
     } catch { toast.error("Save failed"); } finally { setSaving(false); }
   }
-  async function createPage(name) {
-    try { const { data } = await api.post(`/apps/${appId}/pages`, { name, slug: name }); setPages([...pages, data]); switchPage(data.page_id); setPages(p => p.some(x => x.page_id === data.page_id) ? p : [...p, data]); }
+  async function createPage(name, nav = "end") {
+    try { const { data } = await api.post(`/apps/${appId}/pages`, { name, slug: name, nav }); setPages([...pages, data]); switchPage(data.page_id); setPages(p => p.some(x => x.page_id === data.page_id) ? p : [...p, data]); toast.success(nav === "hidden" ? `${name} created` : `${name} created and added to the menu`); }
     catch (e) { toast.error(e.response?.data?.detail || "Could not create page"); }
   }
   async function deletePage(pg) {
@@ -275,31 +287,69 @@ export default function Builder({ appId, appDoc, user }) {
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       {/* Row 2 — tenant/page selector cards · Row 3 — toolbar. Fully separated, never overlapping. */}
       <div className="-mx-6 lg:-mx-10 -mt-8 mb-6" data-testid="builder-header">
-        <div className="px-6 lg:px-10 border-b border-[var(--line)] min-h-[80px] flex items-center"
-          data-testid="header-row-pages">
-          <PagesBar pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
+        <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-pages">
+          <PageManager pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
             canLock={canLock} onToggleLock={toggleLock} theme={theme} />
         </div>
-        <div className="px-6 lg:px-10 py-3 border-b border-[var(--line)] flex flex-wrap items-center gap-2"
-          data-testid="header-row-toolbar">
-          <div className="flex card-surface !p-0.5 rounded-full">
-            <button data-testid="builder-undo-btn" title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.past.length}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Undo2 size={14} /></button>
-            <button data-testid="builder-redo-btn" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!history.future.length}
-              className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Redo2 size={14} /></button>
+        <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-toolbar">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex card-surface !p-0.5 rounded-full">
+              <button data-testid="builder-undo-btn" title="Undo (Ctrl+Z)" onClick={undo} disabled={!history.past.length}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Undo2 size={14} /></button>
+              <button data-testid="builder-redo-btn" title="Redo (Ctrl+Shift+Z)" onClick={redo} disabled={!history.future.length}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[var(--mut)] hover:text-white disabled:opacity-30"><Redo2 size={14} /></button>
+            </div>
+            <div className="flex card-surface !p-0.5 rounded-full">
+              {[["desktop", Monitor], ["tablet", Tablet], ["mobile", Smartphone]].map(([d, I]) => <button key={d} data-testid={`device-${d}-btn`} onClick={() => setDevice(d)} className={`w-8 h-8 rounded-full flex items-center justify-center ${device === d ? "bg-white/10 text-white" : "text-[var(--mut)]"}`}><I size={14} /></button>)}
+            </div>
+            <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`ml-auto btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
           </div>
-          <div className="flex card-surface !p-0.5 rounded-full">
-            {[["desktop", Monitor], ["tablet", Tablet], ["mobile", Smartphone]].map(([d, I]) => <button key={d} data-testid={`device-${d}-btn`} onClick={() => setDevice(d)} className={`w-8 h-8 rounded-full flex items-center justify-center ${device === d ? "bg-white/10 text-white" : "text-[var(--mut)]"}`}><I size={14} /></button>)}
-          </div>
-          {appDoc?.preview_enabled && appDoc.preview_token && <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Preview</a>}
-          <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>
-          {access.can_request && <button data-testid="request-change-btn" onClick={() => setRequestOpen(true)} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Lock size={14} /> Request a change</button>}
-          {canLock && <MasterLockButton compact />}
-          <button data-testid="page-history-btn" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><History size={14} /> History</button>
-          <button data-testid="web-import-btn" onClick={() => setImportOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Globe size={14} /> Import from URL</button>
-          <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>
-          <LogoUpload appId={appId} logo={logo} onChange={(u) => { setLogo(u); load(); }} />
-          <button data-testid="builder-save-btn" onClick={save} disabled={saving} className={`btn-primary text-sm flex items-center gap-2 !py-2 !px-4 ${dirty ? "" : "opacity-80"}`}><Save size={14} /> {saving ? "Saving…" : dirty ? "Save changes" : "Saved"}</button>
+          {/* Controls are grouped automatically by function — see lib/siteModeGroups.ts */}
+          <SiteModeToolbar items={[
+            { id: "design-mode-toggle", node: (
+              <button data-testid="sm-quick-mode" onClick={() => patchSiteMode({ mode: siteMode?.mode === "light" ? "dark" : "light" })}
+                className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2">
+                {siteMode?.mode === "light" ? <Sun size={14} /> : <Moon size={14} />} {siteMode?.mode === "light" ? "Light" : "Dark"} mode
+              </button>) },
+            { id: "design-style", node: (
+              <button data-testid="sm-quick-style" onClick={() => patchSiteMode({ style: siteMode?.style === "editorial" ? "original" : "editorial" })}
+                className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><LayoutGrid size={14} /> {siteMode?.style === "editorial" ? "Editorial" : "Original"} style</button>) },
+            { id: "design-animation", node: (
+              <button data-testid="sm-quick-anim" onClick={() => patchSiteMode({ animation: siteMode?.animation === "full" ? "reduced" : siteMode?.animation === "reduced" ? "none" : "full" })}
+                className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Sparkles size={14} /> Animation · {siteMode?.animation || "full"}</button>) },
+            { id: "design-accent-colour", node: (
+              <label data-testid="sm-quick-accent-wrap" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 cursor-pointer">
+                <Palette size={14} /> Accent
+                <input data-testid="sm-quick-accent" type="color" value={siteMode?.accent || theme?.primary || "#10B981"}
+                  onChange={e => patchSiteMode({ accent: e.target.value.toUpperCase() })}
+                  className="w-6 h-6 rounded bg-transparent border-0 p-0 cursor-pointer" />
+              </label>) },
+            { id: "design-hero-motion", node: (
+              <a data-testid="sm-quick-hero" href="/hero-gallery" className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><MousePointer2 size={14} /> Hero motion{siteMode?.hero ? ` · ${siteMode.hero}` : ""}</a>) },
+            { id: "publish-status", node: (
+              <div data-testid="sm-publish-group" className="flex card-surface !p-0.5 rounded-full">
+                {[["draft", "Draft"], ["preview", "Preview link only"], ["live", "Live"]].map(([v, l]) => (
+                  <button key={v} data-testid={`sm-publish-${v}`} onClick={() => patchSiteMode({ publish: v })}
+                    className={`text-xs px-3 py-1.5 rounded-full ${siteMode?.publish === v ? "bg-white/10 text-white" : "text-[var(--mut)] hover:text-white"}`}>{l}</button>
+                ))}
+              </div>) },
+            appDoc?.preview_enabled && appDoc.preview_token
+              ? { id: "publish-preview-link", node: (
+                <a data-testid="builder-open-preview" href={`/p/${appDoc.preview_token}`} target="_blank" rel="noreferrer"
+                  className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Eye size={13} /> Open live site</a>) } : null,
+            { id: "tools-generate-ai", node: (
+              <button data-testid="generate-site-open-btn" onClick={() => setGenOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2 !border-[var(--acc)]/50 text-[var(--acc)]"><Wand2 size={14} /> Generate site with AI</button>) },
+            { id: "tools-import-url", node: (
+              <button data-testid="web-import-btn" onClick={() => setImportOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Globe size={14} /> Import from URL</button>) },
+            { id: "tools-upload-logo", group: "tools", node: <LogoUpload appId={appId} logo={logo} onChange={(u) => { setLogo(u); load(); }} /> },
+            { id: "tools-another-look", group: "tools", node: (
+              <button data-testid="niche-switcher-btn" onClick={() => setNicheOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><Palette size={14} /> Try another look</button>) },
+            { id: "tools-history", node: (
+              <button data-testid="page-history-btn" onClick={() => setHistoryOpen(true)} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2"><History size={14} /> History</button>) },
+            canLock ? { id: "tools-lock-all", node: <MasterLockButton compact /> } : null,
+            access.can_request ? { id: "tools-request-change", node: (
+              <button data-testid="request-change-btn" onClick={() => setRequestOpen(true)} className="btn-primary text-sm !py-2 !px-4 flex items-center gap-2"><Lock size={14} /> Request a change</button>) } : null,
+          ].filter(Boolean)} />
         </div>
       </div>
       <WebImportDialog appId={appId} open={importOpen} onOpenChange={setImportOpen} onDone={() => load()} />
