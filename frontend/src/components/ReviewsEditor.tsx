@@ -75,7 +75,7 @@ export default function ReviewsEditor({ appId, accent = "#10B981", compact = fal
         <div className="min-w-0">
           <div className="text-sm font-semibold flex items-center gap-2"><Star size={13} className="text-[var(--acc)]" /> Reviews &amp; testimonials</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
-            {data.reviews.length} five-star reviews · {data.source === "custom" ? "edited for this tenant" : "written for this template"}. Colours follow the template unless you override them.
+            {data.reviews.length} five-star reviews · {data.source === "custom" ? "edited for this client" : "written for this template"}. Colours follow the template unless you override them.
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

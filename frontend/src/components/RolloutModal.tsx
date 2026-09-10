@@ -5,7 +5,7 @@ import { Loader2, AlertTriangle, ShieldCheck, X, Plus, Trash2, History } from "l
 import { Link } from "react-router-dom";
 import DiffViewer from "@/components/DiffViewer";
 
-/** Confirmation + scoped, background rollout of Test Lab settings to every active tenant. */
+/** Confirmation + scoped, background rollout of Test Lab settings to every active client. */
 export default function RolloutModal({ open, onClose, targetAppId = null, targetName = "" }) {
   const [preview, setPreview] = useState(null);
   const [diff, setDiff] = useState(null);
@@ -35,7 +35,7 @@ export default function RolloutModal({ open, onClose, targetAppId = null, target
         setJob(data);
         if (data.status === "done") {
           clearInterval(timer);
-          toast.success("Changes successfully applied to all tenants.");
+          toast.success("Changes successfully applied to all clients.");
         }
       } catch { clearInterval(timer); }
     }, 1200);
@@ -98,7 +98,7 @@ export default function RolloutModal({ open, onClose, targetAppId = null, target
           <div>
             <div className="overline">Global rollout</div>
             <h3 className="font-display text-2xl font-semibold tracking-tight mt-1">
-              {targetAppId ? `Push to ${targetName || "one tenant"}` : "Push to All Tenants"}
+              {targetAppId ? `Push to ${targetName || "one client"}` : "Push to All Clients"}
             </h3>
           </div>
           <button data-testid="rollout-close-btn" onClick={onClose} className="btn-ghost !p-2"><X size={15} /></button>
@@ -116,11 +116,11 @@ export default function RolloutModal({ open, onClose, targetAppId = null, target
               <div style={{ width: `${job.pct || 0}%` }} className="h-full bg-[var(--acc)] transition-all duration-500" />
             </div>
             <div className="mt-3 text-xs text-[var(--mut)]">
-              {job.done || 0} of {job.total} tenant(s) processed · {job.changed || 0} updated
+              {job.done || 0} of {job.total} client(s) processed · {job.changed || 0} updated
             </div>
             {job.status === "done" && (
               <div data-testid="rollout-done" className="mt-4 p-3 rounded-xl bg-[var(--acc)]/10 border border-[var(--acc)]/30 text-sm text-[var(--acc)] flex items-center gap-2">
-                <ShieldCheck size={15} /> Changes successfully applied to all tenants.
+                <ShieldCheck size={15} /> Changes successfully applied to all clients.
               </div>
             )}
             <button data-testid="rollout-finish-btn" onClick={onClose} className="mt-5 btn-primary text-sm !py-2 !px-4">Done</button>
@@ -129,9 +129,9 @@ export default function RolloutModal({ open, onClose, targetAppId = null, target
           <>
             <p className="text-sm text-[var(--mut)] mt-3">
               {picked
-                ? `${picked.length} change(s) selected in the diff viewer will be applied to the ${preview.target_count} active tenant(s).`
-                : `Pick what gets copied from the Test Lab onto the ${preview.target_count} active tenant(s).`}
-              {" "}Tenant content — text, images, pages, leads and CMS records — is never touched.
+                ? `${picked.length} change(s) selected in the diff viewer will be applied to the ${preview.target_count} active client(s).`
+                : `Pick what gets copied from the Test Lab onto the ${preview.target_count} active client(s).`}
+              {" "}Client content — text, images, pages, leads and CMS records — is never touched.
             </p>
 
             {!picked && (
@@ -169,7 +169,7 @@ export default function RolloutModal({ open, onClose, targetAppId = null, target
               <AlertTriangle size={15} className="mt-0.5 shrink-0" />
               {targetAppId
                 ? "Are you sure you want to apply these changes? This cannot be undone."
-                : "Are you sure you want to apply all current Test Lab settings to all active tenants? This cannot be undone."}
+                : "Are you sure you want to apply all current Test Lab settings to all active clients? This cannot be undone."}
             </div>
 
             <label className="block mt-4">

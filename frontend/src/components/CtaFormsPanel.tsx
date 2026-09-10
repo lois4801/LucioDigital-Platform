@@ -4,7 +4,7 @@ import { FileText, Loader2, RefreshCw } from "lucide-react";
 import api from "@/lib/api";
 import CtaFormEditor from "@/components/CtaFormEditor";
 
-/** Lists every CTA button on the tenant site that has a modal form attached, with Edit Form. */
+/** Lists every CTA button on the client site that has a modal form attached, with Edit Form. */
 export default function CtaFormsPanel({ appId }) {
   const [state, setState] = useState({ forms: [], simplified: false, can_edit: true });
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,7 @@ export default function CtaFormsPanel({ appId }) {
         <div>
           <div className="overline mb-1 flex items-center gap-2"><FileText size={12} className="text-[var(--acc)]" /> Modal forms · {state.forms.length} CTA button{state.forms.length === 1 ? "" : "s"}</div>
           <h2 className="font-display text-2xl font-semibold tracking-tight">Every call-to-action opens a form</h2>
-          <p className="text-sm text-[var(--mut)] mt-1 max-w-2xl">Fields were pre-set from this tenant's industry. Edits save instantly and go live on the site with no rebuild.</p>
+          <p className="text-sm text-[var(--mut)] mt-1 max-w-2xl">Fields were pre-set from this client's industry. Edits save instantly and go live on the site with no rebuild.</p>
         </div>
         <button data-testid="cta-forms-rescan-btn" onClick={rescan} disabled={scanning} className="btn-ghost text-sm flex items-center gap-2 disabled:opacity-60">
           <RefreshCw size={13} className={scanning ? "animate-spin" : ""} /> Scan for new buttons

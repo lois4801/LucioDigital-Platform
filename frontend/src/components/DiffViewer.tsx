@@ -22,7 +22,7 @@ export function DiffTable({ diff, selected, onToggle }) {
   const cats = CAT_ORDER.filter((c) => (diff?.by_category?.[c] || []).length);
   if (!cats.length) {
     return <div data-testid="diff-empty" className="p-6 text-sm text-[var(--mut)] text-center border border-dashed border-[var(--line)] rounded-xl">
-      Nothing differs between the Test Lab and your live tenants right now.
+      Nothing differs between the Test Lab and your live clients right now.
     </div>;
   }
   return (
@@ -35,7 +35,7 @@ export function DiffTable({ diff, selected, onToggle }) {
           </div>
           <div className="rounded-xl border border-[var(--line)] overflow-hidden">
             <div className="grid grid-cols-[1fr_1fr] text-[10px] uppercase tracking-wider text-[var(--dim)] bg-[var(--bg-2)] border-b border-[var(--line)]">
-              <div className="px-3 py-2">Live tenants now</div>
+              <div className="px-3 py-2">Live clients now</div>
               <div className="px-3 py-2 border-l border-[var(--line)]">Test Lab (incoming)</div>
             </div>
             {diff.by_category[cat].map((c) => (
@@ -50,8 +50,8 @@ export function DiffTable({ diff, selected, onToggle }) {
                   <span className={`chip ${c.kind === "removed" ? "chip-down" : c.kind === "added" ? "chip-active" : ""}`}>
                     {c.kind}
                   </span>
-                  <span className="font-mono text-[10px] text-[var(--dim)]">affects {c.tenants} tenant{c.tenants === 1 ? "" : "s"}</span>
-                  {c.variance && <span className="chip chip-maint">tenants differ</span>}
+                  <span className="font-mono text-[10px] text-[var(--dim)]">affects {c.tenants} client{c.tenants === 1 ? "" : "s"}</span>
+                  {c.variance && <span className="chip chip-maint">clients differ</span>}
                 </div>
                 <div className="grid grid-cols-[1fr_1fr] mt-1.5">
                   <div className="px-3 py-2.5 text-xs font-mono break-all text-red-300/90 line-through decoration-red-400/60">
@@ -87,9 +87,9 @@ export default function DiffViewer({ diff, onBack, onPush }) {
             <div className="overline">Test Lab · rollout review</div>
             <h2 className="font-display text-3xl font-semibold tracking-tight mt-1">What will change</h2>
             <p className="text-sm text-[var(--mut)] mt-2 max-w-2xl">
-              {diff.total} change{diff.total === 1 ? "" : "s"} across {diff.target_count} live tenant
+              {diff.total} change{diff.total === 1 ? "" : "s"} across {diff.target_count} live client
               {diff.target_count === 1 ? "" : "s"}. Old values are struck through in red, incoming Test Lab
-              values are green. Tenant text, images, pages, leads and CMS records are never touched.
+              values are green. Client text, images, pages, leads and CMS records are never touched.
             </p>
           </div>
           <button data-testid="diff-back-btn" onClick={onBack} className="btn-ghost text-sm !py-2 !px-4 flex items-center gap-2">

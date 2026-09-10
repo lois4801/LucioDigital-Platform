@@ -14,7 +14,7 @@ export function EmbedCard({ appDoc }) {
         <div className="flex-1 min-w-0">
           <div className="overline">Chat widget embed</div>
           <h3 className="font-display text-xl font-semibold tracking-tight mt-1">One line adds the AI assistant to any site</h3>
-          <p className="text-sm text-[var(--mut)] mt-2">Paste before <code>&lt;/body&gt;</code> on the client's exported or custom-domain site. Voice + text chat answers from this tenant's content; conversations land in the Inbox.</p>
+          <p className="text-sm text-[var(--mut)] mt-2">Paste before <code>&lt;/body&gt;</code> on the client's exported or custom-domain site. Voice + text chat answers from this client's content; conversations land in the Inbox.</p>
           {snippet ? (
             <div className="mt-4 flex items-start gap-2 p-3 rounded-xl bg-[var(--bg-2)] border border-[var(--line)]">
               <code data-testid="embed-snippet" className="font-mono text-[11px] text-[var(--mut)] break-all flex-1">{snippet}</code>

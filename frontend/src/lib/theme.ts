@@ -3,7 +3,7 @@ export const DEFAULT_THEME = {
   fg: "#F8FAFC", muted: "#A1A7B8", border: "#262637", font_heading: "Plus Jakarta Sans", font_body: "Manrope", radius: 16, motion: true, cursor: true, cursor_effect: "none", cursor_density: 1, cursor_speed: 1, glass: true, grain: true, design_v2: false,
 };
 
-// Editorial default for every new tenant site: fluid type, glass depth, scroll reveals.
+// Editorial default for every new client site: fluid type, glass depth, scroll reveals.
 export const V2_THEME = { ...DEFAULT_THEME, font_heading: "Sora", font_body: "Inter", radius: 20, design_v2: true };
 
 export const FONTS = ["Sora", "Inter", "Space Grotesk", "DM Sans", "Plus Jakarta Sans", "Manrope", "Outfit", "Playfair Display", "Poppins", "Nunito",
@@ -74,7 +74,7 @@ const axis = (f) => VARIABLE_AXIS[f] || "wght@400;500;600;700";
 
 export function loadFonts(t) {
   const th = { ...DEFAULT_THEME, ...(t || {}) };
-  const id = "tenant-fonts";
+  const id = "client-fonts";
   const fam = (f) => `family=${f.replace(/ /g, "+")}:${axis(f)}`;
   const href = `https://fonts.googleapis.com/css2?${fam(th.font_heading)}&${fam(th.font_body)}&display=swap`;
   let el = document.getElementById(id);

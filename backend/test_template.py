@@ -1,6 +1,6 @@
 """Test Template — the permanent sandbox template.
 
-Same credit-safe contract as the Test Lab tenant: template design work lands on `test_template` only,
+Same credit-safe contract as the Test Lab client: template design work lands on `test_template` only,
 and reaches the real templates through an explicit "Push to One Template" / "Push to All Templates"
 action that goes via the diff viewer, the confirmation modal, the history log and undo.
 
@@ -168,13 +168,13 @@ def register(api, db, get_current_user, log_activity):
 
     @api.post("/test-template/push-staging")
     async def push_test_template_staging(body: TplRolloutIn, user: dict = Depends(get_current_user)):
-        """Real-environment check: apply the Test Template look to the staging tenant only."""
+        """Real-environment check: apply the Test Template look to the staging client only."""
         from site_content import LOOKS
         await _require_admin(user)
         # Override: template pushes apply without typing CONFIRM.
         staging = await db.apps.find_one({"is_staging": True}, {"_id": 0})
         if not staging:
-            raise HTTPException(404, "No staging tenant configured")
+            raise HTTPException(404, "No staging client configured")
         lab = LOOKS[TEST_TEMPLATE_KEY]
         picked = set(body.changes) if body.changes is not None else None
         fields = [f for f, cat, _l in LOOK_FIELDS
@@ -253,7 +253,7 @@ def register(api, db, get_current_user, log_activity):
                 NICHES[key]["secondary"] = patch["secondary"]
             await db.template_looks.update_one({"key": key}, {"$set": {"key": key, "look": LOOKS[key],
                                                                       "updated_at": _now()}}, upsert=True)
-            # always-live: the change is applied to tenants on this template immediately
+            # always-live: the change is applied to clients on this template immediately
             await db.template_states.update_one({"key": key}, {"$set": {
                 "key": key, "status": "live", "look_hash": _look_hash(key), "pending_hash": None,
                 "updated_at": _now()}}, upsert=True)

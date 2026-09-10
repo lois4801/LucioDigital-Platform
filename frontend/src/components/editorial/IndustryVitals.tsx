@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-/** Per-industry live charts + located map, driven by the tenant's real vitals payload
+/** Per-industry live charts + located map, driven by the client's real vitals payload
  *  (editable in Site Mode, importable from Excel/CSV). Canvas, one 30fps loop, paused off-screen. */
 const seedOf = (s: string) => Math.abs([...(s || "x")].reduce((a, c) => a * 31 + c.charCodeAt(0), 17));
 const rand = (seed: number) => { let s = seed % 233280; return () => (s = (s * 9301 + 49297) % 233280) / 233280; };

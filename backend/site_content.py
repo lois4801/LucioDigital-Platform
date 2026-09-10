@@ -136,7 +136,7 @@ def theme_for(n, key=None):
 
 
 async def retheme_all(db):
-    """Apply the current per-template look to every tenant. Site content is never touched."""
+    """Apply the current per-template look to every client. Site content is never touched."""
     n = 0
     async for app in db.apps.find({}, {"_id": 0, "app_id": 1, "name": 1, "industry": 1, "site_niche": 1, "theme": 1}):
         key = app.get("site_niche") or niche_for(app)
@@ -161,7 +161,7 @@ NICHES = {
   areas=("Service Areas", ["Toronto", "Mississauga", "Brampton", "Vaughan", "Markham", "Oakville", "Richmond Hill", "Pickering"]),
   certs=("Licensed, insured & certified", ["TSSA Licensed", "NATE Certified", "HRAI Member", "Carrier Factory Authorized", "Energy Star Partner", "WSIB Covered"]),
   stats=[("18,400+", "Systems serviced"), ("92 min", "Avg. emergency response"), ("4.9★", "Google rating, 2,100 reviews"), ("27 yrs", "In business")],
-  quotes=[("Our furnace died on the coldest night of January. Summit had a tech here in under two hours and heat back on before midnight.", "Karen Whitfield", "Homeowner, Etobicoke"), ("They replaced four rooftop units across our plaza with zero tenant downtime. Bills dropped 31% the first summer.", "Raj Patel", "Property Manager, Dixie Plaza"), ("The Total Care plan has paid for itself twice. The pre-season tune-ups caught a cracked heat exchanger before it became dangerous.", "Mike Delorme", "Homeowner, Vaughan")],
+  quotes=[("Our furnace died on the coldest night of January. Summit had a tech here in under two hours and heat back on before midnight.", "Karen Whitfield", "Homeowner, Etobicoke"), ("They replaced four rooftop units across our plaza with zero client downtime. Bills dropped 31% the first summer.", "Raj Patel", "Property Manager, Dixie Plaza"), ("The Total Care plan has paid for itself twice. The pre-season tune-ups caught a cracked heat exchanger before it became dangerous.", "Mike Delorme", "Homeowner, Vaughan")],
   faq=[("Do you offer financing?", "Yes — 0% for 24 months on new systems, with approvals in minutes."), ("How often should my system be serviced?", "Twice a year: cooling in spring, heating in fall. Plan members are scheduled automatically."), ("Are your technicians background-checked?", "Every technician is TSSA-licensed, drug-tested and background-checked, and arrives in uniform with ID.")],
   about=("Started in a garage in 1998 with one van and a promise.", "Summit was founded by Dan Kowalski after 12 years working for a national chain where speed mattered more than doing the job right. He started Summit with one van, a Manual J calculator and a rule: never sell a homeowner more than they need. Today 42 technicians carry that rule into 18,000 homes a year, and Dan still rides along on installs every Friday."),
   team=[("Dan Kowalski", "Founder & Master Technician"), ("Priya Anand", "Service Manager"), ("Luis Ortega", "Lead Installer"), ("Sarah Cheng", "Comfort Advisor")],
@@ -190,14 +190,14 @@ NICHES = {
   gallery=["photo-1503387762-592deb58ef4e", "photo-1541976590-713941681591", "photo-1429497419816-9ca5cfb4571a", "photo-1517581177682-a085bb7ffb15", "photo-1698479603408-1a66a6d9e80f", "photo-1487958449943-2429e8be8625"],
   sections=["portfolio", "services", "safety", "certs", "stats", "video", "team", "testimonials", "quote"],
   portfolio=("Projects Portfolio", "A selection of recent work across sectors."),
-  services=("Services", "One accountable partner from pre-construction to turnover.", [("General contracting", "Lump-sum and CM-at-risk delivery with self-performed concrete and carpentry.", "Shield"), ("Design-build", "Integrated architecture and engineering that cuts schedule by an average of 22%.", "Sparkles"), ("Pre-construction", "Constructability reviews, 4D scheduling and budgets accurate to ±3% at 60% design.", "Star"), ("Industrial & tilt-up", "Warehouses, distribution centres and plants up to 800,000 sq ft.", "Globe"), ("Institutional", "Schools, hospitals and civic buildings with occupied-site phasing.", "Heart"), ("Renovation & tenant fit-out", "Fast-track interior work with after-hours crews and dust control.", "Zap")]),
+  services=("Services", "One accountable partner from pre-construction to turnover.", [("General contracting", "Lump-sum and CM-at-risk delivery with self-performed concrete and carpentry.", "Shield"), ("Design-build", "Integrated architecture and engineering that cuts schedule by an average of 22%.", "Sparkles"), ("Pre-construction", "Constructability reviews, 4D scheduling and budgets accurate to ±3% at 60% design.", "Star"), ("Industrial & tilt-up", "Warehouses, distribution centres and plants up to 800,000 sq ft.", "Globe"), ("Institutional", "Schools, hospitals and civic buildings with occupied-site phasing.", "Heart"), ("Renovation & client fit-out", "Fast-track interior work with after-hours crews and dust control.", "Zap")]),
   safety=("Safety Record", [("m", "2021", "v", 1.9), ("m", "2022", "v", 1.4), ("m", "2023", "v", 0.9), ("m", "2024", "v", 0.6), ("m", "2025", "v", 0.4)], "Total Recordable Incident Rate (TRIR) per 200,000 hours — industry average is 2.5."),
   certs=("Certifications", ["ISO 45001", "COR™ Certified", "LEED AP on staff", "Gold Seal Certified", "CCA Member", "Bonded to $50M"]),
   stats=[("$1.2B", "Completed since 1987"), ("0.4", "TRIR (industry avg 2.5)"), ("94%", "Projects delivered early or on time"), ("312", "Craft & staff employees")],
   team=[("Frank Moretti", "President & CEO"), ("Denise Alvarez, P.Eng", "VP Operations"), ("Tom Nakamura", "Director of Safety"), ("Aisha Rahman", "Pre-construction Lead")],
   quotes=[("Ironbridge delivered our 240,000 sq ft distribution centre three weeks early and $410K under GMP. Their safety culture is the real thing — 190,000 hours without a recordable.", "Gary Lindqvist", "VP Real Estate, Northstar Logistics"), ("Renovating an operating hospital wing is surgery on a living patient. They phased it so well our nursing staff barely noticed.", "Dr. Helen Park", "COO, Lakeside Regional Hospital"), ("Third school we've built with them. Bid accuracy, transparent change orders, no surprises.", "Marcus Bell", "Facilities Director, District 41")],
   quote=("Request a Quote", "Send us your drawings or a project brief. A pre-construction manager will respond within one business day with a scope review and budget range.", "Request a quote"),
-  faq=[("What project sizes do you take on?", "$2M to $150M, from tenant fit-outs to full campus builds."), ("Do you self-perform any trades?", "Yes — concrete, formwork, rough carpentry and site services, which lets us control the critical path."), ("Are you bonded?", "Bonded to $50M single / $150M aggregate through Travelers.")],
+  faq=[("What project sizes do you take on?", "$2M to $150M, from client fit-outs to full campus builds."), ("Do you self-perform any trades?", "Yes — concrete, formwork, rough carpentry and site services, which lets us control the critical path."), ("Are you bonded?", "Bonded to $50M single / $150M aggregate through Travelers.")],
   about=("Three generations. One standard.", "Salvatore Moretti poured his first foundation in 1987 with a crew of six. His son Frank runs the company today with 312 employees and the same rule painted on every job trailer: nobody gets hurt building this. That standard has produced a TRIR six times better than the industry average and clients who have stayed with us for decades."),
   email="bids@ironbridgecg.com", phone="+1 (312) 555-0170", address="1800 W Fulton St, Chicago, IL"),
 
@@ -273,7 +273,7 @@ NICHES = {
   cta="Get a free IT audit", cta2="See our SLA", hero=img("photo-1558494949-ef010cbdcc31"), video=YT.format("managed+service+provider+security+operations+center"),
   gallery=["photo-1551288049-bebda4e38f71", "photo-1573164713714-d95e436ab8d6", "photo-1518770660439-4636190af475", "photo-1544197150-b99a580bb7a8", "photo-1531482615713-2afd69097998", "photo-1563986768609-322da13575f2"],
   sections=["solutions", "technologies", "cases", "sla", "stats", "video", "testimonials", "audit", "faq"],
-  solutions=("Solutions", "Everything a modern business needs to run securely.", [("Managed IT", "Unlimited helpdesk, patching, backups and on-site support for one flat monthly fee per user.", "Shield"), ("Cybersecurity (MDR)", "24/7 SOC with EDR, SIEM and human threat hunting. Mean time to contain: 11 minutes.", "Zap"), ("Cloud & Microsoft 365", "Migration, tenant hardening and licence optimization — most clients save 18% on M365.", "Globe"), ("Compliance", "SOC 2, HIPAA, PCI and CMMC readiness with evidence collection automated.", "Star"), ("Backup & DR", "Immutable backups tested monthly; 4-hour recovery time objective, guaranteed.", "Heart"), ("vCIO strategy", "Quarterly roadmap and budget planning with a fractional CIO.", "Sparkles")]),
+  solutions=("Solutions", "Everything a modern business needs to run securely.", [("Managed IT", "Unlimited helpdesk, patching, backups and on-site support for one flat monthly fee per user.", "Shield"), ("Cybersecurity (MDR)", "24/7 SOC with EDR, SIEM and human threat hunting. Mean time to contain: 11 minutes.", "Zap"), ("Cloud & Microsoft 365", "Migration, client hardening and licence optimization — most clients save 18% on M365.", "Globe"), ("Compliance", "SOC 2, HIPAA, PCI and CMMC readiness with evidence collection automated.", "Star"), ("Backup & DR", "Immutable backups tested monthly; 4-hour recovery time objective, guaranteed.", "Heart"), ("vCIO strategy", "Quarterly roadmap and budget planning with a fractional CIO.", "Sparkles")]),
   technologies=("Technologies", ["Microsoft 365", "Azure", "AWS", "CrowdStrike", "SentinelOne", "Fortinet", "Cisco Meraki", "Datto", "KnowBe4", "Okta"]),
   cases=("Case Studies", [("A 180-person law firm was hit by ransomware at 2:14 AM. Our SOC isolated the endpoint in 9 minutes; zero data loss, zero downtime by morning.", "Lindsay Carter", "Managing Partner, Carter & Associates LLP"), ("Migrated 340 users from on-prem Exchange to M365 over one weekend. Monday morning ticket volume: three.", "Ahmed Siddiqui", "COO, Prairie Logistics"), ("Passed our first SOC 2 Type II audit with zero exceptions, eleven weeks after engaging Vantage Point.", "Nina Rossi", "CTO, Ledgerly")]),
   sla=("SLA Guarantee", "15-minute response, 4-hour resolution on priority-1 issues, 99.9% uptime on managed infrastructure — or we credit 10% of that month's invoice. Automatically.", "Read the full SLA"),
@@ -478,8 +478,44 @@ def _sec(n, key, i, brand):
     return None
 
 
+def blocks_for_types(types, niche_key, brand="", page_name="", mk_id=None):
+    """Build a page from a list of block types using that niche's own copy, so an applied
+    section set lands on-brand. Styling comes from the client's theme, never from here."""
+    n = NICHES.get(niche_key) or NICHES["hvac"]
+    brand = brand or n["brand"]
+    first = lambda *keys: next((k for k in keys if n.get(k)), None)
+    out = []
+    for i, t in enumerate(types):
+        blk = None
+        if t == "hero":
+            blk = _blk("hero", {"variant": "centered" if i == 0 else "left",
+                                "badge": n["industry"], "title": page_name or n["title"],
+                                "subtitle": n["sub"], "cta": n["cta"], "image": n["hero"]},
+                       "default", "center", "lg", hover=False)
+        elif t == "text":
+            blk = _blk("text", {"heading": f"About {brand}", "body": n["story"] if isinstance(n.get("story"), str) else n["sub"]},
+                       "muted" if i % 2 else "default")
+        elif t == "features":
+            blk = _sec(n, first("services", "solutions", "amenities", "whyus", "categories", "schedule", "dining") or "services", i, brand)
+        elif t == "pricing":
+            blk = _sec(n, first("plans", "offers", "rooms") or "plans", i, brand)
+        elif t in ("stats", "team", "testimonials", "gallery", "faq"):
+            blk = _sec(n, t, i, brand)
+        elif t == "contact":
+            blk = _blk("contact", {"heading": "Get in touch", "subtitle": "Tell us what you need and we will come back today.",
+                                   "email": n["email"], "phone": n["phone"], "address": n["address"]},
+                       "muted" if i % 2 else "default")
+        elif t == "cta":
+            blk = _sec(n, "cta", i, brand)
+        if blk:
+            if mk_id:
+                blk["id"] = mk_id("blk")
+            out.append(blk)
+    return out
+
+
 def extract_brand(app, pages):
-    """Real tenant brand data to preserve over sample pack values (pack samples are never treated as real)."""
+    """Real client brand data to preserve over sample pack values (pack samples are never treated as real)."""
     samples = {v[k] for v in NICHES.values() for k in ("email", "phone", "address", "brand")}
     placeholder = lambda v: not v or v in samples or "example.com" in str(v).lower() or str(v).lower().startswith("hello@yourbrand")
     prof = app.get("brand_profile") or {}
@@ -546,7 +582,7 @@ async def apply_premium(db, app, niche_key=None):
 
 
 async def migrate_all(db):
-    """Retroactively redesign every tenant site once (premium_site_v=3)."""
+    """Retroactively redesign every client site once (premium_site_v=3)."""
     n = 0
     async for app in db.apps.find({"premium_site_v": {"$ne": 3}}, {"_id": 0}):
         await apply_premium(db, app)

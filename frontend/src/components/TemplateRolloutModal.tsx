@@ -12,7 +12,7 @@ export default function TemplateRolloutModal({ template, onClose, onDone }) {
     setBusy(true);
     try {
       const { data } = await api.post(`/templates/${template.key}/rollout`, { confirm: word });
-      toast.success(`Changes successfully applied to all tenants. (${data.tenants_updated} using ${template.key})`);
+      toast.success(`Changes successfully applied to all clients. (${data.tenants_updated} using ${template.key})`);
       onDone?.();
       onClose();
     } catch (e) {
@@ -23,7 +23,7 @@ export default function TemplateRolloutModal({ template, onClose, onDone }) {
   async function discard() {
     try {
       await api.post(`/templates/${template.key}/discard`);
-      toast.info("Pending change discarded — live tenants keep their current design");
+      toast.info("Pending change discarded — live clients keep their current design");
       onDone?.();
       onClose();
     } catch (e) { toast.error(e.response?.data?.detail || "Could not discard"); }
@@ -37,7 +37,7 @@ export default function TemplateRolloutModal({ template, onClose, onDone }) {
           <div>
             <div className="overline">Template rollout</div>
             <h3 className="font-display text-xl font-semibold tracking-tight mt-1">
-              Push to all tenants using “{template.brand || template.key}”
+              Push to all clients using “{template.brand || template.key}”
             </h3>
           </div>
           <button data-testid="template-rollout-close" onClick={onClose} className="btn-ghost !p-2"><X size={15} /></button>
@@ -45,12 +45,12 @@ export default function TemplateRolloutModal({ template, onClose, onDone }) {
 
         <div className="mt-4 text-sm text-[var(--mut)]">
           This applies the current design of the <b>{template.key}</b> template to
-          {" "}<b>{template.tenants_using ?? 0}</b> live tenant(s) using it. Their content is untouched.
+          {" "}<b>{template.tenants_using ?? 0}</b> live client(s) using it. Their content is untouched.
         </div>
 
         <div className="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/30 text-sm text-amber-200 flex items-start gap-2">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-          Are you sure you want to apply all current Test Lab settings to all active tenants? This cannot be undone.
+          Are you sure you want to apply all current Test Lab settings to all active clients? This cannot be undone.
         </div>
 
         <label className="block mt-4">

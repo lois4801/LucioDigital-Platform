@@ -28,9 +28,9 @@ export default function TestLabLanding() {
   useEffect(() => {
     Promise.all([api.get("/public/landing/tenants"), api.get("/public/landing/templates")])
       .then(([t, n]) => {
-        const tenants = t.data.tenants || [];
+        const clients = t.data.tenants || [];
         setTemplates(n.data.templates || []);
-        setStats({ tenants: tenants.length, templates: (n.data.templates || []).length, live: tenants.filter(x => x.status === "LIVE").length });
+        setStats({ tenants: clients.length, templates: (n.data.templates || []).length, live: clients.filter(x => x.status === "LIVE").length });
       }).catch(() => {});
   }, []);
 
@@ -55,7 +55,7 @@ export default function TestLabLanding() {
           <span className="font-display font-semibold tracking-tight text-lg whitespace-nowrap">Lois-<span className="text-[var(--ed-lime)]">Tech</span></span>
         </Link>
         <nav className="hidden md:flex items-center gap-7 text-sm text-white/50 ml-auto">
-          {["Work", "Platform", "Pricing"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
+          {["Work", "Platform"].map(l => <a key={l} href={`#${l.toLowerCase()}`} className="hover:text-white transition-colors">{l}</a>)}
           <Link to="/work" className="hover:text-white transition-colors">Client work</Link>
           {/* Always available: unauthenticated visitors are sent to sign-in by the route guard. */}
           <Link to="/dashboard" data-testid="nav-dashboard-link" className="text-[var(--ed-lime)] hover:text-white transition-colors">Dashboard</Link>
@@ -89,7 +89,7 @@ export default function TestLabLanding() {
             className="mt-6 font-display font-extrabold tracking-[-0.03em] leading-[1.02] text-[2.6rem] sm:text-6xl lg:text-7xl" />
           <Reveal i={2} className="mt-7 max-w-xl mx-auto md:mx-0">
             <p className="text-base sm:text-lg text-white/45 leading-relaxed">
-              Spin up tenants, design with drag-and-drop and AI, bill monthly, and ship to your client's own domain.
+              Spin up clients, design with drag-and-drop and AI, bill monthly, and ship to your client's own domain.
             </p>
           </Reveal>
           <Reveal i={3} className="mt-9 flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
@@ -104,7 +104,7 @@ export default function TestLabLanding() {
           </Reveal>
 
           <div className="mt-14 grid grid-cols-3 gap-4 sm:gap-8 max-w-lg mx-auto md:mx-0" data-testid="hero-stats">
-            {[["Tenants created", stats.tenants], ["Templates ready", stats.templates], ["Live clients", stats.live]].map(([label, value], i) => (
+            {[["Clients created", stats.tenants], ["Templates ready", stats.templates], ["Live clients", stats.live]].map(([label, value], i) => (
               <Reveal key={label} i={i} className="text-center md:text-left">
                 <div className="font-display text-3xl sm:text-4xl font-bold tracking-tight">
                   <Counter to={Number(value)} testid={`hero-stat-${i}`} />
@@ -130,7 +130,7 @@ export default function TestLabLanding() {
         </div>
       </section>
 
-      {/* ── Work / tenant table ────────────────────────────────────── */}
+      {/* ── Work / client table ────────────────────────────────────── */}
       <section id="work" className="relative z-10 px-6 sm:px-10 py-24 sm:py-32 border-t border-white/[0.07]" data-testid="work-section">
         <div className="max-w-7xl mx-auto">
           <span className="ed-pill">Selected work</span>
@@ -158,38 +158,13 @@ export default function TestLabLanding() {
         </div>
       </section>
 
-      {/* ── Pricing rows ───────────────────────────────────────────── */}
-      <section id="pricing" className="relative z-10 px-6 sm:px-10 py-24 sm:py-32 border-t border-white/[0.07]" data-testid="pricing-section">
-        <div className="max-w-5xl mx-auto">
-          <span className="ed-pill">Pricing</span>
-          <HeadingWipe testid="pricing-heading" className="mt-5 font-display text-3xl sm:text-5xl font-bold tracking-[-0.03em]">
-            Bill your clients, not your patience.
-          </HeadingWipe>
-          <div className="mt-12 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-            {[["Starter", "$29", "1 hosted tenant", false], ["Pro", "$99", "10 tenants + AI media", true], ["Scale", "$299", "Unlimited + SLA", false]].map(([n, p, d, hot], i) => (
-              <Reveal key={n} i={i}>
-                <div data-testid={`pricing-row-${i}`} className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 py-6 transition-colors hover:bg-white/[0.02] px-1">
-                  <div className="sm:w-40 font-display text-xl font-semibold flex items-center gap-3">
-                    {n} {hot && <span className="ed-pill" style={{ color: "var(--ed-orange)", borderColor: "var(--ed-orange)" }}>Popular</span>}
-                  </div>
-                  <div className="sm:w-32 font-mono text-2xl">{p}<span className="text-xs text-white/35">/mo</span></div>
-                  <div className="flex-1 text-sm text-white/45">{d}</div>
-                  <button data-testid={`pricing-cta-${i}`} onClick={() => nav("/register")}
-                    className={`ed-cta rounded-full py-2.5 text-sm font-semibold ${hot ? "bg-[var(--ed-lime)] text-black" : "border border-white/15 hover:border-white/35"}`}>
-                    Get started
-                  </button>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── Close ──────────────────────────────────────────────────── */}
 
       {/* Reviews from the agencies, studios and freelancers shipping on LucioDigital */}
       {platformReviews.length > 0 && (
         <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
           <ReviewsSection reviews={platformReviews} limeLock
-            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on tenant management, template speed, motion quality and client handoff." }} />
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, template speed, motion quality and client handoff." }} />
         </div>
       )}
 

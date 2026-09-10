@@ -18,7 +18,7 @@ const slotHour = (slot) => {
 
 const BLANK = { name: "", email: "", phone: "", service: "", date: "", slot: "09:00", duration_min: 60, notes: "", notify: true };
 
-/** Week / day / month calendar of every booking for a tenant, with admin create, edit and cancel. */
+/** Week / day / month calendar of every booking for a client, with admin create, edit and cancel. */
 export default function BookingsCalendar({ appId, token }) {
   const [rows, setRows] = useState([]);
   const [view, setView] = useState("week");

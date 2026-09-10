@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Star, GripVertical, ChevronDown, ExternalLink } from "lucide-react";
 
-/** Star tenants for the public landing page and drag them into the order you want. */
+/** Star clients for the public landing page and drag them into the order you want. */
 export default function ShowcaseManager({ apps, onChange }) {
   const [open, setOpen] = useState(false);
   const [drag, setDrag] = useState(null);
@@ -37,7 +37,7 @@ export default function ShowcaseManager({ apps, onChange }) {
     try {
       await api.patch(`/apps/${a.app_id}/showcase`, { featured: false });
       onChange(apps.map(x => x.app_id === a.app_id ? { ...x, featured: false } : x));
-    } catch { toast.error("Could not update that tenant"); }
+    } catch { toast.error("Could not update that client"); }
   }
 
   return (
@@ -48,8 +48,8 @@ export default function ShowcaseManager({ apps, onChange }) {
           <div className="text-sm font-semibold">Landing page showcase</div>
           <div className="text-[11px] text-[var(--mut)]">
             {featured.length === 0
-              ? "No tenants starred — the landing page shows your newest tenants. Star the ones you want to feature."
-              : `${featured.length} starred tenant${featured.length === 1 ? "" : "s"} on the landing page · drag to reorder`}
+              ? "No clients starred — the landing page shows your newest clients. Star the ones you want to feature."
+              : `${featured.length} starred client${featured.length === 1 ? "" : "s"} on the landing page · drag to reorder`}
           </div>
         </div>
         {saving && <span className="text-[10px] font-mono text-[var(--mut)]">saving…</span>}
@@ -59,7 +59,7 @@ export default function ShowcaseManager({ apps, onChange }) {
       {open && (
         <div className="mt-4 pt-4 border-t border-[var(--line)] space-y-2">
           {featured.length === 0 && (
-            <div className="text-xs text-[var(--mut)]">Click the star on any tenant card below to feature it here.</div>
+            <div className="text-xs text-[var(--mut)]">Click the star on any client card below to feature it here.</div>
           )}
           {featured.map((a, i) => (
             <div key={a.app_id} data-testid={`showcase-order-row-${a.app_id}`}

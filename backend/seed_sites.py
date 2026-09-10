@@ -137,7 +137,7 @@ async def reseed_demo_sites(db, owner_id):
         if not app or app.get("demo_site_v") == 2:
             continue
         if await db.pages.count_documents({"app_id": app["app_id"]}) > 0:
-            continue  # never overwrite a tenant that already has saved pages
+            continue  # never overwrite a client that already has saved pages
         for i, (pname, slug, blocks) in enumerate(build_pages(name, n)):
             await db.pages.insert_one({"page_id": _id("pg"), "app_id": app["app_id"], "name": pname, "slug": slug, "order": i, "blocks": blocks, "updated_at": _now()})
         await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"theme": n["theme"], "kind": n["kind"], "demo_site_v": 2, "thumbnail": n["hero_img"], "video_url": n["video"],

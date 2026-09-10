@@ -26,7 +26,7 @@ export function BoxAnimPreview({ anim, accent, speed = 1, stagger = 90 }) {
   );
 }
 
-/** Entrance animation, speed, stagger and per-section overrides for one tenant.
+/** Entrance animation, speed, stagger and per-section overrides for one client.
  *  Shared by the agency Site Mode panel and the client portal. */
 export default function AnimationControls({ appId, accent = "#10B981", onSaved = () => {}, compact = false }) {
   const [sm, setSm] = useState<any>(null);

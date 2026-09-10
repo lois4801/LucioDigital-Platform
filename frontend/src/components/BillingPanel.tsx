@@ -97,7 +97,7 @@ export default function BillingPanel({ appDoc }) {
 
           <div className="card-surface p-5">
             <div className="overline mb-3 flex items-center gap-2"><Receipt size={12} className="text-[var(--acc)]" /> Transactions</div>
-            {tx.length === 0 ? <div className="text-xs text-[var(--mut)]">No charges yet for this tenant.</div> : (
+            {tx.length === 0 ? <div className="text-xs text-[var(--mut)]">No charges yet for this client.</div> : (
               <div className="space-y-2">
                 {tx.map(t => (
                   <div key={t.session_id} data-testid="billing-transaction-row" className="flex items-center justify-between text-xs">

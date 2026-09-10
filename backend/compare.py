@@ -53,7 +53,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, new_message=
         if not before and not body.before_image:
             raise HTTPException(400, "Add the prospect's current website address so we can capture the 'before' shot")
         if not doc.get("preview_token"):
-            raise HTTPException(409, "Turn on the live preview link for this tenant first")
+            raise HTTPException(409, "Turn on the live preview link for this client first")
         existing = await db.compare_links.find_one({"app_id": app_id}, {"_id": 0})
         code = existing["code"] if existing else secrets.token_urlsafe(9)
         row = {"code": code, "app_id": app_id, "before_url": before,

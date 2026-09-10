@@ -171,7 +171,7 @@ export function WebImportDialog({ appId, open, onOpenChange, onDone }) {
       } catch (e) { toast.error(`${f.name}: ${e.response?.data?.detail || "upload failed"}`); }
     }
     setUploading(false);
-    toast.success("Added to this tenant's media library — pick them from any image or video block");
+    toast.success("Added to this client's media library — pick them from any image or video block");
   }
 
   return (

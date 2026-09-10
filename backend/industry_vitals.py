@@ -1,4 +1,4 @@
-"""Per-template vitals: unique positive figures + two chart series each, editable per tenant,
+"""Per-template vitals: unique positive figures + two chart series each, editable per client,
 CSV / Excel import. Every one of the 33 templates has its own bespoke entry — nothing is generic."""
 import csv
 import io

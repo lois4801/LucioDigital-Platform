@@ -33,7 +33,7 @@ export default function HeroGallery() {
   const [sent, setSent] = useState("");
 
   // admin-only state
-  const [tenants, setTenants] = useState([]);
+  const [clients, setClients] = useState([]);
   const [templates, setTemplates] = useState([]);
   const [tplTarget, setTplTarget] = useState("");
   const [target, setTarget] = useState("");
@@ -65,7 +65,7 @@ export default function HeroGallery() {
     }).catch(() => {});
     api.get("/apps").then(r => {
       const list = r.data.apps || r.data || [];
-      setTenants(list);
+      setClients(list);
       if (list[0]) setTarget(list[0].app_id);
     }).catch(() => {});
     api.get("/motion-picks").then(r => setPicks(r.data.picks || [])).catch(() => {});
@@ -103,13 +103,13 @@ export default function HeroGallery() {
   }
 
   async function apply(hero, opts: { speed?: number; intensity?: number } = {}) {
-    if (!target) return toast.error("Pick a tenant first");
+    if (!target) return toast.error("Pick a client first");
     const sp = opts.speed ?? speed, it = opts.intensity ?? intensity;
     setApplying(hero);
     try {
       await api.put(`/apps/${target}/site-mode`, { hero, style: "editorial", motion_speed: sp, motion_intensity: it });
       setCurrent(hero); setSpeed(sp); setIntensity(it);
-      toast.success(`${hero} applied to ${tenants.find(t => t.app_id === target)?.name} · ${sp.toFixed(2)}x`);
+      toast.success(`${hero} applied to ${clients.find(t => t.app_id === target)?.name} · ${sp.toFixed(2)}x`);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not apply that hero");
     } finally { setApplying(""); }
@@ -120,7 +120,7 @@ export default function HeroGallery() {
     setApplying(hero);
     try {
       const { data } = await api.put(`/editorial/templates/${tplTarget}/hero`, { hero, apply_to_tenants: true });
-      toast.success(`${tplTarget}: ${data.previous} → ${hero}${data.tenants_updated.length ? ` · ${data.tenants_updated.length} tenant(s) updated` : ""}`);
+      toast.success(`${tplTarget}: ${data.previous} → ${hero}${data.tenants_updated.length ? ` · ${data.tenants_updated.length} client(s) updated` : ""}`);
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not update the template");
     } finally { setApplying(""); }
@@ -172,9 +172,9 @@ export default function HeroGallery() {
                   className={`chip cursor-pointer inline-flex items-center gap-1 ${showPicks ? "chip-active" : "hover:!text-white"}`}>
                   <Inbox size={11} /> Client picks {picks.length ? `(${picks.length})` : ""}
                 </button>
-                <select data-testid="hero-gallery-tenant" value={target} onChange={e => setTarget(e.target.value)}
+                <select data-testid="hero-gallery-client" value={target} onChange={e => setTarget(e.target.value)}
                   className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-white/30">
-                  {tenants.map(t => <option key={t.app_id} value={t.app_id}>{t.name}</option>)}
+                  {clients.map(t => <option key={t.app_id} value={t.app_id}>{t.name}</option>)}
                 </select>
                 <select data-testid="hero-gallery-template" value={tplTarget} onChange={e => setTplTarget(e.target.value)}
                   className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm outline-none focus:border-white/30">
@@ -222,7 +222,7 @@ export default function HeroGallery() {
                     <span className="chip ml-auto">{Number(p.speed || 1).toFixed(2)}x · {Number(p.intensity || 1).toFixed(2)}</span>
                     <button data-testid={`hero-pick-apply-${p.pick_id}`}
                       onClick={() => apply(p.hero, { speed: Number(p.speed) || 1, intensity: Number(p.intensity) || 1 })}
-                      className="chip cursor-pointer hover:!text-white">Apply to tenant</button>
+                      className="chip cursor-pointer hover:!text-white">Apply to client</button>
                   </li>
                 ))}
               </ul>}
@@ -265,8 +265,8 @@ export default function HeroGallery() {
                 </div>
                 <div className="mt-3 flex items-center gap-1.5 flex-wrap">
                   <span className="chip" data-testid={`motion-template-badge-${r.hero}`}>TEMPLATE{r.template_key ? ` · ${r.template_key}` : ""}</span>
-                  <span className="chip" data-testid={`motion-tenant-badge-${r.hero}`}>
-                    {r.tenant_count ? `Tenant · ${r.tenants[0]}${r.tenant_count > 1 ? ` +${r.tenant_count - 1}` : ""}` : "Tenant · none yet"}
+                  <span className="chip" data-testid={`motion-client-badge-${r.hero}`}>
+                    {r.tenant_count ? `Client · ${r.tenants[0]}${r.tenant_count > 1 ? ` +${r.tenant_count - 1}` : ""}` : "Client · none yet"}
                   </span>
                   <div className="ml-auto flex items-center gap-1.5">
                     {isAdmin ? (
@@ -276,7 +276,7 @@ export default function HeroGallery() {
                         <button data-testid={`hero-apply-${r.hero}`} disabled={applying === r.hero || current === r.hero} onClick={() => apply(r.hero)}
                           className={`text-xs !py-2 !px-3 rounded-full inline-flex items-center gap-1.5 cursor-pointer ${current === r.hero ? "chip chip-active" : "bg-white text-black font-semibold hover:bg-white/85"} disabled:opacity-70`}>
                           {applying === r.hero ? <Loader2 size={11} className="animate-spin" /> : current === r.hero ? <Check size={11} /> : null}
-                          {current === r.hero ? "Active" : "Tenant"}
+                          {current === r.hero ? "Active" : "Client"}
                         </button>
                       </>
                     ) : (

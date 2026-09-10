@@ -35,7 +35,7 @@ export function UiLabelsProvider({ appId, children }) {
     if (!Object.keys(labels).length && !Object.keys(styles).length) { toast.info("Nothing to apply — edit some labels first."); return; }
     const { data } = await api.put(`/apps/${appId}/ui_labels`, { labels, styles, scope: "global" });
     setState(s => ({ ...s, ...data }));
-    toast.success("Applied to all tenants");
+    toast.success("Applied to all clients");
   }, [appId, state.tenant, state.tenant_styles]);
 
   return <Ctx.Provider value={{ ...state, save, saveStyle, reset, applyAllTenants }}>{children}</Ctx.Provider>;
@@ -72,9 +72,9 @@ export function UiLabelsToolbar() {
     <div data-testid="ui-labels-toolbar" className="flex flex-wrap items-center gap-2 justify-end">
       <span className="text-xs text-[var(--dim)] mr-auto">Click any label to rename it, pick a font or colour · Ctrl+Z undoes while typing. The Overview title and summary follow Site Mode and can't be renamed here.</span>
       <button data-testid="ui-labels-apply-all-btn" onClick={applyAllTenants}
-        className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Globe2 size={12} /> Apply to all tenants</button>
+        className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5"><Globe2 size={12} /> Apply to all clients</button>
       <button data-testid="ui-labels-reset-btn"
-        onClick={async () => { if (!confirm("Reset all label edits for this tenant back to defaults?")) return; try { await reset("tenant"); toast.success("Reset to defaults"); } catch { toast.error("Reset failed"); } }}
+        onClick={async () => { if (!confirm("Reset all label edits for this client back to defaults?")) return; try { await reset("tenant"); toast.success("Reset to defaults"); } catch { toast.error("Reset failed"); } }}
         className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5"><RotateCcw size={12} /> Reset all</button>
     </div>
   );

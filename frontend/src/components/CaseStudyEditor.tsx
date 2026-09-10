@@ -5,7 +5,7 @@ import api from "@/lib/api";
 
 const field = "w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]";
 
-// Admin editor for a tenant's case study: copy, screenshots, metrics, quote, draft/published.
+// Admin editor for a client's case study: copy, screenshots, metrics, quote, draft/published.
 export default function CaseStudyEditor({ appId, appName, open, onClose, onSaved }) {
   const [cs, setCs] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -28,7 +28,7 @@ export default function CaseStudyEditor({ appId, appName, open, onClose, onSaved
     try {
       const { data } = await api.post(`/apps/${appId}/case-study/sync-metrics`);
       setCs(c => ({ ...c, stats: data.stats }));
-      toast.success("Pulled this tenant's real leads, pages and days live");
+      toast.success("Pulled this client's real leads, pages and days live");
     } catch (e) {
       toast.error(e.response?.data?.detail || "Could not sync metrics");
     } finally { setBusy(false); }
@@ -111,7 +111,7 @@ export default function CaseStudyEditor({ appId, appName, open, onClose, onSaved
             <div>
               <span className="overline block mb-2">Results — three metrics</span>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-[var(--mut)]">Type them, or pull this tenant's real numbers.</span>
+                <span className="text-xs text-[var(--mut)]">Type them, or pull this client's real numbers.</span>
                 <button data-testid="cs-sync-metrics" disabled={busy} onClick={syncMetrics}
                   className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1 disabled:opacity-60">
                   <RefreshCw size={11} /> Sync real metrics

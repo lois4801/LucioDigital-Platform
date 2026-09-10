@@ -1,12 +1,12 @@
-"""Test Lab tenant + controlled global rollout.
+"""Test Lab client + controlled global rollout.
 
-Permanent platform rule: every design/behaviour change lands on the Test Lab tenant only. It reaches
-live tenants exclusively when a rollout admin clicks "Push to All Tenants" and confirms.
+Permanent platform rule: every design/behaviour change lands on the Test Lab client only. It reaches
+live clients exclusively when a rollout admin clicks "Push to All Clients" and confirms.
 
-  - ensure_test_lab()          one protected tenant, preloaded with every template layout
+  - ensure_test_lab()          one protected client, preloaded with every template layout
   - mark_template_states()     detects template design changes and parks them as "pending"
   - /api/test-lab/*            preview, rollout (scoped, background, snapshotted), job progress
-  - /api/templates/*/rollout   per-template push to the tenants using that template
+  - /api/templates/*/rollout   per-template push to the clients using that template
 """
 import asyncio
 import hashlib
@@ -41,7 +41,7 @@ MOTION_KEYS = ("motion", "cursor")
 APP_MOTION_KEYS = ("cursor_effect", "cursor_density", "cursor_speed")
 
 # Diff rows: (change_id, category, human label, source, field)
-#   source "theme" = tenant.theme[field] · "app" = tenant[field]
+#   source "theme" = client.theme[field] · "app" = client[field]
 DIFF_FIELDS = [
     ("design.mode", "Design", "Light / dark mode", "theme", "mode"),
     ("design.primary", "Design", "Primary colour", "theme", "primary"),
@@ -88,9 +88,9 @@ def _look_hash(key: str) -> str:
     return hashlib.sha256(json.dumps(LOOKS.get(key) or {}, sort_keys=True, default=str).encode()).hexdigest()[:16]
 
 
-# ---------- Test Lab tenant ----------
+# ---------- Test Lab client ----------
 async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
-    """Idempotent. Creates the protected Test Lab tenant and preloads one page per template."""
+    """Idempotent. Creates the protected Test Lab client and preloads one page per template."""
     from site_content import LOOKS, NICHES, build_premium_site, theme_for
     doc = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})
     if not doc:
@@ -98,7 +98,7 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
             "app_id": TEST_LAB_ID, "owner_id": owner_id, "name": TEST_LAB_NAME,
             "industry": "Internal Tools", "kind": "website",
             "description": "The live master workspace. Every design, motion and content change made "
-                           "here applies instantly to its template and to every active tenant.",
+                           "here applies instantly to its template and to every active client.",
             "status": "active", "tags": ["internal tools", "website"], "color": "#22D3EE",
             "is_test_lab": True, "protected": True, "archived": False, "transfer_mode": False,
             "theme": theme_for(NICHES["saas"], "saas") if "saas" in LOOKS else {},
@@ -108,7 +108,7 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
         }
         await db.apps.insert_one(dict(doc))
         doc.pop("_id", None)
-        logger.info("Test Lab tenant created")
+        logger.info("Test Lab client created")
     else:
         await db.apps.update_one({"app_id": TEST_LAB_ID},
                                  {"$set": {"name": TEST_LAB_NAME, "is_test_lab": True,
@@ -117,7 +117,7 @@ async def ensure_test_lab(db, owner_id: str, build_pages=None) -> dict:
                                            "tags": ["internal tools", "website"],
                                            "description": "The live master workspace. Every design, motion and "
                                                           "content change made here applies instantly to its "
-                                                          "template and to every active tenant."}})
+                                                          "template and to every active client."}})
 
     existing = {p.get("template_key") for p in
                 await db.pages.find({"app_id": TEST_LAB_ID}, {"_id": 0, "template_key": 1}).to_list(200)}
@@ -152,7 +152,7 @@ STAGING_NAME = "Rollout Target Demo"
 
 
 async def ensure_staging_tenant(db, owner_id: str) -> dict:
-    """The permanent staging tenant: a real environment the admin can push to before going live.
+    """The permanent staging client: a real environment the admin can push to before going live.
     Never modified automatically — only by an explicit Push to Staging."""
     doc = await db.apps.find_one({"is_staging": True}, {"_id": 0})
     if not doc:
@@ -166,7 +166,7 @@ async def ensure_staging_tenant(db, owner_id: str) -> dict:
     doc = {
         "app_id": _uid("app"), "owner_id": owner_id, "name": STAGING_NAME,
         "industry": NICHES[key]["industry"], "kind": "website",
-        "description": "Staging tenant — the final real-environment check before pushing to live tenants.",
+        "description": "Staging client — the final real-environment check before pushing to live clients.",
         "status": "active", "tags": ["staging"], "color": "#F97316",
         "is_staging": True, "protected": True, "archived": False,
         "theme": theme_for(NICHES[key], key), "site_niche": key, "premium_site_v": 3,
@@ -175,12 +175,12 @@ async def ensure_staging_tenant(db, owner_id: str) -> dict:
     }
     await db.apps.insert_one(dict(doc))
     doc.pop("_id", None)
-    logger.info("Staging tenant ready: %s", doc["app_id"])
+    logger.info("Staging client ready: %s", doc["app_id"])
     return doc
 
 
 async def retheme_test_lab_only(db) -> int:
-    """Startup maintenance now stops at the Test Lab — live tenants are never re-themed silently."""
+    """Startup maintenance now stops at the Test Lab — live clients are never re-themed silently."""
     from site_content import LOOKS, NICHES, theme_for
     doc = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0, "site_niche": 1, "theme": 1})
     if not doc:
@@ -207,7 +207,7 @@ async def mark_template_states(db) -> int:
 
 
 def _common(values: list):
-    """Most common live value + whether tenants disagree."""
+    """Most common live value + whether clients disagree."""
     from collections import Counter
     keyed = [json.dumps(v, sort_keys=True, default=str) for v in values]
     if not keyed:
@@ -217,7 +217,7 @@ def _common(values: list):
 
 
 async def build_diff(db, targets: list, lab: dict) -> dict:
-    """Aggregate diff between the Test Lab and every live tenant. Only real differences appear."""
+    """Aggregate diff between the Test Lab and every live client. Only real differences appear."""
     lab_theme = lab.get("theme") or {}
     rows = []
     for cid, cat, label, source, field in DIFF_FIELDS:
@@ -300,7 +300,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def _require_rollout_admin(user: dict) -> dict:
         email = (user.get("email") or "").lower().strip()
         if email not in await _rollout_admins():
-            raise HTTPException(403, "Only a rollout admin can push changes to all tenants")
+            raise HTTPException(403, "Only a rollout admin can push changes to all clients")
         return user
 
     def _check_confirm(word: str):
@@ -310,11 +310,11 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def _test_lab() -> dict:
         doc = await db.apps.find_one({"app_id": TEST_LAB_ID}, {"_id": 0})
         if not doc:
-            raise HTTPException(404, "Test Lab tenant is missing — restart the backend to recreate it")
+            raise HTTPException(404, "Test Lab client is missing — restart the backend to recreate it")
         return doc
 
     async def _targets(only: Optional[List[str]] = None) -> List[dict]:
-        # "All tenants" means live client tenants: the Test Lab and the staging tenant are only
+        # "All clients" means live client sites: the Test Lab and the staging client are only
         # ever reached through an explicit Push to Staging / Test Lab edit.
         q = {"app_id": {"$ne": TEST_LAB_ID}, "archived": {"$ne": True}, "is_staging": {"$ne": True}}
         if only:
@@ -328,7 +328,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def staging_tenant(user: dict = Depends(get_current_user)):
         doc = await db.apps.find_one({"is_staging": True}, {"_id": 0, "app_id": 1, "name": 1, "theme": 1})
         if not doc:
-            raise HTTPException(404, "No staging tenant configured — restart the backend to create it")
+            raise HTTPException(404, "No staging client configured — restart the backend to create it")
         return doc
 
     @api.post("/test-lab/run-test")
@@ -343,10 +343,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         diff = await build_diff(db, targets, lab)
         staging = await db.apps.find_one({"is_staging": True}, {"_id": 0, "app_id": 1, "name": 1})
         checks = [
-            {"name": "Test Lab tenant", "ok": bool(lab), "detail": lab.get("name")},
+            {"name": "Test Lab client", "ok": bool(lab), "detail": lab.get("name")},
             {"name": "Template pages loaded", "ok": pages > 0, "detail": f"{pages} page(s), {blocks} block(s)"},
-            {"name": "Staging tenant", "ok": bool(staging), "detail": (staging or {}).get("name", "missing")},
-            {"name": "Live tenants reachable", "ok": True, "detail": f"{len(targets)} live tenant(s)"},
+            {"name": "Staging client", "ok": bool(staging), "detail": (staging or {}).get("name", "missing")},
+            {"name": "Live clients reachable", "ok": True, "detail": f"{len(targets)} live client(s)"},
             {"name": "Unpushed Test Lab changes", "ok": True, "detail": f"{diff['total']} change(s) waiting"},
             {"name": "Forms configured", "ok": True,
              "detail": f"{await db.cta_forms.count_documents({'app_id': TEST_LAB_ID})} CTA form(s)"},
@@ -360,7 +360,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         return result
 
     def _patch_for(scopes: List[str], lab: dict, target: dict, changes: Optional[List[str]] = None) -> dict:
-        """The $set patch a single tenant receives. `changes` (from the Diff Viewer) wins when given."""
+        """The $set patch a single client receives. `changes` (from the Diff Viewer) wins when given."""
         lab_theme = lab.get("theme") or {}
         theme = dict(target.get("theme") or {})
         upd: dict = {}
@@ -450,10 +450,10 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         status = "failed" if failed and not changed else ("partial" if failed else "done")
         await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
             "status": status, "pct": 100, "finished_at": _now(),
-            "detail": f"Applied to {changed} of {len(targets)} tenant(s)"
+            "detail": f"Applied to {changed} of {len(targets)} client(s)"
                       + (f" · {failed} failed" if failed else "")}})
         await log_activity(TEST_LAB_ID, user["user_id"], "rollout.all",
-                           f"Pushed {len(picked) or len(scopes)} change(s) from the Test Lab to {changed} tenant(s)")
+                           f"Pushed {len(picked) or len(scopes)} change(s) from the Test Lab to {changed} client(s)")
 
     # ---------- Test Lab ----------
     @api.get("/test-lab")
@@ -591,7 +591,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             "undone_at": _now(), "undone_by": user.get("email"), "undo_pct": 100,
             "undo_total": len(snaps), "status_before_undo": "done", "status": "undone"}})
         await log_activity(TEST_LAB_ID, user["user_id"], "rollout.undo",
-                           f"Undid rollout {job_id} — restored {len(snaps)} tenant(s)")
+                           f"Undid rollout {job_id} — restored {len(snaps)} client(s)")
 
     @api.post("/test-lab/rollout/jobs/{job_id}/undo")
     async def undo_rollout(job_id: str, body: RolloutIn, user: dict = Depends(get_current_user)):
@@ -687,12 +687,12 @@ def register(api, db, get_current_user, get_user_app, log_activity):
                                                "updated_at": _now()}})
         await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
             "status": "done", "pct": 100, "done": len(targets), "changed": len(targets),
-            "finished_at": _now(), "detail": f"Applied to {len(targets)} tenant(s) using {key}"}})
+            "finished_at": _now(), "detail": f"Applied to {len(targets)} client(s) using {key}"}})
         await db.template_states.update_one({"key": key}, {"$set": {
             "key": key, "look_hash": _look_hash(key), "status": "live", "pending_hash": None,
             "last_pushed_at": _now(), "updated_at": _now()}}, upsert=True)
         await log_activity(TEST_LAB_ID, user["user_id"], "rollout.template",
-                           f"Pushed the {key} template design to {len(targets)} tenant(s)")
+                           f"Pushed the {key} template design to {len(targets)} client(s)")
         return {"ok": True, "key": key, "tenants_updated": len(targets), "job_id": job_id}
 
     @api.post("/templates/{key}/discard")

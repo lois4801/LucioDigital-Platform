@@ -89,7 +89,7 @@ export default function Dashboard() {
       setArchived(list => list.filter(x => x.app_id !== a.app_id));
       toast.success(`${a.name} restored with all its pages, leads and settings`);
       load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that client"); }
   }
   async function purgeTenant(a) {
     const s = a.snapshot || {};
@@ -99,7 +99,7 @@ export default function Dashboard() {
       await api.delete(`/apps/${a.app_id}/purge`);
       setArchived(list => list.filter(x => x.app_id !== a.app_id));
       toast.success(`${a.name} permanently deleted`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not delete that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not delete that client"); }
   }
   /** Delete = move to the 30-day trash. Nothing is erased: the site goes offline and everything
    *  (pages, leads, bookings, files) stays restorable for 30 days. */
@@ -114,7 +114,7 @@ export default function Dashboard() {
       loadTrash();
       load();
     } catch (e) {
-      toast.error(e.response?.data?.detail || "Could not delete that tenant");
+      toast.error(e.response?.data?.detail || "Could not delete that client");
     } finally { setDeleting(""); }
   }
   async function loadTrash() {
@@ -126,7 +126,7 @@ export default function Dashboard() {
       setTrash(list => list.filter(x => x.app_id !== t.app_id));
       toast.success(`${t.name} restored with all its pages and leads`);
       load();
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not restore that client"); }
   }
   async function eraseNow(t) {
     if (!window.confirm(`Erase ${t.name} forever? This removes ${t.pages || 0} page(s) and ${t.leads || 0} lead(s) and cannot be undone.`)) return;
@@ -134,7 +134,7 @@ export default function Dashboard() {
       await api.delete(`/apps/${t.app_id}/trash`);
       setTrash(list => list.filter(x => x.app_id !== t.app_id));
       toast.success(`${t.name} erased permanently`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not erase that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not erase that client"); }
   }
   async function ackPick(p) {
     try { await api.post(`/template-shares/${p.token}/ack`); setPicks(list => list.filter(x => x.token !== p.token)); }
@@ -156,14 +156,14 @@ export default function Dashboard() {
       setApps(list => list.filter(x => x.app_id !== a.app_id));
       loadArchived();
       toast.success(archiving ? `${a.name} archived — ${data.leads_kept} lead(s) kept in your inbox` : `${a.name} restored`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not archive that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not archive that client"); }
   }
   async function toggleFeatured(a) {
     try {
       const { data } = await api.patch(`/apps/${a.app_id}/showcase`, { featured: !a.featured });
       setApps(list => list.map(x => x.app_id === a.app_id ? { ...x, featured: data.featured, showcase_order: data.showcase_order } : x));
       toast.success(data.featured ? `${a.name} is now featured on the landing page` : `${a.name} removed from the landing page`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not update that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not update that client"); }
   }
 
   async function loadNotifs() {
@@ -313,11 +313,11 @@ export default function Dashboard() {
           <div>
             <div className="overline mb-2">Master Workspace</div>
             <motion.h1 initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: fast }} className="font-display text-4xl lg:text-5xl font-semibold tracking-tighter">Your agency, at a glance.</motion.h1>
-            <p className="text-[var(--mut)] mt-2">Every client tenant, live metrics, and one-click handoff — all from here.</p>
+            <p className="text-[var(--mut)] mt-2">Every client client, live metrics, and one-click handoff — all from here.</p>
           </div>
           <div className="grid grid-cols-4 gap-3 min-w-[420px]">
             {[
-              { k: "Tenants", v: counts.total, dot: "" },
+              { k: "Clients", v: counts.total, dot: "" },
               { k: "Active", v: counts.active, dot: "" },
               { k: "Maint.", v: counts.maintenance, dot: "amber" },
               { k: "Handover", v: counts.handover, dot: "cyan" },
@@ -343,7 +343,7 @@ export default function Dashboard() {
                   {p.client_note && <div className="text-xs text-[var(--mut)] mt-0.5">“{p.client_note}”</div>}
                 </div>
                 <div className="ml-auto flex items-center gap-2">
-                  <button data-testid={`client-pick-create-${p.token}`} onClick={() => nav("/templates")} className="btn-primary text-xs !py-1.5 !px-3">Create the tenant</button>
+                  <button data-testid={`client-pick-create-${p.token}`} onClick={() => nav("/templates")} className="btn-primary text-xs !py-1.5 !px-3">Create the client</button>
                   <button data-testid={`client-pick-dismiss-${p.token}`} onClick={() => ackPick(p)} className="btn-ghost text-xs !py-1.5 !px-3">Dismiss</button>
                 </div>
               </div>
@@ -357,7 +357,7 @@ export default function Dashboard() {
           <div className="relative flex-1 max-w-md">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mut)]" />
             <input data-testid="dashboard-search-input" value={q} onChange={(e) => setQ(e.target.value)}
-              placeholder="Search tenants, tags, tech…"
+              placeholder="Search clients, tags, tech…"
               className="w-full bg-[var(--card)] border border-[var(--line)] rounded-full pl-9 pr-4 py-2.5 text-sm font-mono focus:border-[var(--acc)] outline-none" />
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -402,7 +402,7 @@ export default function Dashboard() {
                   className="w-full text-left p-3 rounded-xl border border-[var(--acc)]/40 bg-[var(--acc)]/8 hover:bg-[var(--acc)]/12 flex items-center gap-3">
                   <Sparkles size={16} className="text-[var(--acc)]" />
                   <span><span className="font-display font-semibold block">Browse the 16 template designs</span>
-                    <span className="text-xs text-[var(--mut)]">The recommended way to start a tenant</span></span>
+                    <span className="text-xs text-[var(--mut)]">The recommended way to start a client</span></span>
                 </button>
                 <div className="grid grid-cols-2 gap-2">
                   {[["website", "Website"], ["app", "App"]].map(([k, l]) => (
@@ -428,7 +428,7 @@ export default function Dashboard() {
                 <label className="block"><span className="overline block mb-1">…or import a ZIP package</span>
                   <input data-testid="new-app-zip-input" type="file" accept=".zip" onChange={(e) => setZipFile(e.target.files?.[0] || null)}
                     className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-xs outline-none file:mr-3 file:rounded-md file:border-0 file:bg-[var(--acc)]/15 file:text-[var(--acc)] file:px-2 file:py-1" />
-                  <span className="text-[11px] text-[var(--mut)] mt-1 block">HTML, CSS, images and assets — each page becomes its own tenant page.</span></label>
+                  <span className="text-[11px] text-[var(--mut)] mt-1 block">HTML, CSS, images and assets — each page becomes its own client page.</span></label>
                 {importing && impStage && <ImportProgress stage={impStage} started={impStarted} testid="new-app-import-progress" />}
                 {impReport && <div className="space-y-3">
                   <ImportReport report={impReport} testid="new-app-import-report" />
@@ -449,8 +449,8 @@ export default function Dashboard() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="card-surface p-12 text-center">
-            <div className="overline mb-2">{showArchived ? "Nothing archived" : "No tenants yet"}</div>
-            <div className="font-display text-xl">{showArchived ? "Archived tenants will appear here and can be restored any time." : "Click New project to create your first tenant — nothing is ever created automatically."}</div>
+            <div className="overline mb-2">{showArchived ? "Nothing archived" : "No clients yet"}</div>
+            <div className="font-display text-xl">{showArchived ? "Archived clients will appear here and can be restored any time." : "Click New project to create your first client — nothing is ever created automatically."}</div>
           </div>
         ) : view === "grid" ? (
           <motion.div variants={stagger} initial="hidden" animate="show" className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -469,9 +469,9 @@ export default function Dashboard() {
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] via-[var(--card)]/20 to-transparent" />
                     <div className="absolute top-3 left-3 flex gap-1.5">
-                      {a.is_staging && <span data-testid={`tenant-staging-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(249,115,22,0.18)", color: "#FB923C", borderColor: "rgba(249,115,22,0.45)" }}><Rocket size={10} /> STAGING</span>}
-                      <span className="chip" data-testid={`tenant-industry-badge-${a.app_id}`}>{a.is_test_lab ? "INTERNAL TOOLS" : a.industry}</span>
-                      {a.theme?.site_skin === "studio" && <span data-testid={`tenant-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
+                      {a.is_staging && <span data-testid={`client-staging-badge-${a.app_id}`} className="chip inline-flex items-center gap-1" style={{ background: "rgba(249,115,22,0.18)", color: "#FB923C", borderColor: "rgba(249,115,22,0.45)" }}><Rocket size={10} /> STAGING</span>}
+                      <span className="chip" data-testid={`client-industry-badge-${a.app_id}`}>{a.is_test_lab ? "INTERNAL TOOLS" : a.industry}</span>
+                      {a.theme?.site_skin === "studio" && <span data-testid={`client-studio-badge-${a.app_id}`} className="chip chip-active inline-flex items-center gap-1"><Sparkles size={10} /> New design</span>}
                       <span className={`chip ${a.kind === "app" ? "chip-handover" : ""}`}>{a.kind === "app" ? "App" : "Website"}</span>
                       {a.plan && <span className="chip chip-active">{a.plan}</span>}
                       {a.custom_domain && <span className={`chip ${a.domain_status === "verified" ? "chip-active" : "chip-maint"}`}>{a.custom_domain}</span>}
@@ -479,25 +479,25 @@ export default function Dashboard() {
                     </div>
                     <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
                       {!a.is_test_lab && !a.is_staging && (
-                      <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
+                      <button data-testid={`archive-toggle-${a.app_id}`} title={showArchived ? "Restore this client" : "Archive this client (leads are kept)"}
                         onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
                         className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/50 hover:text-red-300 transition-colors">
                         {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                       </button>
                       )}
                       {a.is_test_lab || a.protected ? (
-                      <button data-testid={`delete-tenant-${a.app_id}`} disabled
+                      <button data-testid={`delete-client-${a.app_id}`} disabled
                         onClick={(e) => e.stopPropagation()}
                         className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center text-white/25 cursor-not-allowed"
                         title="The master workspace is permanent and cannot be deleted">
                         <Trash2 size={13} />
                       </button>
                       ) : (
-                      <button data-testid={`delete-tenant-${a.app_id}`}
+                      <button data-testid={`delete-client-${a.app_id}`}
                         disabled={deleting === a.app_id}
                         onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
                         className="w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-red-400/25 flex items-center justify-center text-red-300/80 hover:text-red-300 hover:border-red-400/60 hover:bg-red-500/10 transition-all disabled:opacity-60"
-                        title="Delete this tenant — restorable for 30 days">
+                        title="Delete this client — restorable for 30 days">
                         {deleting === a.app_id ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                       </button>
                       )}
@@ -506,7 +506,7 @@ export default function Dashboard() {
                         className={`w-8 h-8 rounded-full bg-black/55 backdrop-blur border border-white/10 flex items-center justify-center transition-colors ${a.featured ? "text-amber-400" : "text-white/50 hover:text-amber-300"}`}>
                         <Star size={13} fill={a.featured ? "currentColor" : "none"} />
                       </button>
-                      <button data-testid={`case-study-edit-${a.app_id}`} title="Edit this tenant's case study page"
+                      <button data-testid={`case-study-edit-${a.app_id}`} title="Edit this client's case study page"
                         onClick={(e) => { e.stopPropagation(); setCaseStudyApp(a); }}
                         className="chip cursor-pointer hover:!text-white transition-colors">Edit Case Study</button>
                       <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
@@ -545,13 +545,13 @@ export default function Dashboard() {
                     <div className="text-xs text-[var(--mut)]">{a.industry} · {a.description?.slice(0, 60)}</div>
                   </div>
                   <span className={`chip badge-glow ${meta.cls}`}><span className={`pulse-dot ${meta.dot}`} />{meta.label}</span>
-                  <button data-testid={`archive-row-${a.app_id}`} title={showArchived ? "Restore this tenant" : "Archive this tenant (leads are kept)"}
+                  <button data-testid={`archive-row-${a.app_id}`} title={showArchived ? "Restore this client" : "Archive this client (leads are kept)"}
                     onClick={(e) => { e.stopPropagation(); toggleArchive(a); }}
                     className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-300 hover:bg-white/10">
                     {showArchived ? <RotateCcw size={13} /> : <Archive size={13} />}
                   </button>
                   {!a.is_test_lab && !a.protected && (
-                    <button data-testid={`delete-row-${a.app_id}`} title="Delete this tenant — restorable for 30 days"
+                    <button data-testid={`delete-row-${a.app_id}`} title="Delete this client — restorable for 30 days"
                       disabled={deleting === a.app_id}
                       onClick={(e) => { e.stopPropagation(); deleteTenant(a); }}
                       className="p-1.5 rounded-md text-[var(--dim)] hover:text-red-400 hover:bg-white/10 disabled:opacity-60">
@@ -572,9 +572,9 @@ export default function Dashboard() {
             <div className="flex flex-wrap items-end justify-between gap-3 mb-4 border-b border-[var(--line)] pb-3">
               <div>
                 <div className="overline mb-1 flex items-center gap-2"><Trash2 size={12} className="text-red-400/80" /> Recently deleted</div>
-                <h2 className="font-display text-2xl font-semibold tracking-tight">{trash.length} tenant{trash.length === 1 ? "" : "s"} restorable</h2>
+                <h2 className="font-display text-2xl font-semibold tracking-tight">{trash.length} client{trash.length === 1 ? "" : "s"} restorable</h2>
               </div>
-              <p className="text-xs text-[var(--mut)] max-w-sm">Deleted tenants stay here for 30 days with every page, lead, booking and file intact. Restore any time inside the window — after that they are erased automatically.</p>
+              <p className="text-xs text-[var(--mut)] max-w-sm">Deleted clients stay here for 30 days with every page, lead, booking and file intact. Restore any time inside the window — after that they are erased automatically.</p>
             </div>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {trash.map(t => (
@@ -599,15 +599,15 @@ export default function Dashboard() {
           </section>
         )}
 
-        {/* Archived tenants — recoverable, and not counted as active */}
+        {/* Archived clients — recoverable, and not counted as active */}
         {archived.length > 0 && (
-          <section className="mt-12" data-testid="archived-tenants-section">
+          <section className="mt-12" data-testid="archived-clients-section">
             <div className="flex flex-wrap items-end justify-between gap-3 mb-4 border-b border-[var(--line)] pb-3">
               <div>
-                <div className="overline mb-1 flex items-center gap-2"><Archive size={12} className="text-[var(--mut)]" /> Archived tenants</div>
-                <h2 className="font-display text-2xl font-semibold tracking-tight">{archived.length} tenant{archived.length === 1 ? "" : "s"} kept safe</h2>
+                <div className="overline mb-1 flex items-center gap-2"><Archive size={12} className="text-[var(--mut)]" /> Archived clients</div>
+                <h2 className="font-display text-2xl font-semibold tracking-tight">{archived.length} client{archived.length === 1 ? "" : "s"} kept safe</h2>
               </div>
-              <p className="text-xs text-[var(--mut)] max-w-sm">Restore brings a tenant back exactly as it was — pages, content, design, forms, leads, bookings and settings. Archived tenants never count toward your active total.</p>
+              <p className="text-xs text-[var(--mut)] max-w-sm">Restore brings a client back exactly as it was — pages, content, design, forms, leads, bookings and settings. Archived clients never count toward your active total.</p>
             </div>
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
               {archived.map(a => {
@@ -628,8 +628,8 @@ export default function Dashboard() {
                       ))}
                     </div>
                     <div className="mt-4 flex items-center gap-2">
-                      <button data-testid={`restore-tenant-${a.app_id}`} onClick={() => restoreTenant(a)} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1.5"><RotateCcw size={12} /> Restore</button>
-                      <button data-testid={`purge-tenant-${a.app_id}`} onClick={() => purgeTenant(a)} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!text-red-300 hover:!border-red-400/40"><Trash2 size={12} /> Permanently delete</button>
+                      <button data-testid={`restore-client-${a.app_id}`} onClick={() => restoreTenant(a)} className="btn-primary text-xs !py-1.5 !px-3 flex items-center gap-1.5"><RotateCcw size={12} /> Restore</button>
+                      <button data-testid={`purge-client-${a.app_id}`} onClick={() => purgeTenant(a)} className="btn-ghost text-xs !py-1.5 !px-3 flex items-center gap-1.5 hover:!text-red-300 hover:!border-red-400/40"><Trash2 size={12} /> Permanently delete</button>
                     </div>
                   </div>
                 );

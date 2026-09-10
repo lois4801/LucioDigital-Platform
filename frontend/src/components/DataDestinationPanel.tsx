@@ -205,10 +205,10 @@ function ProviderFields({ provider, draft, setDraft }) {
   return (
     <div className="space-y-3">
       <TextInput
-        label="Entra tenant ID"
+        label="Entra client ID"
         value={config.entra_tenant_id}
         onChange={(value) => setConfig("entra_tenant_id", value)}
-        testid="data-destination-onedrive-tenant-input"
+        testid="data-destination-onedrive-client-input"
       />
       <TextInput
         label="Application client ID"

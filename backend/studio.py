@@ -32,7 +32,7 @@ DEFAULT_THEME = {
     "design_v2": False,
 }
 
-# The Framer-grade standard applied to every new tenant site and every AI-generated site.
+# The Framer-grade standard applied to every new client site and every AI-generated site.
 V2_THEME = {**DEFAULT_THEME, "font_heading": "Sora", "font_body": "Inter", "radius": 20, "design_v2": True}
 
 BLOCK_SCHEMA = """
@@ -51,7 +51,7 @@ Block types and props (every block: {"id": string, "type": string, "props": {...
 - chart: {heading, caption, series:[{m, v}]}
 - cta: {title, subtitle, cta}
 - contact: {heading, subtitle, email, phone, address}
-- form: {heading, subtitle, fields:[{name, label, type: "text|email|tel|number|url|date|textarea|select|checkbox|radio", placeholder, required: bool, options:[string] (select/radio only)}], submit_label, success_message}  (submissions land in the tenant's Lead Inbox)
+- form: {heading, subtitle, fields:[{name, label, type: "text|email|tel|number|url|date|textarea|select|checkbox|radio", placeholder, required: bool, options:[string] (select/radio only)}], submit_label, success_message}  (submissions land in the client's Lead Inbox)
 - footer: {brand, tagline, columns:[{title, links:[string]}]}
 - collection_list: {heading, collection: "blog|case-studies", limit: 6}  (auto-fills from the CMS)
 Hrefs for links must be page slugs like "/", "/about", "/pricing" or "#section".
@@ -190,7 +190,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
 
     @api.post("/apps/{app_id}/site/upgrade-design")
     async def upgrade_design(app_id: str, user: dict = Depends(get_current_user)):
-        """Switch a legacy tenant to the current design standard. Copy, images and layout are
+        """Switch a legacy client to the current design standard. Copy, images and layout are
         untouched — only the theme flag (and the old default font pair) change."""
         doc = await get_user_app(app_id, user)
         from page_guard import role_of, snapshot_site
@@ -212,7 +212,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
 
     @api.post("/site/upgrade-design-all")
     async def upgrade_design_all(user: dict = Depends(get_current_user)):
-        """Bulk upgrade every tenant the user owns or administers that is still on the legacy look."""
+        """Bulk upgrade every client the user owns or administers that is still on the legacy look."""
         ms = await db.memberships.find({"user_id": user["user_id"], "role": "admin"}, {"_id": 0, "app_id": 1}).to_list(500)
         apps = await db.apps.find({"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in ms]}}]},
                                   {"_id": 0, "app_id": 1, "name": 1, "theme": 1}).to_list(500)
@@ -471,7 +471,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         pages = await db.pages.find({"app_id": doc["app_id"]}, {"_id": 0}).to_list(50)
         pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
         cols = await hooks["public_collections"](doc["app_id"]) if hooks.get("public_collections") else []
-        # Per-tenant Site Mode always wins over the template-derived motion profile, so an
+        # Per-client Site Mode always wins over the template-derived motion profile, so an
         # applied hero / accent / speed / intensity shows up in Preview, Live and Demo alike.
         sm = doc.get("site_mode") or {}
         prof = dict(doc.get("motion_profile") or {})
@@ -489,7 +489,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, hooks=None):
         from reviews import DEFAULT_STYLE as _RVS
         reviews_out = {"reviews": _own.get("reviews") or _rv["reviews"],
                        "style": {**_RVS, **(_own.get("style") or {})}}
-        # Address: the tenant's own field wins, then its contact/footer copy, then the template sample.
+        # Address: the client's own field wins, then its contact/footer copy, then the template sample.
         _addr = (sm.get("address") or (doc.get("brand_profile") or {}).get("address") or "").strip()
         if not _addr:
             for _p in pages:

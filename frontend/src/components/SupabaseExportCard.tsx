@@ -31,7 +31,7 @@ export default function SupabaseExportCard({ appDoc }) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${(appDoc.name || "tenant").toLowerCase().replace(/\s+/g, "-")}-supabase.sql`;
+      a.download = `${(appDoc.name || "client").toLowerCase().replace(/\s+/g, "-")}-supabase.sql`;
       document.body.appendChild(a); a.click(); a.remove();
       URL.revokeObjectURL(url);
       toast.success("Migration file downloaded");
@@ -48,7 +48,7 @@ export default function SupabaseExportCard({ appDoc }) {
         </div>
         <div className="flex-1">
           <div className="overline">Supabase</div>
-          <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Push this tenant into their own Supabase</h3>
+          <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Push this client into their own Supabase</h3>
           <p className="text-sm text-[var(--mut)] mt-2 max-w-2xl">
             Creates the tables, loads every record and turns on Row Level Security in the client's own Postgres.
             Re-run it any time — the migration is idempotent. Prefer to run it yourself? Download the .sql instead.

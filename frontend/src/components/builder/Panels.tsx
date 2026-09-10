@@ -90,7 +90,7 @@ function FormRouting({ block, onChange, appId }) {
 }
 
 const PRESETS = [
-  ["default", "Default", "The tenant's current look"],
+  ["default", "Default", "The client's current look"],
   ["editorial", "Editorial", "Roomy, hairline dividers, long-form measure"],
   ["bold", "Bold", "Heavy tight headings, high contrast accents"],
   ["minimal", "Minimal", "Whitespace, thin type, no glass or shadow"],

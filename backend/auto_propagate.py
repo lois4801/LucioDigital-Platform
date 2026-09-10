@@ -1,16 +1,16 @@
 """Always-live auto-propagation.
 
 There is no pending state, no queue and no push button anywhere on the platform. Any design or
-motion change is applied to its source template immediately, pushed to every active tenant using
-that template, and inherited by every future tenant created from it.
+motion change is applied to its source template immediately, pushed to every active client using
+that template, and inherited by every future client created from it.
 
 Propagation order (enforced here):
   1. change lands on the source template / master workspace
-  2. it is written to every active tenant using that template
-  3. platform defaults are updated so future tenants inherit it at creation time
+  2. it is written to every active client using that template
+  3. platform defaults are updated so future clients inherit it at creation time
 
 CONTENT IS NEVER TOUCHED: only theme tokens, site_mode design flags and motion_profile move.
-Pages, blocks, copy, imagery, CTA forms, stats, leads and tenant data are never read or written.
+Pages, blocks, copy, imagery, CTA forms, stats, leads and client data are never read or written.
 """
 import logging
 from datetime import datetime, timezone
@@ -36,7 +36,7 @@ async def _tenants_on(db, key: str):
 
 
 async def apply_template(db, key: str) -> Dict[str, Any]:
-    """Applies a template's current design + motion to every active tenant using it."""
+    """Applies a template's current design + motion to every active client using it."""
     from site_content import LOOKS, NICHES, theme_for
     from editorial_rollout import profile_for
     if key not in LOOKS:
@@ -46,7 +46,7 @@ async def apply_template(db, key: str) -> Dict[str, Any]:
     for t in await _tenants_on(db, key):
         sm = t.get("site_mode") or {}
         prof = dict(t.get("motion_profile") or {})
-        # per-tenant overrides always win; otherwise inherit the template's motion
+        # per-client overrides always win; otherwise inherit the template's motion
         inherited = profile_for(key, sm.get("accent") or prof.get("accent"))
         if not sm.get("hero"):
             prof["hero"] = inherited["hero"]
@@ -68,17 +68,17 @@ async def apply_template(db, key: str) -> Dict[str, Any]:
 
 
 async def run(db) -> Dict[str, int]:
-    """Full sweep — every template applied to every tenant using it. Runs on every boot."""
+    """Full sweep — every template applied to every client using it. Runs on every boot."""
     from site_content import LOOKS
     from test_lab import _look_hash
     templates = 0
-    tenants = 0
+    clients = 0
     for key in LOOKS:
         res = await apply_template(db, key)
         templates += 1
-        tenants += len(res["tenants"])
+        clients += len(res["tenants"])
         await db.template_states.update_one({"key": key}, {"$set": {"look_hash": _look_hash(key)}}, upsert=True)
-    return {"templates": templates, "tenants": tenants}
+    return {"templates": templates, "tenants": clients}
 
 
 async def propagate_site_mode(db, app_id: str, patch: Dict[str, Any]) -> Dict[str, Any]:
@@ -96,7 +96,7 @@ async def propagate_site_mode(db, app_id: str, patch: Dict[str, Any]) -> Dict[st
         sm["updated_at"] = _now()
         await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"site_mode": sm}})
         touched.append(app.get("name") or app["app_id"])
-    # future tenants inherit at creation
+    # future clients inherit at creation
     defaults = (await db.platform_settings.find_one({"_id": "site_mode_defaults"}) or {})
     await db.platform_settings.update_one(
         {"_id": "site_mode_defaults"},

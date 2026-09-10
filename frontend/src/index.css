@@ -153,7 +153,7 @@ body {
 .scrollbar-thin::-webkit-scrollbar-thumb { background: #282D3F; border-radius: 999px; }
 .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
 
-/* Tenant navigation strip — a scrollbar you can actually grab, always visible when it overflows. */
+/* Client navigation strip — a scrollbar you can actually grab, always visible when it overflows. */
 /* LucioDigital landing reviews — lime is reserved for the platform page and lois-tech.ca only. */
 .lois-reviews { --tbg: #08090a; --tbody: #f4f4f5; --tfg: #ffffff; --tfh: inherit; --tr: 16px; }
 
@@ -197,7 +197,7 @@ button:active { transform: scale(0.97); }
 .has-cursor-trail [data-testid="brand-home-link"] *,
 .has-cursor-trail [data-testid="dashboard-logo-home-btn"],
 .has-cursor-trail [data-testid="dashboard-logo-home-btn"] * { cursor: pointer; }
-/* ===== Tenant premium design system (glass, grain, glow) ===== */
+/* ===== Client premium design system (glass, grain, glow) ===== */
 .tglass{background:var(--tglass, rgba(255,255,255,.04));backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:0 0 0 1px transparent, 0 20px 60px -40px var(--tglow, transparent)}
 .tglass:hover{border-color:color-mix(in srgb, var(--tp) 45%, var(--tbd));box-shadow:0 0 0 1px color-mix(in srgb, var(--tp) 25%, transparent), 0 30px 80px -40px var(--tp)}
 .tsec-accent .tglass{background:rgba(255,255,255,.12)}
@@ -350,7 +350,7 @@ html { scroll-behavior: smooth; }
   .ed-scope .ed-card-in, .ed-scope .ed-word, .ed-scope .ed-child { opacity: 1 !important; transform: none !important; }
 }
 
-/* Site Mode: animation intensity "none" freezes every motion on a tenant's public site. */
+/* Site Mode: animation intensity "none" freezes every motion on a client's public site. */
 .ed-static, .ed-static * { animation: none !important; transition: none !important; }
 
 /* ── Signature hero motion engines (per-template) ─────────────────────────── */

@@ -9,7 +9,7 @@ const ICONS = { desktop: Monitor, tablet: Tablet, mobile: Smartphone };
 export const previewUrl = (token) =>
   `${typeof window !== "undefined" ? window.location.origin : ""}/p/${token}?motion=full`;
 
-// Full-screen live preview of a tenant's site: no editor chrome, all motion active.
+// Full-screen live preview of a client's site: no editor chrome, all motion active.
 export default function SitePreviewOverlay({ appId, previewToken, open, onClose }) {
   const [vp, setVp] = useState("desktop");
   const [token, setToken] = useState(previewToken || "");
@@ -22,7 +22,7 @@ export default function SitePreviewOverlay({ appId, previewToken, open, onClose 
     // No link yet (or preview disabled) — mint one so Preview always shows the real public site.
     api.post(`/apps/${appId}/preview/regenerate`)
       .then(({ data }) => setToken(data.preview_token || data.token || ""))
-      .catch(() => setErr("Could not create a preview link for this tenant."));
+      .catch(() => setErr("Could not create a preview link for this client."));
   }, [open, appId, previewToken]);
 
   if (!open) return null;
@@ -58,7 +58,7 @@ export default function SitePreviewOverlay({ appId, previewToken, open, onClose 
       </div>
       <div className="flex-1 overflow-auto grid place-items-center p-4">
         {token ? (
-          <iframe key={`${vp}-${token}`} data-testid="site-preview-frame" title="Tenant live preview"
+          <iframe key={`${vp}-${token}`} data-testid="site-preview-frame" title="Client live preview"
             src={previewUrl(token)} className="border border-white/10 rounded-xl bg-black"
             style={{ width: w, height: h, maxWidth: "100%" }} />
         ) : (

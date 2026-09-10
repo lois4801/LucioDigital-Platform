@@ -1,6 +1,6 @@
 /** PowerPoint-style entrance animations for content boxes.
  *  Every one of the 33 templates gets its OWN animation, the team section always uses a
- *  different one, and a tenant can override the whole site from Site Mode. */
+ *  different one, and a client can override the whole site from Site Mode. */
 
 export type BoxAnim = { key: string; label: string; dur: number };
 

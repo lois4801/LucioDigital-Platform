@@ -34,7 +34,7 @@ export default function Showcase() {
         <div className="max-w-7xl mx-auto">
           <span className="ed-pill">Client work</span>
           <HeadingWipe testid="showcase-heading" className="mt-5 font-display text-4xl sm:text-6xl font-bold tracking-[-0.035em] max-w-4xl leading-[1.02]">
-            Every tenant, shipped as a product.
+            Every client, shipped as a product.
           </HeadingWipe>
           <p className="mt-6 max-w-xl text-white/45">Published case studies from the workspace — the brief, the build and the numbers.</p>
         </div>

@@ -3,12 +3,12 @@ import { animForTemplate, teamAnimFor, durFor, sectionOfBlock, sectionAnimFor } 
 
 /** PowerPoint-style entrance animations for the CONTENT: every card, stat box, heading and
  *  paragraph group plays an entrance each time it scrolls into view. Per-section overrides win,
- *  then the tenant's site-wide choice, then the template's own per-section defaults.
+ *  then the client's site-wide choice, then the template's own per-section defaults.
  *  One shared IntersectionObserver, CSS animations only, so the cursor stays smooth. */
 export default function ContentMotion({
   scopeSelector = "[data-content-motion]",
   templateKey = "",
-  anim = "",              // tenant override; falls back to the template's own entrance
+  anim = "",              // client override; falls back to the template's own entrance
   teamAnim = "",
   speed = 1,              // 0.5x – 2x playback
   stagger = 90,           // ms between boxes

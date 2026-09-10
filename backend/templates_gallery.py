@@ -1,6 +1,6 @@
 """Template Gallery + client-facing template preview links.
 
-Nothing here creates a tenant. `/public/templates` and `/public/templates/{key}` build the site
+Nothing here creates a client. `/public/templates` and `/public/templates/{key}` build the site
 in memory from the template definition so the gallery can render a real, scrollable preview of
 every design without touching the database.
 """
@@ -52,7 +52,7 @@ class SelectIn(BaseModel):
 
 
 def build_template_site(key: str):
-    """Render a template to pages + theme in memory. No DB writes, no tenant created."""
+    """Render a template to pages + theme in memory. No DB writes, no client created."""
     from site_content import NICHES, LOOKS, build_premium_site
     if key not in LOOKS:
         raise HTTPException(404, "Unknown template")

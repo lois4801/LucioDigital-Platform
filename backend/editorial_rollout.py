@@ -2,13 +2,13 @@
 
 Flow enforced here:
   1. sandbox pre-check (only LucioDigital Test Lab may exist)
-  2. full snapshot of every tenant + template into rollout_snapshots under one job_id
+  2. full snapshot of every client + template into rollout_snapshots under one job_id
      (so the existing "Undo Last Rollout" restores everything)
-  3. push the editorial system to every active tenant, and to every industry template
-  4. store platform Site Mode defaults so FUTURE tenants inherit everything automatically
+  3. push the editorial system to every active client, and to every industry template
+  4. store platform Site Mode defaults so FUTURE clients inherit everything automatically
 
-Colour rule: each tenant/template keeps its OWN accent. Lime (#B6FF3B) is reserved for
-lois-tech.ca and is never written to a tenant or template.
+Colour rule: each client/template keeps its OWN accent. Lime (#B6FF3B) is reserved for
+lois-tech.ca and is never written to a client or template.
 """
 import asyncio
 import logging
@@ -22,7 +22,7 @@ from pydantic import BaseModel
 logger = logging.getLogger("agency.editorial_rollout")
 
 LIME = "#84FF00"                 # platform-only accent (lois-tech.ca)
-RESERVED_ACCENTS = {"#84FF00", "#B6FF3B"}   # never applied to a tenant or template
+RESERVED_ACCENTS = {"#84FF00", "#B6FF3B"}   # never applied to a client or template
 TEST_LAB_ID = "app_testlab"
 DEFAULTS_DOC = "site_mode_defaults"
 
@@ -104,7 +104,7 @@ def _uid(p: str) -> str:
 
 
 def profile_for(template_key: Optional[str], accent: Optional[str] = None) -> Dict[str, Any]:
-    """Resolves a tenant's motion profile from its template, keeping the tenant's own accent."""
+    """Resolves a client's motion profile from its template, keeping the client's own accent."""
     prof = dict(MOTION_PROFILES.get((template_key or "").lower()) or RESERVED_PROFILES.get((template_key or "").lower()) or MOTION_PROFILES["test_template"])
     if accent and accent.upper() != LIME:
         prof["accent"] = accent
@@ -117,7 +117,7 @@ def profile_for(template_key: Optional[str], accent: Optional[str] = None) -> Di
 def register(api, db, get_current_user):
 
     async def _snapshot(job_id: str) -> int:
-        """Step 0 — snapshot every tenant and every template under one undoable job."""
+        """Step 0 — snapshot every client and every template under one undoable job."""
         from site_content import LOOKS
         n = 0
         async for app in db.apps.find({}, {"_id": 0}):
@@ -148,11 +148,11 @@ def register(api, db, get_current_user):
             await step(2, "Verifying single test site")
             purged = await purge_other_sandboxes(db)
 
-            await step(8, "Snapshotting every tenant and template")
+            await step(8, "Snapshotting every client and template")
             snaps = await _snapshot(job_id)
 
-            await step(25, "Pushing editorial system to active tenants")
-            tenants = 0
+            await step(25, "Pushing editorial system to active clients")
+            clients = 0
             async for app in db.apps.find({}, {"_id": 0}):
                 theme = app.get("theme") or {}
                 accent = theme.get("primary") or "#10B981"
@@ -168,7 +168,7 @@ def register(api, db, get_current_user):
                     "site_mode": sm, "motion_profile": prof,
                     "theme.bg": "#080808", "theme.editorial": True,
                 }})
-                tenants += 1
+                clients += 1
 
             await step(65, "Applying unique motion profile to all industry templates")
             tpl = 0
@@ -192,7 +192,7 @@ def register(api, db, get_current_user):
                                                    upsert=True)
                 tpl += 1
 
-            await step(90, "Storing defaults for future tenants")
+            await step(90, "Storing defaults for future clients")
             await db.platform_settings.update_one(
                 {"_id": DEFAULTS_DOC},
                 {"$set": {**DEFAULT_SITE_MODE, "inherit_motion": True, "updated_at": _now(),
@@ -203,11 +203,11 @@ def register(api, db, get_current_user):
 
             await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
                 "status": "done", "progress": 100, "step": "Rollout complete",
-                "finished_at": _now(), "tenants": tenants, "templates": tpl,
+                "finished_at": _now(), "tenants": clients, "templates": tpl,
                 "snapshots": snaps, "purged": purged,
             }})
-            logger.info("Editorial rollout %s complete: %s tenants, %s templates, %s snapshots",
-                        job_id, tenants, tpl, snaps)
+            logger.info("Editorial rollout %s complete: %s clients, %s templates, %s snapshots",
+                        job_id, clients, tpl, snaps)
         except Exception as e:                                   # noqa: BLE001
             logger.exception("Editorial rollout failed")
             await db.rollout_jobs.update_one({"job_id": job_id}, {"$set": {
@@ -284,7 +284,7 @@ def register(api, db, get_current_user):
 
     @api.put("/editorial/templates/{key}/hero")
     async def swap_template_hero(key: str, body: HeroSwapIn, user: dict = Depends(get_current_user)):
-        """Swaps a template's signature hero. Future tenants inherit it; existing tenants on that
+        """Swaps a template's signature hero. Future clients inherit it; existing clients on that
         template are updated too unless they picked their own hero."""
         from site_content import LOOKS
         prof = MOTION_PROFILES.get(key)
@@ -303,7 +303,7 @@ def register(api, db, get_current_user):
             async for app in db.apps.find({}, {"_id": 0}):
                 mp = app.get("motion_profile") or {}
                 sm = app.get("site_mode") or {}
-                if mp.get("template_key") != key or sm.get("hero"):     # respect per-tenant overrides
+                if mp.get("template_key") != key or sm.get("hero"):     # respect per-client overrides
                     continue
                 mp["hero"] = body.hero
                 await db.apps.update_one({"app_id": app["app_id"]}, {"$set": {"motion_profile": mp}})
@@ -348,7 +348,7 @@ def register(api, db, get_current_user):
         """Preview, Live and Demo all read this — identical motion in every environment."""
         app = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "motion_profile": 1, "site_mode": 1, "theme": 1})
         if not app:
-            raise HTTPException(404, "Tenant not found")
+            raise HTTPException(404, "Client not found")
         defaults = await db.platform_settings.find_one({"_id": DEFAULTS_DOC}) or {}
         sm = app.get("site_mode") or {}
         return {
@@ -363,7 +363,7 @@ def register(api, db, get_current_user):
 
 
 async def ensure_defaults(db) -> dict:
-    """Future tenants inherit these automatically — no per-tenant setup."""
+    """Future clients inherit these automatically — no per-client setup."""
     doc = await db.platform_settings.find_one({"_id": DEFAULTS_DOC})
     if not doc:
         await db.platform_settings.update_one(
@@ -374,7 +374,7 @@ async def ensure_defaults(db) -> dict:
 
 
 async def backfill_new_tenants(db) -> int:
-    """Any tenant without a motion profile (i.e. created after the rollout) inherits it now."""
+    """Any client without a motion profile (i.e. created after the rollout) inherits it now."""
     n = 0
     async for app in db.apps.find({"motion_profile": {"$exists": False}}, {"_id": 0}):
         theme = app.get("theme") or {}

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="1" skipped="0" tests="15" time="5.478" timestamp="2026-09-10T14:25:41.315791+00:00" hostname="agent-env-0807f207-82c5-46c2-b347-b787bd4fe45d"><testcase classname="tests.test_iter89_section_sets_pages.TestSectionSets" name="test_home_page_returns_home_type_and_4_sets" time="0.892" /><testcase classname="tests.test_iter89_section_sets_pages.TestSectionSets" name="test_bad_page_id_404s" time="0.135" /><testcase classname="tests.test_iter89_section_sets_pages.TestSectionSets" name="test_general_page_type_for_custom_slug" time="0.513" /><testcase classname="tests.test_iter89_section_sets_pages.TestApplySet" name="test_apply_home_launch_builds_5_blocks_from_niche_copy" time="0.389" /><testcase classname="tests.test_iter89_section_sets_pages.TestApplySet" name="test_apply_blank_clears_blocks" time="0.511" /><testcase classname="tests.test_iter89_section_sets_pages.TestApplySet" name="test_unknown_set_id_400s_with_message" time="0.341" /><testcase classname="tests.test_iter89_section_sets_pages.TestApplySet" name="test_all_11_block_types_build_across_page_types" time="0.643"><failure message="requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))">/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:788: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1443: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:337: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:306: in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+E   http.client.RemoteDisconnected: Remote end closed connection without response
+
+During handling of the above exception, another exception occurred:
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:696: in send
+    resp = conn.urlopen(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:842: in urlopen
+    retries = retries.increment(
+/root/.venv/lib/python3.11/site-packages/urllib3/util/retry.py:498: in increment
+    raise reraise(type(error), error, _stacktrace)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/util/util.py:38: in reraise
+    raise value.with_traceback(tb)
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:788: in urlopen
+    response = self._make_request(
+/root/.venv/lib/python3.11/site-packages/urllib3/connectionpool.py:534: in _make_request
+    response = conn.getresponse()
+               ^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/urllib3/connection.py:571: in getresponse
+    httplib_response = super().getresponse()
+                       ^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:1443: in getresponse
+    response.begin()
+/usr/local/lib/python3.11/http/client.py:337: in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/http/client.py:306: in _read_status
+    raise RemoteDisconnected("Remote end closed connection without"
+E   urllib3.exceptions.ProtocolError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))
+
+During handling of the above exception, another exception occurred:
+backend/tests/test_iter89_section_sets_pages.py:143: in test_all_11_block_types_build_across_page_types
+    pid = self._scratch(client, slug, name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend/tests/test_iter89_section_sets_pages.py:88: in _scratch
+    r = client.post(f"{API}/apps/{APP_ID}/pages", json={"slug": slug, "name": name}, timeout=20)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:712: in post
+    return self.request("POST", url, data=data, json=json, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:651: in request
+    resp = self.send(prep, **send_kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/sessions.py:784: in send
+    r = adapter.send(request, **kwargs)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/root/.venv/lib/python3.11/site-packages/requests/adapters.py:711: in send
+    raise ConnectionError(err, request=request)
+E   requests.exceptions.ConnectionError: ('Connection aborted.', RemoteDisconnected('Remote end closed connection without response'))</failure></testcase><testcase classname="tests.test_iter89_section_sets_pages.TestApplySet" name="test_foreign_page_rejected" time="0.165" /><testcase classname="tests.test_iter89_section_sets_pages.TestPageReorder" name="test_reorder_swaps_and_persists" time="0.201" /><testcase classname="tests.test_iter89_section_sets_pages.TestPageReorder" name="test_foreign_page_id_rejected" time="0.069" /><testcase classname="tests.test_iter89_section_sets_pages.TestPageReorder" name="test_public_navbar_matches_new_order" time="0.392" /><testcase classname="tests.test_iter89_section_sets_pages.TestLandingPricing" name="test_landing_html_has_no_pricing_or_tenant" time="0.200" /><testcase classname="tests.test_iter89_section_sets_pages.TestPublicEndpoints" name="test_public_reviews_luciodigital_zero_tenant" time="0.172" /><testcase classname="tests.test_iter89_section_sets_pages.TestPublicEndpoints" name="test_public_site_ok" time="0.397" /><testcase classname="tests.test_iter89_section_sets_pages.TestPublicEndpoints" name="test_public_landing_tenants_route_still_exists" time="0.270" /></testsuite></testsuites>

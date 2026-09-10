@@ -2,7 +2,7 @@
 
 These reuse the same page builder as the original pack, so they get the CTA modal forms, locks,
 overview sync and export pipeline for free. Each one is flagged `studio: True` so the gallery can
-badge it as a new-design template and tenants created from it start on the new skin.
+badge it as a new-design template and clients created from it start on the new skin.
 """
 from site_content import NICHES, LOOKS, MOODS, img  # noqa: F401
 

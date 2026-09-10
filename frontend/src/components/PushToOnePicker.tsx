@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, Rocket } from "lucide-react";
 
-/** Small "Push to One …" picker used on the Test Lab tenant card and the Test Template card. */
+/** Small "Push to One …" picker used on the Test Lab client card and the Test Template card. */
 export default function PushToOnePicker({ label, options, onPick, testid }) {
   const [open, setOpen] = useState(false);
   return (

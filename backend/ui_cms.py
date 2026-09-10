@@ -10,7 +10,7 @@ MAX_KEYS = 200
 class LabelsPatch(BaseModel):
     labels: Optional[Dict[str, str]] = None
     styles: Optional[Dict[str, Dict[str, str]]] = None
-    scope: Optional[str] = "tenant"  # tenant | global
+    scope: Optional[str] = "tenant"  # client | global
 
 
 def _is_platform_admin(user: dict) -> bool:
@@ -95,7 +95,7 @@ def register(api, db, get_current_user, get_user_app):
     async def apply_cursor_vote(app_id: str, user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
         if not (_is_platform_admin(user) or doc["owner_id"] == user["user_id"]):
-            raise HTTPException(403, "Only the platform admin or tenant owner can apply a vote")
+            raise HTTPException(403, "Only the platform admin or client owner can apply a vote")
         vote = doc.get("cursor_vote")
         if not vote:
             raise HTTPException(404, "No client vote yet")
@@ -112,7 +112,7 @@ def register(api, db, get_current_user, get_user_app):
     async def put_ui_labels(app_id: str, body: LabelsPatch, user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
         if not await _can_edit(doc, user):
-            raise HTTPException(403, "Only the platform admin or tenant owner can edit labels")
+            raise HTTPException(403, "Only the platform admin or client owner can edit labels")
         labels = _clean(body.labels or {})
         # These three now follow Site Mode, so an override here would only become dead data.
         from content_lock import SYNCED_LABEL_KEYS
@@ -146,7 +146,7 @@ def register(api, db, get_current_user, get_user_app):
     async def reset_ui_labels(app_id: str, scope: str = "tenant", user: dict = Depends(get_current_user)):
         doc = await get_user_app(app_id, user)
         if not await _can_edit(doc, user):
-            raise HTTPException(403, "Only the platform admin or tenant owner can edit labels")
+            raise HTTPException(403, "Only the platform admin or client owner can edit labels")
         await db.apps.update_one({"app_id": app_id}, {"$unset": {"ui_overrides": "", "ui_label_styles": ""}})
         if scope == "all":
             if not _is_platform_admin(user):

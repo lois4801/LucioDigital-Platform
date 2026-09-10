@@ -34,7 +34,7 @@ function Row({ label, hint, value, options, onPick, testid, busy = false }) {
   );
 }
 
-// Per-tenant Site Mode. Every write is scoped to this one app_id — no other tenant is touched.
+// Per-client Site Mode. Every write is scoped to this one app_id — no other client is touched.
 export default function SiteModePanel({ appId, appName, appDoc = null, templates = [] }) {
   const [sm, setSm] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -46,7 +46,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
     if (!appId) return;
     api.get(`/apps/${appId}/site-mode`).then(r => {
       setSm(r.data);
-      // Never rotate an existing link — only mint one when the tenant has none at all.
+      // Never rotate an existing link — only mint one when the client has none at all.
       if (r.data.preview_token) setLiveToken(r.data.preview_token);
       else api.post(`/apps/${appId}/preview/regenerate`)
         .then(({ data }) => setLiveToken(data.preview_token || data.token || "")).catch(() => {});
@@ -61,7 +61,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
       const { data } = await api.put(`/apps/${appId}/site-mode`, next);
       setSm(s => ({ ...s, ...data }));
       setRenderV(v => v + 1);
-      toast.success("Site Mode updated for this tenant only");
+      toast.success("Site Mode updated for this client only");
     } catch (e) {
       if (e.response?.status === 429) {       // the live-site refetch is rate limited; retry once
         await new Promise(r => setTimeout(r, 1300));
@@ -69,7 +69,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           const { data } = await api.put(`/apps/${appId}/site-mode`, next);
           setSm(s => ({ ...s, ...data }));
           setRenderV(v => v + 1);
-          toast.success("Site Mode updated for this tenant only");
+          toast.success("Site Mode updated for this client only");
           return;
         } catch { /* fall through to the error toast */ }
       }
@@ -88,14 +88,14 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           <div className="text-xs text-[var(--mut)] mt-0.5">Public site · {sm.publish}</div>
         </div>
         <div className="flex items-center gap-2">
-          <span className="chip inline-flex items-center gap-1" data-testid="site-mode-live-badge"><ShieldCheck size={11} /> Live · isolated to this tenant</span>
+          <span className="chip inline-flex items-center gap-1" data-testid="site-mode-live-badge"><ShieldCheck size={11} /> Live · isolated to this client</span>
         </div>
       </div>
 
       <div className="mt-4">
         <Row busy={busy} testid="sm-style" label="Design style" hint="Original template look, or the new editorial motion system."
           value={sm.style} options={STYLES} onPick={v => patch({ style: v })} />
-        <Row busy={busy} testid="sm-mode" label="Light / dark default" hint="What visitors see first on this tenant's public site."
+        <Row busy={busy} testid="sm-mode" label="Light / dark default" hint="What visitors see first on this client's public site."
           value={sm.mode} options={MODES} onPick={v => patch({ mode: v })} />
         <Row busy={busy} testid="sm-anim" label="Animation intensity" hint="Full motion, subtle transitions only, or completely static."
           value={sm.animation} options={ANIMS} onPick={v => patch({ animation: v })} />
@@ -105,7 +105,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold">Signature hero motion</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">Swap this tenant's hero animation. Applies to Preview, Live and Demo.</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Swap this client's hero animation. Applies to Preview, Live and Demo.</div>
             </div>
             <div className="flex items-center gap-2">
               <select data-testid="sm-hero-select" value={sm.hero || ""} onChange={e => patch({ hero: e.target.value })}
@@ -145,7 +145,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="text-sm font-semibold">Accent colour</div>
-              <div className="text-xs text-[var(--mut)] mt-0.5">Drives every motion layer on this tenant. Lime is reserved for lois-tech.ca.</div>
+              <div className="text-xs text-[var(--mut)] mt-0.5">Drives every motion layer on this client. Lime is reserved for lois-tech.ca.</div>
             </div>
             <div className="flex items-center gap-2">
               <input type="color" data-testid="sm-accent-picker" value={sm.accent || "#10B981"}
@@ -168,7 +168,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
         {templates.length > 0 && (
           <div className="py-4">
             <div className="text-sm font-semibold">Active template</div>
-            <div className="text-xs text-[var(--mut)] mt-0.5 mb-2">Which industry layout drives this tenant's site.</div>
+            <div className="text-xs text-[var(--mut)] mt-0.5 mb-2">Which industry layout drives this client's site.</div>
             <select data-testid="sm-template" value={sm.template_key || ""} onChange={e => patch({ template_key: e.target.value })}
               className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-xl px-3 py-2.5 text-sm outline-none focus:border-[var(--acc)]">
               <option value="">— none selected —</option>
@@ -195,7 +195,7 @@ export default function SiteModePanel({ appId, appName, appDoc = null, templates
             className="mt-3 w-full h-[56vh] min-h-[420px] rounded-xl border border-[var(--line)] bg-black" />
         ) : (
           <div className="mt-3 text-sm text-[var(--mut)]" data-testid="sm-live-site-missing">
-            This tenant has no public link yet — set Publishing status to Preview or Live.
+            This client has no public link yet — set Publishing status to Preview or Live.
           </div>
         )}
       </div>

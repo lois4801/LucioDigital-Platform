@@ -12,7 +12,7 @@ const err = (e) => {
   return e.message || "Something went wrong";
 };
 
-/** Per-tab storage for tenant-site JWTs — not readable by another tab, cleared when the tab closes.
+/** Per-tab storage for client-site JWTs — not readable by another tab, cleared when the tab closes.
  *  Any token still sitting in localStorage from an older build is migrated once and removed. */
 function readJwt(token) {
   const k = memberKey(token);
@@ -35,7 +35,7 @@ export function useMember(token) {
   return { ...state, signIn, signOut };
 }
 
-/** Sign-in / register / reset wall shown in place of a members-only page. Uses tenant theme vars. */
+/** Sign-in / register / reset wall shown in place of a members-only page. Uses client theme vars. */
 export default function MemberGate({ token, pageName, signupMode = "open", onSignedIn }) {
   const [view, setView] = useState("login");
   const [f, setF] = useState({ email: "", password: "", name: "" });

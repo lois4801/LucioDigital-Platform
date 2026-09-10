@@ -182,7 +182,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     async def global_inbox(status: Optional[str] = None, user: dict = Depends(get_current_user)):
         memberships = await db.memberships.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(500)
         # The admin inbox is the single collection point for every lead on the platform, including
-        # leads that belong to archived tenants or to tenants that have since been removed.
+        # leads that belong to archived clients or to clients that have since been removed.
         admin = (user.get("email") or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
         scope = {} if admin else {"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in memberships]}}]}
         apps = await db.apps.find(scope, {"_id": 0, "app_id": 1, "name": 1, "color": 1, "archived": 1}).to_list(500)
@@ -194,7 +194,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         msgs = await db.messages.find(q, {"_id": 0}).sort([("hot", -1), ("score", -1), ("updated_at", -1)]).limit(300).to_list(300)
         for m in msgs:
             a = names.get(m["app_id"])
-            m["app_name"] = (a or {}).get("name") or "Removed tenant"
+            m["app_name"] = (a or {}).get("name") or "Removed client"
             m["app_color"] = (a or {}).get("color")
             m["app_archived"] = bool((a or {}).get("archived")) or a is None
         uq = {"status": "unread", "lane": {"$ne": "test"}}
@@ -204,7 +204,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
         return {"messages": msgs, "unread": unread}
 
     async def _classify_pending(app_id: Optional[str] = None) -> int:
-        """Backfills lane/review on any lead that has never been classified (all tenants, lazily)."""
+        """Backfills lane/review on any lead that has never been classified (all clients, lazily)."""
         from lead_class import classify
         from pymongo import UpdateOne
         q = {"lane": {"$exists": False}}
@@ -306,7 +306,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, build_export
     async def _run_archive_all(days: int):
         try:
             n = await _archive_stale_test(None, days)
-            logger.info("auto-archived %s stale test lead(s) across all tenants", n)
+            logger.info("auto-archived %s stale test lead(s) across all clients", n)
         except Exception:
             logger.exception("test lead auto-archive failed")
 

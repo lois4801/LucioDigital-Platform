@@ -1,4 +1,4 @@
-/* Studio 2026 tenant-site skin — opt-in per tenant via theme.site_skin = "studio".
+/* Studio 2026 client-site skin — opt-in per client via theme.site_skin = "studio".
    Modernises ANY template (including the original 16) without touching its content:
    softer geometry, 1px borders, calm elevation, tighter type. Toggle off = untouched. */
 .sk-studio .tcard {

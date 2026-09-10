@@ -197,11 +197,11 @@ def register(api, db, get_current_user, get_user_app, log_activity):
                 manifest.append({"file": f"files/{d['file_id']}-{safe}", "name": d.get("original_filename"), "size": d.get("size"), "uploaded_at": d.get("created_at")})
             z.writestr("files/manifest.json", json.dumps(manifest, indent=2))
             z.writestr("README.md", f"# {app_doc['name']} — data & media export\n\nGenerated {now_iso()}\n\n"
-                                    "`data/` holds every record for this tenant as JSON (site pages, CMS, leads, team, activity).\n"
+                                    "`data/` holds every record for this client as JSON (site pages, CMS, leads, team, activity).\n"
                                     "`files/` holds every uploaded file, with `files/manifest.json` mapping them to their original names.\n"
                                     "This archive is yours to keep, migrate or import into another system at any time.\n")
         buf.seek(0)
-        await log_activity(app_id, user["user_id"], "data.exported", "Downloaded full tenant data & media archive")
+        await log_activity(app_id, user["user_id"], "data.exported", "Downloaded full client data & media archive")
         fname = f"{app_doc['name'].lower().replace(' ', '-')}-data-export.zip"
         return StreamingResponse(iter([buf.getvalue()]), media_type="application/zip",
                                  headers={"Content-Disposition": f"attachment; filename={fname}"})

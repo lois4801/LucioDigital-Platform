@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Plus, Trash2, FileText, Lock, Unlock } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, Trash2, FileText, Lock, Unlock, GripVertical, LayoutTemplate } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /** What each page is for, plus a short guide shown when it is selected. */
@@ -40,12 +40,23 @@ const rgba = (hex: string, a: number) => {
 
 /** Page Manager: every page as a tab with what it is for, an inline guide for the selected one,
  *  and an Add Page form that also places the page in the site navigation. */
-export default function PageManager({ pages = [], current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme }) {
+export default function PageManager({ pages = [], current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme, onReorder, onSections }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [where, setWhere] = useState("end");
+  const [drag, setDrag] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+  const press = useRef<any>(null);
   const active = pages.find(p => p.page_id === current);
   const slug = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+  const drop = (to: number) => {
+    if (drag === null || drag === to) { setDrag(null); setOver(null); return; }
+    const ids = pages.map(p => p.page_id);
+    ids.splice(to, 0, ids.splice(drag, 1)[0]);
+    setDrag(null); setOver(null);
+    onReorder?.(ids);
+  };
 
   return (
     <div className="w-full" data-testid="page-manager">
@@ -55,7 +66,7 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
       </div>
 
       <div className="mt-2 flex items-stretch gap-2.5 overflow-x-auto tenant-scroll pb-2 pr-4" data-testid="pages-bar">
-        {pages.map(p => {
+        {pages.map((p, i) => {
           const on = current === p.page_id;
           const brand = p?.theme_preview?.primary || theme?.primary || "#8B5CF6";
           const light = isLight(brand);
@@ -63,8 +74,23 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
           const tid = (p.slug || "").replace("/", "") || "home";
           return (
             <div key={p.page_id} data-testid={`page-tab-${tid}`} onClick={() => onSelect(p.page_id)}
+              draggable
+              onDragStart={() => setDrag(i)}
+              onDragOver={e => { e.preventDefault(); setOver(i); }}
+              onDragEnd={() => { setDrag(null); setOver(null); }}
+              onDrop={e => { e.preventDefault(); drop(i); }}
+              onTouchStart={() => { press.current = setTimeout(() => setDrag(i), 380); }}
+              onTouchMove={e => {
+                if (drag === null) { clearTimeout(press.current); return; }
+                e.preventDefault();
+                const t = e.touches[0];
+                const el = document.elementFromPoint(t.clientX, t.clientY)?.closest("[data-testid^='page-tab-']");
+                const idx = el ? [...(el.parentElement?.children || [])].indexOf(el) : -1;
+                if (idx >= 0) setOver(idx);
+              }}
+              onTouchEnd={() => { clearTimeout(press.current); if (drag !== null && over !== null) drop(over); }}
               aria-current={on ? "true" : undefined} title={infoFor(p).desc}
-              className="group shrink-0 w-[196px] min-h-[86px] rounded-xl px-3.5 py-3 cursor-pointer flex flex-col gap-1.5"
+              className={`group shrink-0 w-[196px] min-h-[86px] rounded-xl px-3.5 py-3 cursor-pointer flex flex-col gap-1.5 select-none ${drag === i ? "opacity-50" : ""} ${over === i && drag !== null && drag !== i ? "ring-2 ring-[var(--acc)]" : ""}`}
               style={{
                 background: on ? rgba(brand, 0.85) : "var(--bg-2)",
                 border: on ? `2px solid ${brand}` : "1px solid var(--line)",
@@ -73,6 +99,8 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
                 transition: "background-color .25s ease, border-color .25s ease, box-shadow .25s ease, color .25s ease",
               }}>
               <div className="flex items-center gap-1.5">
+                <GripVertical size={11} data-testid={`page-drag-${tid}`} title="Drag to reorder — this is the menu order"
+                  className="shrink-0 opacity-0 group-hover:opacity-70 cursor-grab" style={{ color: fg }} />
                 {p.locked ? <Lock size={11} className="shrink-0" style={{ color: on ? fg : "#FBBF24" }} />
                   : <FileText size={11} className="shrink-0 opacity-70" />}
                 <span className="text-sm font-semibold truncate" style={{ color: fg }}>{p.name}</span>
@@ -102,9 +130,15 @@ export default function PageManager({ pages = [], current, onSelect, onCreate, o
       </div>
 
       {active && (
-        <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] px-4 py-3" data-testid="page-guide">
-          <div className="text-xs font-semibold">{active.name} — {infoFor(active).desc}</div>
-          <p className="text-xs text-[var(--mut)] mt-1 leading-relaxed">{infoFor(active).guide}</p>
+        <div className="mt-1 rounded-xl border border-[var(--line)] bg-[var(--bg-2)] px-4 py-3 flex flex-wrap items-start justify-between gap-3" data-testid="page-guide">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold">{active.name} — {infoFor(active).desc}</div>
+            <p className="text-xs text-[var(--mut)] mt-1 leading-relaxed">{infoFor(active).guide}</p>
+          </div>
+          <button data-testid="page-sections-btn" onClick={() => onSections?.(active)}
+            className="chip cursor-pointer hover:!text-white inline-flex items-center gap-1.5 shrink-0">
+            <LayoutTemplate size={11} /> Apply a section template
+          </button>
         </div>
       )}
 

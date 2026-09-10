@@ -48,7 +48,7 @@ async def assert_item_editable(db, app_doc: dict, kind: str, item_id: str, user:
 
 
 async def _inventory(db, app_id: str):
-    """Every lockable item in a tenant, as (kind, item_id, name) tuples."""
+    """Every lockable item in a client, as (kind, item_id, name) tuples."""
     items = []
     pages = await db.pages.find({"app_id": app_id}, {"_id": 0, "page_id": 1, "name": 1, "blocks": 1, "locked": 1}).to_list(200)
     for pg in pages:
@@ -168,7 +168,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await _require_admin(app_id, user)
         res = await apply_all(db, app_id, body.locked, user.get("name") or user["email"])
         await log_activity(app_id, user["user_id"], "locks.all",
-                           f"{'Locked' if body.locked else 'Unlocked'} all {res['items']} item(s) across this tenant")
+                           f"{'Locked' if body.locked else 'Unlocked'} all {res['items']} item(s) across this client")
         return {**await summary(db, app_id), "locks": await lock_map(db, app_id), **res}
 
     @api.post("/apps/{app_id}/locks/item")
@@ -183,7 +183,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.get("/locks/summary")
     async def locks_summary(user: dict = Depends(get_current_user)):
-        """Lock rollup for every tenant the user can see — powers the dashboard card badges."""
+        """Lock rollup for every client the user can see — powers the dashboard card badges."""
         ms = await db.memberships.find({"user_id": user["user_id"]}, {"_id": 0, "app_id": 1}).to_list(500)
         apps = await db.apps.find({"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": [m["app_id"] for m in ms]}}]},
                                   {"_id": 0, "app_id": 1}).to_list(500)

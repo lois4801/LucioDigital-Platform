@@ -15,7 +15,7 @@ DEFAULTS = {
     "marquee": ["Nexus", "Orbit", "Fleet", "Aura", "Ledger", "Studio", "Vanta", "Halo"],
     "texts": {
         "hero_caption_overline": "Live · Orbit SaaS Portal", "hero_caption_title": "B2B Success Analytics",
-        "products_overline": "Products we ship", "products_heading": "Every tenant, on-brand and always live.",
+        "products_overline": "Products we ship", "products_heading": "Every client, on-brand and always live.",
         "demos_overline": "See it in action", "demos_heading": "Watch Lois-Tech build, brand and ship a product.",
         "platform_overline": "The platform", "platform_heading": "Everything between “kickoff” and “handoff”.",
         "cta_heading": "Launch your agency workspace today.",
@@ -51,7 +51,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
             return await get_user_app(app_id, user)
         doc = await db.apps.find_one({"app_id": app_id, "owner_id": user["user_id"]}, {"_id": 0})
         if not doc:
-            raise HTTPException(404, "Tenant not found")
+            raise HTTPException(404, "Client not found")
         return doc
 
     def _now():
@@ -67,7 +67,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
 
     @api.patch("/apps/{app_id}/showcase")
     async def toggle_featured(app_id: str, body: dict, user: dict = Depends(get_current_user)):
-        """Star/unstar a tenant for the public landing showcase."""
+        """Star/unstar a client for the public landing showcase."""
         await _own(app_id, user)
         featured = bool(body.get("featured"))
         upd = {"featured": featured, "updated_at": _now()}
@@ -90,9 +90,9 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
         owned = set(await db.apps.distinct("app_id", {"owner_id": user["user_id"], "app_id": {"$in": ids}}))
         missing = [i for i in ids if i not in owned]
         if missing:
-            raise HTTPException(404, f"Not your tenant: {missing[0]}")
+            raise HTTPException(404, f"Not your client: {missing[0]}")
         from pymongo import UpdateOne
-        # Authoritative resequence: the given ids take 0..n-1 and any other starred tenant keeps its
+        # Authoritative resequence: the given ids take 0..n-1 and any other starred client keeps its
         # relative position after them, so two cards can never share an order.
         rest = await db.apps.find({"owner_id": user["user_id"], "featured": True,
                                    "app_id": {"$nin": ids}},
@@ -116,7 +116,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
 
     @api.get("/public/landing/tenants")
     async def public_tenants():
-        """Real tenants in the platform admin's workspace, with their live deployment state."""
+        """Real clients in the platform admin's workspace, with their live deployment state."""
         from site_content import NICHES, niche_for
         admin = await db.users.find_one({"email": (os.environ.get("ADMIN_EMAIL") or "").lower().strip()}, {"_id": 0, "user_id": 1})
         if not admin:
@@ -125,7 +125,7 @@ def register(api, db, get_current_user, get_user_app=None, log_activity=None):
                                   {"_id": 0}).to_list(60)
         starred = [a for a in apps if a.get("featured")]
         if starred:
-            # Once the admin stars any tenant, the showcase shows exactly those, in their chosen order.
+            # Once the admin stars any client, the showcase shows exactly those, in their chosen order.
             apps = sorted(starred, key=lambda a: (a.get("showcase_order", 0), a.get("created_at") or ""))
         else:
             apps = sorted(apps, key=lambda a: a.get("created_at") or "", reverse=True)

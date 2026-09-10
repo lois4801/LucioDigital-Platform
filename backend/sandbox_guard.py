@@ -2,7 +2,7 @@
 
 Runs on every startup and is also exposed as an admin endpoint. Any other app tagged or named as
 TEST / STAGING / DEMO is deactivated and permanently deleted together with its dependent records,
-so newly created tenants can never inherit a second sandbox.
+so newly created clients can never inherit a second sandbox.
 """
 import logging
 import re

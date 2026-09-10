@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 /** Reviews & testimonials: a fixed title and subtitle, with 5-star cards that auto-scroll slowly
  *  left to right. Arrows steer manually then hand back to the auto-scroll. Each quote types itself
  *  out the moment its card enters the viewport. Colour follows the template palette unless the
- *  tenant overrides it in Site Mode. */
+ *  client overrides it in Site Mode. */
 
 const Stars = ({ colour }) => (
   <div className="flex gap-0.5 shrink-0" aria-label="5 out of 5 stars" data-testid="review-stars">

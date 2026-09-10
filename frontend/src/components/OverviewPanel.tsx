@@ -40,7 +40,7 @@ function SiteSnapshot({ appDoc }) {
   const snap = lock.snapshot || appDoc.site_snapshot;
   async function toggle() {
     const next = !lock.locked;
-    if (next === false && !window.confirm("Unlock this tenant's site content? AI rebuilds and website imports will then be allowed to replace the saved pages.")) return;
+    if (next === false && !window.confirm("Unlock this client's site content? AI rebuilds and website imports will then be allowed to replace the saved pages.")) return;
     setBusy(true);
     try { await api.post(`/apps/${appDoc.app_id}/content-lock`, { locked: next }); setLock(l => ({ ...l, locked: next })); toast.success(next ? "Site content locked" : "Unlocked — remember to lock it again"); }
     catch { toast.error("Failed"); } finally { setBusy(false); }
@@ -50,7 +50,7 @@ function SiteSnapshot({ appDoc }) {
       {snap && (
         <div className="rounded-xl border border-[var(--line)] bg-white/[0.03] p-4">
           <div className="overline mb-2">Live site (from Site Mode)</div>
-          <div className="text-[10px] text-[var(--dim)] mb-2">Synced from Site Mode — the tenant name follows the Navbar brand, so edit it there.</div>
+          <div className="text-[10px] text-[var(--dim)] mb-2">Synced from Site Mode — the client name follows the Navbar brand, so edit it there.</div>
           <div data-testid="snapshot-headline" className="font-display font-semibold">{snap.headline || "—"}</div>
           {snap.subtitle && <div data-testid="snapshot-subtitle" className="text-sm text-[var(--mut)] mt-1">{snap.subtitle}</div>}
           {snap.description && <div data-testid="snapshot-description" className="text-xs text-[var(--mut)] mt-2 leading-relaxed line-clamp-3">{snap.description}</div>}
@@ -90,7 +90,7 @@ function SiteSnapshot({ appDoc }) {
       <div data-testid="overview-master-lock" className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] p-3">
         <div className="text-xs flex-1 min-w-[180px]">
           <div className="font-semibold">Master lock</div>
-          <div className="text-[var(--mut)]">Lock or unlock every page, section, form, CMS entry and workflow in this tenant at once.</div>
+          <div className="text-[var(--mut)]">Lock or unlock every page, section, form, CMS entry and workflow in this client at once.</div>
         </div>
         <LockStateBadge testid="overview-lock-state-badge" />
         <MasterLockButton testid="overview-master-lock-btn" />

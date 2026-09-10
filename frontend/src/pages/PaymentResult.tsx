@@ -27,8 +27,8 @@ export function PaymentSuccess() {
     <div className="min-h-screen flex items-center justify-center px-6" data-testid="payment-success-page">
       <div className="card-surface p-10 max-w-md w-full text-center">
         {state.status === "checking" && <><Loader2 size={32} className="animate-spin text-[var(--acc)] mx-auto" /><div className="font-display text-2xl mt-4">Confirming payment…</div><p className="text-sm text-[var(--mut)] mt-2">Waiting for Stripe to confirm.</p></>}
-        {state.status === "paid" && <><CheckCircle2 size={36} className="text-[var(--acc)] mx-auto" /><div className="font-display text-2xl mt-4">Subscribed to {state.plan_name}</div><p className="text-sm text-[var(--mut)] mt-2">Billing is active for this tenant.</p>
-          <button data-testid="payment-back-btn" onClick={() => nav(state.app_id ? `/apps/${state.app_id}` : "/dashboard")} className="btn-primary mt-6">Back to tenant</button></>}
+        {state.status === "paid" && <><CheckCircle2 size={36} className="text-[var(--acc)] mx-auto" /><div className="font-display text-2xl mt-4">Subscribed to {state.plan_name}</div><p className="text-sm text-[var(--mut)] mt-2">Billing is active for this client.</p>
+          <button data-testid="payment-back-btn" onClick={() => nav(state.app_id ? `/apps/${state.app_id}` : "/dashboard")} className="btn-primary mt-6">Back to client</button></>}
         {state.status === "failed" && <><XCircle size={36} className="text-red-400 mx-auto" /><div className="font-display text-2xl mt-4">Payment not confirmed</div><p className="text-sm text-[var(--mut)] mt-2">If you were charged, it will sync shortly via webhook.</p>
           <button onClick={() => nav("/dashboard")} className="btn-ghost mt-6">Dashboard</button></>}
       </div>

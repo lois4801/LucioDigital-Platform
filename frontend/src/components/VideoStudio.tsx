@@ -138,7 +138,7 @@ export default function VideoStudio({ appId, appDoc }) {
       </div>
 
       <div>
-        <div className="overline mb-3">This tenant's videos ({state.videos.length})</div>
+        <div className="overline mb-3">This client's videos ({state.videos.length})</div>
         {state.videos.length === 0 ? <div className="card-surface p-8 text-center text-sm text-[var(--mut)]">No videos yet — auto-source, generate or upload one.</div> : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3" data-testid="video-library">
             {state.videos.map(v => (

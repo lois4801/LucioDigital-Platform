@@ -903,3 +903,28 @@ FastAPI/Mongo. No feature or UI changes.
 - Landing page (`TestLabLanding.tsx`, route `/`) renders the 20 agency/studio/freelancer reviews with
   `limeLock` — lime (#BEF264) is reserved for the platform page and lois-tech.ca via the
   `.lois-reviews` CSS scope; no tenant inherits it unless lime is its own accent.
+
+## 2026-06 · Section templates, page reordering, landing pricing removal, tenant→client rename (iter89, 146/146 backend, frontend 100%)
+- NEW `backend/page_sections.py`: `SETS` = 4 curated section sets each for home / about / services /
+  contact / general (`page_type()` derives the type from the slug or name).
+  `GET /apps/{id}/pages/{page_id}/section-sets`, `POST .../apply-set` (set id or "blank"),
+  `PUT /apps/{id}/pages/order`. Reordering rewrites both the page `order` field AND the navbar link
+  order on every page, so the tabs and the site menu can never disagree.
+- NEW `site_content.blocks_for_types()` builds each set from that niche's OWN copy (11 block types
+  supported), so an applied set arrives on-brand — styling always comes from the client's Site Mode.
+- NEW `builder/SectionPicker.tsx` (`section-picker`, `section-set-<id>`, `section-set-blank`) with a
+  bar-sketch thumbnail and a "best used for" line per set. It opens automatically after page
+  creation and on demand from `page-sections-btn` in the page guide (replaces that page's content).
+- `PageManager` tabs are draggable (`page-drag-<slug>` handle on hover, HTML5 drag + touch
+  long-press for mobile); `Builder.reorderPages()` saves instantly and rolls back on failure.
+- Landing page: the Pricing section and its navbar link are gone; everything else untouched.
+- RENAME: `/app/scripts/rename_tenant.py` + `rename_tenant_pass2.py` swapped tenant→client in
+  visible copy only (301 + 124 lines, ~90 files); `backend/rename_stored_copy.py` swept stored
+  review/CMS copy in Mongo. DELIBERATELY UNCHANGED (do not "finish" this rename): `tenant_id` /
+  `tenant_key` fields, the `"tenants"` JSON response keys and `/public/landing/tenants` route, the
+  `ui_labels` scope value `"tenant"`, and CSS class names (`tenant-scroll`, `tenant-v2`,
+  `tenant-modes.css`, `tenant-studio.css`). data-testids WERE renamed
+  (e.g. `hero-gallery-tenant` -> `hero-gallery-client`).
+- Rename gotcha to remember: a swapped string next to an untouched identifier breaks things.
+  Three real breaks were found and fixed — `const [clients, setTenants]` in HeroGallery and
+  RedesignReview, and `_ap['clients']` in server.py where the dict key is still `tenants`.

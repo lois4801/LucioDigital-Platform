@@ -59,7 +59,7 @@ export default function DomainPanel({ appDoc, setAppDoc }) {
           <div className="w-10 h-10 rounded-xl bg-[var(--acc)]/10 border border-[var(--acc)]/30 flex items-center justify-center"><Globe size={18} className="text-[var(--acc)]" /></div>
           <div className="flex-1">
             <div className="overline">Custom domain</div>
-            <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Point the client's domain at this tenant</h3>
+            <h3 className="font-display text-xl font-semibold tracking-tight mt-1">Point the client's domain at this client</h3>
             {!appDoc.custom_domain ? (
               <div className="mt-4 flex gap-2 max-w-lg">
                 <input data-testid="domain-input" value={domain} onChange={e => setDomain(e.target.value)} placeholder="app.clientbrand.com"
@@ -77,7 +77,7 @@ export default function DomainPanel({ appDoc, setAppDoc }) {
                 </div>
                 {appDoc.domain_checked_at && <div className="text-[11px] font-mono text-[var(--dim)] mt-2">Last checked {new Date(appDoc.domain_checked_at).toLocaleString()} · live DNS lookup</div>}
                 <div className="mt-5 space-y-3">
-                  <Row ok={dns?.cname?.ok} label="1 · CNAME record" name={appDoc.custom_domain} expected="tenants.luciostudio.app" found={dns?.cname?.found} />
+                  <Row ok={dns?.cname?.ok} label="1 · CNAME record" name={appDoc.custom_domain} expected="clients.luciostudio.app" found={dns?.cname?.found} />
                   <Row ok={dns?.txt?.ok} label="2 · TXT ownership record" name={`_lucio-verify.${appDoc.custom_domain}`} expected={appDoc.domain_token} found={dns?.txt?.found} />
                   <div className="p-4 rounded-xl bg-[var(--bg-2)] border border-[var(--line)] flex gap-3">
                     {appDoc.domain_status === "verified" ? <CheckCircle2 size={18} className="text-[var(--acc)] shrink-0" /> : <Circle size={18} className="text-[var(--dim)] shrink-0" />}

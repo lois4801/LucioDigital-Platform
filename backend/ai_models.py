@@ -1,4 +1,4 @@
-"""AI model routing: a platform default that each tenant can override, across every LLM call.
+"""AI model routing: a platform default that each client can override, across every LLM call.
 Text models: Claude, OpenAI and Gemini (3 Flash / 3.1 Pro). Images: Gemini Nano Banana."""
 import logging
 import os
@@ -37,7 +37,7 @@ def _now():
 
 
 async def resolve_model(db, app_id: Optional[str], feature: str = "") -> Tuple[str, str]:
-    """Tenant override → platform default → built-in default. Returns (provider, model)."""
+    """Client override → platform default → built-in default. Returns (provider, model)."""
     try:
         plat = await db.platform_settings.find_one({"_id": "ai"}) or {}
         chosen = None
@@ -70,7 +70,7 @@ def resolve_sync(app_id: Optional[str] = None, feature: str = "") -> Tuple[str, 
 
 
 async def run_text(app_id: Optional[str], feature: str, system: str, prompt: str, session_id: str) -> Tuple[str, str]:
-    """One-shot text generation on whichever model this tenant/feature resolves to."""
+    """One-shot text generation on whichever model this client/feature resolves to."""
     from llm_provider import get_chat, UserMessage, TextDelta, StreamDone
     provider, model = await resolve_for(app_id, feature)
     chat = get_chat(provider, model, system, session_id)

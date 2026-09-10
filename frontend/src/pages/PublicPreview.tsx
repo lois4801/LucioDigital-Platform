@@ -164,7 +164,7 @@ export default function PublicPreview() {
           industry={site.app.industry} accent={site.theme?.primary}
           brand={site.app.name} vitals={site.app.vitals} mapUrl={site.app.map_url}
           address={site.app.address || (() => {
-            // the real address lives in the tenant's own contact / footer block
+            // the real address lives in the client's own contact / footer block
             for (const p of site.pages || []) {
               for (const b of p.blocks || []) {
                 const a = b?.props?.address;

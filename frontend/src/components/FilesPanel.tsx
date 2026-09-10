@@ -92,7 +92,7 @@ export default function FilesPanel({ appId }) {
       <div className="grid lg:grid-cols-[1fr_320px] gap-5">
         <div className="card-surface p-5">
           <div className="overline">Media & file library</div>
-          <p className="text-xs text-[var(--mut)] mt-1.5">Upload images, documents, sheets, audio or video for this tenant. New files are <span className="text-[var(--fg)]">private</span> — flip a file to Shared when you want a public link for pages, replies or the client.</p>
+          <p className="text-xs text-[var(--mut)] mt-1.5">Upload images, documents, sheets, audio or video for this client. New files are <span className="text-[var(--fg)]">private</span> — flip a file to Shared when you want a public link for pages, replies or the client.</p>
           <div className="flex flex-wrap items-center gap-2 mt-4">
             <input ref={inputRef} data-testid="files-input" type="file" multiple onChange={upload} className="hidden"
               accept=".png,.jpg,.jpeg,.webp,.gif,.svg,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.json,.mp4,.webm,.mp3,.wav" />
@@ -112,7 +112,7 @@ export default function FilesPanel({ appId }) {
 
       {shown.length === 0 ? (
         <div data-testid="files-empty" className="card-surface p-10 text-center text-sm text-[var(--mut)]">
-          {files.length === 0 ? "No files yet — upload logos, brand assets, quotes or contracts to keep them with this tenant." : "No files match that search."}
+          {files.length === 0 ? "No files yet — upload logos, brand assets, quotes or contracts to keep them with this client." : "No files match that search."}
         </div>
       ) : (
         <div data-testid="files-grid" className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -12,12 +12,12 @@ export default function RedesignReview() {
   const nav = useNavigate();
   const [vp, setVp] = useState("desktop");
   const [info, setInfo] = useState(null);
-  const [target, setTarget] = useState(null);      // null = all tenants
-  const [tenants, setTenants] = useState([]);
+  const [target, setTarget] = useState(null);      // null = all clients
+  const [clients, setClients] = useState([]);
 
   useEffect(() => {
     api.get("/redesign/pending").then(r => setInfo(r.data)).catch(() => {});
-    api.get("/apps").then(r => setTenants((r.data.apps || r.data || []).filter(a => !a.is_test_lab))).catch(() => {});
+    api.get("/apps").then(r => setClients((r.data.apps || r.data || []).filter(a => !a.is_test_lab))).catch(() => {});
   }, []);
 
   const [w, h] = SIZES[vp];
@@ -81,7 +81,7 @@ export default function RedesignReview() {
           </div>
           <p className="text-sm text-[var(--mut)] mt-2 max-w-2xl mx-auto">
             Auto-propagation is permanently on: every change lands on its template immediately,
-            reaches every active tenant using it, and is inherited by future tenants. There is no
+            reaches every active client using it, and is inherited by future clients. There is no
             approval step, no diff to confirm and no push button.
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2">

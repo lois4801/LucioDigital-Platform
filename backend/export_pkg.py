@@ -1,9 +1,9 @@
-"""Three-way export system for every tenant.
+"""Three-way export system for every client.
 
   website   — static multi-page site, every asset + font embedded locally, a tiny form server
               and WordPress/Webflow import files
   fullstack — React frontend + FastAPI backend + seeded database + auth + admin dashboard
-  plugin    — structured JSON + assets bundle that restores as a new tenant on this platform
+  plugin    — structured JSON + assets bundle that restores as a new client on this platform
 
 Exports run as background jobs with progress; the finished .zip lives in object storage and is
 streamed back through an authenticated download route.
@@ -311,7 +311,7 @@ RESEND_API_KEY=
 
 
 def _handoff_readme(app_doc, pages, cols, counts, manifest, sql_counts) -> str:
-    name = app_doc.get("name") or "This tenant"
+    name = app_doc.get("name") or "This client"
     total_rows = sum(counts.values())
     return f"""# {name} — Client Handoff Bundle
 
@@ -324,7 +324,7 @@ original platform is needed to run, host or migrate it.
 |---|---|
 | `site/` | The complete static website — {len(pages)} page(s) of plain HTML/CSS/JS with every image, video and font embedded locally. Drop it on any host. |
 | `app/` | Full-stack starter: React frontend + FastAPI backend + seeded database + auth + admin dashboard. |
-| `data/` | Every record for this tenant as JSON ({total_rows} rows across {len(counts)} collections). |
+| `data/` | Every record for this client as JSON ({total_rows} rows across {len(counts)} collections). |
 | `files/` | Every uploaded file ({len(manifest)}), with `files/manifest.json` mapping them to original names. |
 | `supabase/` | One idempotent `migration.sql` that creates the schema, loads the data and enables Row Level Security in your own Supabase project. |
 | `.env.example` | Every environment variable the app reads, with nothing filled in. |
@@ -352,7 +352,7 @@ psql "$SUPABASE_DB_URL" -f supabase/migration.sql
 ```
 
 Creates `lt_tenants` plus {len(sql_counts)} data tables, loads {sum(sql_counts.values())} rows and turns on RLS
-(service role writes, signed-in users read only their own tenant). Details in `supabase/README.md`.
+(service role writes, signed-in users read only their own client). Details in `supabase/README.md`.
 
 ## 4. Content inventory
 
@@ -529,8 +529,8 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
             "Plug-and-play backup / clone bundle for this platform.\n\n"
             "## Restore it\n"
             "1. Open Lois-Tech → **Dashboard**\n"
-            "2. Either open any tenant → **Site Mode → Import → Import a .zip** and drop this file in, "
-            "or use **Import plugin package** on the dashboard to restore it as a brand-new tenant.\n"
+            "2. Either open any client → **Site Mode → Import → Import a .zip** and drop this file in, "
+            "or use **Import plugin package** on the dashboard to restore it as a brand-new client.\n"
             "3. The importer detects `plugin.json` and restores pages, blocks, design, CMS, forms, workflows, "
             "settings, bookings and members with every asset re-uploaded — no rebuild needed.\n\n"
             "## What's inside\n"
@@ -540,7 +540,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         return files
 
     async def build_handoff(app_doc, pages, cols, bundler, client, say):
-        """Everything a client needs to own this tenant: static site, full-stack app, their data,
+        """Everything a client needs to own this client: static site, full-stack app, their data,
         their files, the Supabase migration and a self-host guide."""
         app_id = app_doc["app_id"]
         await say("site", "Rendering the static website", 18)
@@ -582,7 +582,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         files["supabase/migration.sql"] = sql
         files["supabase/README.md"] = (
             f"# {app_doc.get('name')} — Supabase migration\n\n"
-            "Run this once against your own Supabase project and every record from this tenant lands in\n"
+            "Run this once against your own Supabase project and every record from this client lands in\n"
             "your Postgres database, with Row Level Security enabled on every table.\n\n"
             "## How to run it\n"
             "1. Supabase dashboard → **SQL Editor** → paste `migration.sql` → **Run**.\n"
@@ -643,7 +643,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
                          f"Your {KINDS[kind]} export for {app_doc.get('name')} finished.\n\n"
                          f"File: {filename}\nSize: {len(raw) // 1024} KB\n"
                          f"Files bundled: {len(files) + len(bundler.files)}\n\n"
-                         "Open the tenant's Handoff & Export tab to download it.")
+                         "Open the client's Handoff & Export tab to download it.")
         except Exception as e:
             logger.exception("export failed")
             await db.export_jobs.update_one({"job_id": job_id}, {"$set": {
@@ -688,7 +688,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         return StreamingResponse(iter([data]), media_type="application/zip",
                                  headers={"Content-Disposition": f"attachment; filename={job['filename']}"})
 
-    # ---------------- plugin import (restore as a new tenant) ----------------
+    # ---------------- plugin import (restore as a new client) ----------------
 
     async def restore_plugin(manifest: dict, zf: zipfile.ZipFile, app_id: str, user_id: str, name: Optional[str] = None):
         """Rewrites every bundled asset into this platform's storage, then restores all collections."""
@@ -767,7 +767,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
 
     @api.post("/site/import-plugin")
     async def import_plugin(file: UploadFile = File(...), name: str = Form(""), user: dict = Depends(get_current_user)):
-        """Restores a plugin package as a brand-new tenant owned by the caller."""
+        """Restores a plugin package as a brand-new client owned by the caller."""
         if not (file.filename or "").lower().endswith(".zip"):
             raise HTTPException(400, "Upload the plugin .zip package")
         raw = await file.read()

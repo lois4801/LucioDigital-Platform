@@ -37,7 +37,7 @@ export default function TemplatePushModal({ open, initialScope = "all", targetKe
             scope, keys: scope === "selected" ? [targetKey] : null, changes: picked, confirm: word,
           });
       toast.success(staging
-        ? "Changes successfully applied to the staging tenant."
+        ? "Changes successfully applied to the staging client."
         : `Changes successfully applied to ${data.templates_updated} template(s).`);
       onDone?.();
       onClose();

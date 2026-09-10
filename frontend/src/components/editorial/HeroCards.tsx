@@ -1,18 +1,18 @@
 import { useCursorParallax, useIsMobile, useReducedMotion, EASE_CSS } from "./motion";
 
-// Abstract UI cards: tenant sites, templates, dashboards. Scattered, tilted, slow sine drift,
+// Abstract UI cards: client sites, templates, dashboards. Scattered, tilted, slow sine drift,
 // staggered entrance and cursor parallax (cards move opposite the pointer).
 const CARDS = [
-  { k: "tenant-a", label: "Orbit SaaS", kind: "Tenant", x: 6, y: 14, w: 210, rot: -6, dur: 7.5, depth: 1, accent: "lime" },
+  { k: "client-a", label: "Orbit SaaS", kind: "Client", x: 6, y: 14, w: 210, rot: -6, dur: 7.5, depth: 1, accent: "lime" },
   { k: "tmpl-a", label: "Dental · template", kind: "Template", x: 78, y: 10, w: 190, rot: 5, dur: 9, depth: 0.6, accent: "teal" },
   { k: "dash-a", label: "Revenue · $48,210", kind: "Dashboard", x: 71, y: 62, w: 235, rot: -4, dur: 6.5, depth: 1.2, accent: "orange" },
-  { k: "tenant-b", label: "Halo Studio", kind: "Tenant", x: 3, y: 63, w: 195, rot: 7, dur: 8.5, depth: 0.9, accent: "teal" },
+  { k: "client-b", label: "Halo Studio", kind: "Client", x: 3, y: 63, w: 195, rot: 7, dur: 8.5, depth: 0.9, accent: "teal" },
   { k: "tmpl-b", label: "Law firm · template", kind: "Template", x: 16, y: 38, w: 165, rot: -8, dur: 10, depth: 0.5, accent: "lime" },
   { k: "dash-b", label: "Leads · 1,284", kind: "Dashboard", x: 86, y: 36, w: 175, rot: 6, dur: 7, depth: 0.7, accent: "lime" },
-  { k: "tenant-c", label: "Ledger Fintech", kind: "Tenant", x: 12, y: 86, w: 180, rot: 4, dur: 8, depth: 1.1, accent: "orange" },
+  { k: "client-c", label: "Ledger Fintech", kind: "Client", x: 12, y: 86, w: 180, rot: 4, dur: 8, depth: 1.1, accent: "orange" },
   { k: "tmpl-c", label: "Restaurant · template", kind: "Template", x: 62, y: 80, w: 170, rot: -5, dur: 9.5, depth: 0.8, accent: "teal" },
   { k: "dash-c", label: "Uptime · 99.98%", kind: "Dashboard", x: 52, y: 4, w: 160, rot: 3, dur: 6, depth: 0.6, accent: "lime" },
-  { k: "tenant-d", label: "Vanta Clinic", kind: "Tenant", x: 90, y: 78, w: 165, rot: -7, dur: 8.2, depth: 0.5, accent: "orange" },
+  { k: "client-d", label: "Vanta Clinic", kind: "Client", x: 90, y: 78, w: 165, rot: -7, dur: 8.2, depth: 0.5, accent: "orange" },
 ];
 
 const TONE = {

@@ -4,7 +4,7 @@ import * as Icons from "lucide-react";
 import { SwapOverlay } from "@/components/builder/ImageSwap";
 import { EditableText } from "@/components/InlineTextTools";
 
-// design_v2 flag for the current tenant site — set by the canvas / public preview root.
+// design_v2 flag for the current client site — set by the canvas / public preview root.
 export const DesignCtx = createContext(false);
 import { useCta } from "@/components/CtaFormModal";
 

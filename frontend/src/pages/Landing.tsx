@@ -15,8 +15,8 @@ import { Settings2 } from "lucide-react";
 const LOGOS = ["Nexus", "Orbit", "Fleet", "Aura", "Ledger", "Studio", "Vanta", "Halo"];
 const BENTO = [
   { icon: GripVertical, t: "Drag-and-drop builder", d: "Reorder hero, features, pricing and chart blocks with real physics — then ask Claude to rewrite any block in plain English.", span: "lg:col-span-7" },
-  { icon: Sparkles, t: "AI Media Studio", d: "Generate ad-ready images (GPT-Image-1), cinematic video (fal.ai) and studio voiceovers (ElevenLabs) inside every tenant.", span: "lg:col-span-5", icons: [ImageIcon, Film, Mic] },
-  { icon: CreditCard, t: "Stripe billing per tenant", d: "Import your price book from Excel or Word — tiers sync to Stripe and clients subscribe in one click.", span: "lg:col-span-4" },
+  { icon: Sparkles, t: "AI Media Studio", d: "Generate ad-ready images (GPT-Image-1), cinematic video (fal.ai) and studio voiceovers (ElevenLabs) inside every client.", span: "lg:col-span-5", icons: [ImageIcon, Film, Mic] },
+  { icon: CreditCard, t: "Stripe billing per client", d: "Import your price book from Excel or Word — tiers sync to Stripe and clients subscribe in one click.", span: "lg:col-span-4" },
   { icon: Globe, t: "Custom domains", d: "Bind app.clientbrand.com with a live DNS checklist and verified badge.", span: "lg:col-span-4" },
   { icon: Link2, t: "Live preview links", d: "Public read-only URLs partners can open before handoff. Revoke anytime.", span: "lg:col-span-4" },
 ];
@@ -57,7 +57,7 @@ function NicheModal({ s, i, onClose, onStart }) {
         <div className="aspect-[21/9] relative">{s.thumbnail ? <img src={s.thumbnail} alt="" className="w-full h-full object-cover" /> : <video src={s.video} autoPlay muted loop playsInline className="w-full h-full object-cover" />}<div className="absolute inset-0 bg-gradient-to-t from-[var(--card)] to-transparent" /><div className="absolute top-4 left-4 chip">{s.tag}</div>
           <button data-testid="niche-modal-close" onClick={onClose} className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/60 border border-white/10 flex items-center justify-center hover:bg-black/80"><X size={14} /></button></div>
         <div className="p-7">
-          <div className="overline mb-2">{s.tag}{s.status === "TEMPLATE" ? " template" : " · live tenant"}</div>
+          <div className="overline mb-2">{s.tag}{s.status === "TEMPLATE" ? " template" : " · live client"}</div>
           <h3 className="font-display text-2xl font-bold tracking-tight">{s.title || s.name}</h3>
           <p className="text-[var(--mut)] mt-3">{s.summary || s.blurb}</p>
           <div className="mt-5 flex flex-wrap gap-2">{(s.sections || []).map(x => <span key={x} className="chip normal-case tracking-normal">{typeof x === "string" ? x.replace(/_/g, " ") : x}</span>)}</div>
@@ -126,7 +126,7 @@ export default function Landing() {
     titleNode: <Tx k={`demo_${i}_title`} f={DEMOS[i].title} />,
     onVideoUrl: admin ? async () => { const u = window.prompt("Paste the video URL (MP4 or YouTube embed link) for this demo", tx(`demo_${i}_video`, DEMOS[i].video)); if (u && u.trim()) { try { await saveText(`demo_${i}_video`)(u.trim()); toast.success("Demo video updated"); } catch { toast.error("Save failed"); } } } : undefined });
   async function saveMarquee(list) { try { setCms(await saveLanding({ marquee: list })); setTickerOpen(false); toast.success("Ticker updated"); } catch { toast.error("Save failed"); } }
-  // Tenant cards + niche template cards are 100% database-driven and refresh on focus / every 30s.
+  // Client cards + niche template cards are 100% database-driven and refresh on focus / every 30s.
   useEffect(() => {
     let alive = true;
     const load = async () => {
@@ -237,7 +237,7 @@ export default function Landing() {
           <div className="mt-7">{admin ? <><Tx k="hero_h1" f="The workspace where agencies build, bill and hand off" as="h1" className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" testid="hero-headline" /><Tx k="hero_h1_accent" f="every client app." as="h1" className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--acc)]" /></> : <><Words as="h1" testid="hero-headline" text={tx("hero_h1", "The workspace where agencies build, bill and hand off")} className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]" delay={0.1} />
             <Words as="h1" text={tx("hero_h1_accent", "every client app.")} className="font-display text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] text-[var(--acc)]" delay={0.55} /></>}</div>
           <motion.p variants={fade} custom={2} className="mt-6 text-lg sm:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            <Tx k="hero_sub" f="Spin up tenants, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain." />
+            <Tx k="hero_sub" f="Spin up clients, design pages with drag-and-drop and AI, generate video, images and voice, charge clients monthly, and ship to their own domain." />
           </motion.p>
           <motion.div variants={fade} custom={3} className="mt-9 flex flex-col sm:flex-row sm:flex-wrap justify-center gap-3">
             <button data-testid="hero-cta-primary" onClick={admin ? undefined : go} className="btn-primary btn-glow arrow-slide w-full sm:w-auto flex items-center justify-center gap-2"><Tx k="hero_cta" f="Start building free" /> <ArrowRight size={16} /></button>
@@ -306,14 +306,14 @@ export default function Landing() {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <motion.div variants={fade}>
               <AdminText admin={admin} value={tx("products_overline", "Products we ship")} onSave={saveText("products_overline")} as="div" className="overline mb-3" testid="text-products-overline" />
-              <AdminText admin={admin} value={tx("products_heading", "Every tenant, on-brand and always live.")} onSave={saveText("products_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-products-heading" />
-              <div className="text-sm text-[var(--mut)] mt-2" data-testid="showcase-counts">{showcase.length} tenant{showcase.length === 1 ? "" : "s"} in the workspace · {showcase.filter(s => s.status === "LIVE").length} live</div>
+              <AdminText admin={admin} value={tx("products_heading", "Every client, on-brand and always live.")} onSave={saveText("products_heading")} as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" testid="text-products-heading" />
+              <div className="text-sm text-[var(--mut)] mt-2" data-testid="showcase-counts">{showcase.length} client{showcase.length === 1 ? "" : "s"} in the workspace · {showcase.filter(s => s.status === "LIVE").length} live</div>
             </motion.div>
-            <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start"><Tx k="showcase_view_all" f="View all tenants" /> <ArrowRight size={14} /></motion.button>
+            <motion.button variants={fade} custom={1} data-testid="showcase-view-all" onClick={() => nav(user ? "/dashboard" : "/login")} className="btn-ghost arrow-slide inline-flex items-center gap-2 self-start"><Tx k="showcase_view_all" f="View all clients" /> <ArrowRight size={14} /></motion.button>
           </div>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {showcase.slice(0, 8).map((s, i) => <ShowcaseCard key={s.app_id || s.title} s={s} i={i} onOpen={openShowcase} />)}
-            {showcase.length === 0 && <div data-testid="showcase-empty" className="col-span-full text-sm text-[var(--mut)]">No tenants in the workspace yet — create one and it appears here automatically.</div>}
+            {showcase.length === 0 && <div data-testid="showcase-empty" className="col-span-full text-sm text-[var(--mut)]">No clients in the workspace yet — create one and it appears here automatically.</div>}
           </div>
         </motion.div>
       </section>
@@ -358,7 +358,7 @@ export default function Landing() {
       {platformReviews.length > 0 && (
         <div className="relative z-10 lois-reviews" data-testid="landing-reviews">
           <ReviewsSection reviews={platformReviews} limeLock
-            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on tenant management, template speed, motion quality and client handoff." }} />
+            style={{ title: "Loved by the studios shipping on it", subtitle: "Agency owners, digital studios and freelancers on client management, template speed, motion quality and client handoff." }} />
         </div>
       )}
 
@@ -370,7 +370,7 @@ export default function Landing() {
             {admin ? <Tx k="pricing_heading" f="Bill your clients, not your patience." as="h2" className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" /> : <Words as="h2" text={tx("pricing_heading", "Bill your clients, not your patience.")} className="font-display text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight" />}
             <p className="text-[var(--mut)] mt-3 max-w-xl mx-auto"><Tx k="pricing_sub" f="Default tiers below — or upload your own Excel/Word price book and we sync it to Stripe." /></p></motion.div>
           <div className="grid md:grid-cols-3 gap-6 mt-12 text-left" data-testid="pricing-tiers">
-            {[["Starter", "$29", "1 hosted tenant"], ["Pro", "$99", "10 tenants + AI Media"], ["Scale", "$299", "Unlimited + SLA"]].map(([n, p, d], i) => (
+            {[["Starter", "$29", "1 hosted client"], ["Pro", "$99", "10 clients + AI Media"], ["Scale", "$299", "Unlimited + SLA"]].map(([n, p, d], i) => (
               <motion.div key={n} variants={fade} custom={i} className={`card-lift rounded-2xl border p-8 bg-[var(--card)] ${i === 1 ? "border-[var(--acc)]/50 pro-glow" : "border-slate-800"}`}>
                 <Tx k={`pricing_${i}_name`} f={n} as="div" className="overline" />
                 <div className="font-display text-4xl font-bold mt-3"><Tx k={`pricing_${i}_price`} f={p} /><span className="text-sm text-[var(--mut)] font-normal">/<Tx k={`pricing_${i}_period`} f="mo" /></span></div>
@@ -393,7 +393,7 @@ export default function Landing() {
       </section>
 
       <footer className="relative z-10 px-6 lg:px-14 py-10 border-t border-white/5 text-[var(--mut)] text-xs font-mono flex flex-col sm:flex-row gap-2 justify-between">
-        <span><Tx k="footer_copy" f="© 2026 Lois-Tech · Agency Multi-Tenant Platform" /></span>
+        <span><Tx k="footer_copy" f="© 2026 Lois-Tech · Agency Multi-Client Platform" /></span>
         <span>Built for Emergent</span>
       </footer>
       <ChatWidget token="studio" brand="Lois-Tech" accent="#10B981" lift={56} textColor={tx("chat_text_color", "#000000")} admin={admin}

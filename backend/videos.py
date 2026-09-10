@@ -1,5 +1,5 @@
 """Video engine: free stock video sourcing (Pexels/Pixabay), AI video generation (fal.ai via the
-Emergent Universal Key), and auto-placement of videos onto the tenant's site."""
+Emergent Universal Key), and auto-placement of videos onto the client's site."""
 import os
 import re
 import uuid
@@ -110,7 +110,7 @@ async def store_video(db, app_id: str, url: str, quota_mb: int, name: str, meta:
                 if total > MAX_VIDEO_BYTES:
                     raise HTTPException(413, "Video is larger than the 60 MB limit")
                 if total > budget:
-                    raise HTTPException(413, "Tenant storage quota reached — free space or raise the quota")
+                    raise HTTPException(413, "Client storage quota reached — free space or raise the quota")
                 chunks.append(chunk)
     data = b"".join(chunks)
     path = f"{APP_NAME}/library/{app_id}/{uuid.uuid4().hex}.mp4"
@@ -220,7 +220,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def place_video(app_id: str, url: str, heading: str, caption: str, page_slug: str = "/") -> dict:
         page = await db.pages.find_one({"app_id": app_id, "slug": page_slug}, {"_id": 0}) or await db.pages.find_one({"app_id": app_id}, {"_id": 0})
         if not page:
-            raise HTTPException(404, "This tenant has no pages yet — build or import the site first")
+            raise HTTPException(404, "This client has no pages yet — build or import the site first")
         blocks = page.get("blocks") or []
         block = {"id": _uid("b"), "type": "video", "props": {"heading": heading or "See it in action", "url": url, "caption": caption or ""},
                  "style": {"bg": "muted", "align": "center", "padding": "md"}}

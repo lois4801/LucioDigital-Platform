@@ -23,7 +23,7 @@ export default function MotionStage({ profile, industry = "", speed = 1, intensi
             className="mt-5 font-display text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-[0.95]" />
           <p className="mt-5 text-sm md:text-base text-white/45 max-w-prose">
             {hero.replace(/-/g, " ")} hero choreography, {profile?.reveal?.replace(/-/g, " ") || "scroll reveals"} on scroll
-            and a {profile?.counter?.replace(/-/g, " ") || "counter"} stat rhythm — the exact motion a new tenant inherits.
+            and a {profile?.counter?.replace(/-/g, " ") || "counter"} stat rhythm — the exact motion a new client inherits.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
             <span className="rounded-full px-5 py-2.5 text-sm font-semibold text-black" style={{ background: accent }}>Get a quote</span>
@@ -54,7 +54,7 @@ export default function MotionStage({ profile, industry = "", speed = 1, intensi
                 <span className="ed-pill">{String(i + 1).padStart(2, "0")}</span>
                 <h3 className="mt-5 font-display text-lg font-semibold">Service {i + 1}</h3>
                 <p className="mt-2 text-sm text-white/40 leading-relaxed">
-                  Copy, imagery and CTA forms are generated per tenant — this card only demonstrates the motion.
+                  Copy, imagery and CTA forms are generated per client — this card only demonstrates the motion.
                 </p>
                 <span className="mt-5 block h-px w-full" style={{ background: `linear-gradient(90deg,${accent}88,transparent)` }} />
               </article>

@@ -150,7 +150,7 @@ export default function ExportCards({ appDoc }) {
         })}
       </div>
       <div className="mt-4 text-[10px] text-[var(--dim)]">
-        Stages: {STAGES.join(" → ")}. Media is capped at this tenant's storage quota; anything skipped is listed in the package readme.
+        Stages: {STAGES.join(" → ")}. Media is capped at this client's storage quota; anything skipped is listed in the package readme.
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 """Per-tenant case study pages, isolated Site Mode settings and the redesign approval workflow.
 
-Platform rule kept intact: nothing here pushes anything to a live tenant. Case studies are authored
-per tenant (Test Lab first), Site Mode is stored per tenant and never shared, and every redesign
+Platform rule kept intact: nothing here pushes anything to a live client. Case studies are authored
+per client (Test Lab first), Site Mode is stored per client and never shared, and every redesign
 raises a pending approval record that an admin must review before the existing rollout flow runs.
 """
 import logging
@@ -101,8 +101,8 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         animation: Optional[str] = None        # full | reduced | none
         publish: Optional[str] = None          # draft | preview | live
         template_key: Optional[str] = None     # which of the industry templates drives the look
-        hero: Optional[str] = None             # signature hero motion for this tenant
-        accent: Optional[str] = None           # tenant accent used by every motion layer
+        hero: Optional[str] = None             # signature hero motion for this client
+        accent: Optional[str] = None           # client accent used by every motion layer
         motion_speed: Optional[float] = None       # 0.25x – 2x playback of the hero engine
         motion_intensity: Optional[float] = None   # 0.2 (subtle) – 1.5 (bold) presence
         address: Optional[str] = None          # real business address: map + contact/footer blocks
@@ -121,7 +121,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if not doc:
             doc = await db.apps.find_one({"app_id": app_id}, {"_id": 0})
         if not doc:
-            raise HTTPException(404, "Tenant not found")
+            raise HTTPException(404, "Client not found")
         return doc
 
     def _template_address(key: str) -> str:
@@ -200,7 +200,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/case-study/sync-metrics")
     async def sync_metrics(app_id: str, user: dict = Depends(get_current_user)):
-        """Pulls this tenant's real numbers into the case study results row."""
+        """Pulls this client's real numbers into the case study results row."""
         app = await _app_or_404(app_id, user)
         cs = await _load(app)
         leads = await db.leads.count_documents({"app_id": app_id})
@@ -225,7 +225,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             await log_activity(app_id, user, "case_study.sync_metrics", f"Metrics synced: {stats}")
         return {"stats": stats, "synced_at": _now(), "previous": cs.get("stats")}
 
-    # ── per-tenant Site Mode (fully isolated) ─────────────────────────────
+    # ── per-client Site Mode (fully isolated) ─────────────────────────────
     @api.get("/apps/{app_id}/site-mode")
     async def get_site_mode(app_id: str, user: dict = Depends(get_current_user)):
         app = await _app_or_404(app_id, user)
@@ -317,7 +317,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
             await db.apps.update_one({"app_id": app_id}, {"$set": {"motion_profile": prof}})
         await db.apps.update_one({"app_id": app_id}, {"$set": {"site_mode": cur}})
         # Always-live: a design change saved in the master workspace propagates instantly to every
-        # active tenant and to the platform defaults future tenants inherit. Content is untouched.
+        # active client and to the platform defaults future clients inherit. Content is untouched.
         from auto_propagate import propagate_site_mode
         prop = await propagate_site_mode(db, app_id, patch)
         if log_activity:
@@ -381,6 +381,6 @@ async def ensure_seed(db, current_version: str = CURRENT_REDESIGN):
             {"_id": REDESIGN_DOC},
             {"$set": {"version": current_version, "created_at": _now(), "reviewed_at": None,
                       "dismissed_at": None, "rolled_out_at": None,
-                      "note": "Editorial motion design system applied to the Test Lab tenant and Test Template."}},
+                      "note": "Editorial motion design system applied to the Test Lab client and Test Template."}},
             upsert=True)
         logger.info("Redesign approval flag raised: %s", current_version)

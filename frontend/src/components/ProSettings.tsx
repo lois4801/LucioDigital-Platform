@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Mail, CreditCard, Eye, Send, Sparkles } from "lucide-react";
 
-/** Per-tenant weekly digest settings + the paid members area. */
+/** Per-client weekly digest settings + the paid members area. */
 export default function ProSettings({ appId }) {
   const [digest, setDigest] = useState({ enabled: false, hour: 8, recipients: [] });
   const [preview, setPreview] = useState(null);
@@ -58,12 +58,12 @@ export default function ProSettings({ appId }) {
           <Sparkles size={15} className="text-[var(--acc)]" />
           <div className="text-xs flex-1 min-w-[220px]">
             <div className="font-semibold">AI model</div>
-            <div className="text-[var(--mut)]">Choose the brain behind this tenant's site generation, chat widget, lead scoring, copy rewrites and SEO. Leave a feature on “Platform default” to follow your global setting.</div>
+            <div className="text-[var(--mut)]">Choose the brain behind this client's site generation, chat widget, lead scoring, copy rewrites and SEO. Leave a feature on “Platform default” to follow your global setting.</div>
           </div>
           <button data-testid="ai-seo-btn" onClick={writeSeo} disabled={busy === "seo"} className="btn-ghost !py-2 !px-4 text-xs">{busy === "seo" ? "Writing…" : "Write SEO for all pages"}</button>
         </div>
-        <label className="block text-xs text-[var(--mut)]">Tenant default
-          <select data-testid="ai-model-tenant" value={ai.override?.model || ""} onChange={e => saveAi({ ...ai.override, model: e.target.value || undefined })}
+        <label className="block text-xs text-[var(--mut)]">Client default
+          <select data-testid="ai-model-client" value={ai.override?.model || ""} onChange={e => saveAi({ ...ai.override, model: e.target.value || undefined })}
             className="ml-2 bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-2 py-1.5 text-xs">
             <option value="">{`Platform default (${ai.platform?.model || "claude-sonnet-5"})`}</option>
             {(ai.models || []).map(m => <option key={m.id} value={m.id}>{m.label}</option>)}

@@ -1,7 +1,7 @@
-"""Convert to Web App — turns a static tenant site into a full-stack app in one pass:
+"""Convert to Web App — turns a static client site into a full-stack app in one pass:
 tenant-scoped visitor auth (bcrypt + JWT, audience-isolated from agency auth), protected pages,
 form submissions persisted to MongoDB, database-driven repeated sections, a private admin panel,
-a real-time tenant API and role-based access. Design, copy and branding are never modified."""
+a real-time client API and role-based access. Design, copy and branding are never modified."""
 import os
 import re
 import csv
@@ -20,7 +20,7 @@ from pydantic import BaseModel, EmailStr
 logger = logging.getLogger("agency.siteapp")
 
 JWT_ALG = "HS256"
-SITE_AUD = "site-user"          # keeps tenant visitor tokens off agency endpoints
+SITE_AUD = "site-user"          # keeps client visitor tokens off agency endpoints
 PUBLIC_SLUGS = ("/", "/about", "/services", "/contact")
 SIGNUP_MODES = ("open", "approval", "invite")
 
@@ -415,7 +415,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         return Response(buf.getvalue(), media_type="text/csv",
                         headers={"Content-Disposition": 'attachment; filename="submissions.csv"'})
 
-    # ---------- tenant visitor auth ----------
+    # ---------- client visitor auth ----------
 
     @api.get("/site/{token}/config")
     async def site_config(token: str):
@@ -514,7 +514,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, send_email=N
         u = await db.site_users.find_one({"site_user_id": row["site_user_id"]}, {"_id": 0, "password_hash": 0})
         return {"token": site_token(doc["app_id"], u["site_user_id"], u.get("role", "user")), "user": public_user(u)}
 
-    # ---------- live tenant API ----------
+    # ---------- live client API ----------
 
     @api.get("/site/{token}/page/{slug:path}")
     async def site_page(token: str, slug: str, request: Request):

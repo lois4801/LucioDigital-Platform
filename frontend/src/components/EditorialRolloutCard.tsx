@@ -4,7 +4,7 @@ import api from "@/lib/api";
 import { Radio } from "lucide-react";
 
 /** Always-live status strip. There is no rollout button, queue or pending state —
- *  every change reaches its template, its tenants and future tenants automatically. */
+ *  every change reaches its template, its clients and future clients automatically. */
 export default function EditorialRolloutCard() {
   const nav = useNavigate();
   const [status, setStatus] = useState(null);
@@ -21,7 +21,7 @@ export default function EditorialRolloutCard() {
           <div className="font-display text-base">Always live · auto-propagation on</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
             Every design, motion and content change applies to its template instantly, pushes to all
-            active tenants using it, and is inherited by future tenants. No pending state, no push step.
+            active clients using it, and is inherited by future clients. No pending state, no push step.
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">

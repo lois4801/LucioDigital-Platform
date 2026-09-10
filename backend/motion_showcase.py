@@ -1,8 +1,8 @@
 """Public Motion Systems index + Template Isolation Preview.
 
 `/motion` and `/hero-gallery` render the same permanently public index: every motion system,
-its assigned industry template and whether it is ACTIVE (a live tenant runs it) or RESERVED
-(built and assigned, waiting for a tenant). Nothing here mutates a tenant or a template.
+its assigned industry template and whether it is ACTIVE (a live client runs it) or RESERVED
+(built and assigned, waiting for a client). Nothing here mutates a client or a template.
 """
 import logging
 import uuid
@@ -49,7 +49,7 @@ def register(api, db, get_current_user):
                                    RESERVED_PROFILES, LIME)
 
     async def _live_by_template() -> dict:
-        """template_key → [tenant names] for every non-archived tenant."""
+        """template_key → [client names] for every non-archived client."""
         out: dict = {}
         async for app in db.apps.find({"archived": {"$ne": True}},
                                       {"_id": 0, "name": 1, "site_niche": 1, "motion_profile": 1, "site_mode": 1}):
@@ -65,14 +65,14 @@ def register(api, db, get_current_user):
         live = await _live_by_template()
         rows = []
         for key, prof in list(MOTION_PROFILES.items()) + list(RESERVED_PROFILES.items()):
-            tenants = live.get(key) or []
+            clients = live.get(key) or []
             rows.append({
                 "hero": prof["hero"], "template_key": key,
                 "industry": label_for(key), "industry_slug": key,
                 "accent": prof["accent"], "reserved": key in RESERVED_PROFILES,
                 "layout": prof["layout"], "reveal": prof["reveal"], "counter": prof["counter"],
-                "status": "active" if tenants else "reserved",
-                "tenants": tenants, "tenant_count": len(tenants),
+                "status": "active" if clients else "reserved",
+                "tenants": clients, "tenant_count": len(clients),
             })
         used = {r["hero"] for r in rows}
         for h in HERO_NAMES:
@@ -95,7 +95,7 @@ def register(api, db, get_current_user):
 
     @api.get("/public/motion-reel")
     async def motion_reel():
-        """Everything the public index needs — no auth, no tenant data beyond template usage."""
+        """Everything the public index needs — no auth, no client data beyond template usage."""
         rows = await _catalogue()
         return {
             "heroes": rows,
@@ -116,11 +116,11 @@ def register(api, db, get_current_user):
         if not prof:
             raise HTTPException(404, "Unknown template")
         live = await _live_by_template()
-        tenants = live.get(key) or (["lois-tech.ca"] if key == "platform" else [])
+        clients = live.get(key) or (["lois-tech.ca"] if key == "platform" else [])
         return {
             "template_key": key, "industry": label_for(key) if key != "platform" else "lois-tech.ca (platform)",
             "profile": {**prof, "template_key": key, "speed": 1.0, "intensity": 1.0},
-            "status": "active" if tenants else "reserved", "tenants": tenants,
+            "status": "active" if clients else "reserved", "tenants": clients,
         }
 
     class PickIn(BaseModel):

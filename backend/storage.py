@@ -174,7 +174,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, now_iso):
         if not rec:
             raise HTTPException(404, "File not found")
         if rec.get("private"):
-            raise HTTPException(403, "This file is private — open it from the tenant's Files tab")
+            raise HTTPException(403, "This file is private — open it from the client's Files tab")
         try:
             data, ct = get_object(path)
         except Exception as e:

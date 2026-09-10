@@ -36,7 +36,7 @@ function UndoModal({ entry, onClose, onDone }) {
         setPct(j?.undo_pct ?? 0);
         if (j?.undone_at) {
           clearInterval(timer);
-          toast.success("Rollout undone. All tenants restored to their previous state.");
+          toast.success("Rollout undone. All clients restored to their previous state.");
           onDone?.();
           onClose();
         }
@@ -61,7 +61,7 @@ function UndoModal({ entry, onClose, onDone }) {
 
         <div className="mt-4 p-3 rounded-xl bg-amber-500/8 border border-amber-500/30 text-sm text-amber-200 flex items-start gap-2">
           <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-          This will restore all {entry.total || 0} tenants to their state before this rollout. This cannot be undone. Are you sure?
+          This will restore all {entry.total || 0} clients to their state before this rollout. This cannot be undone. Are you sure?
         </div>
 
         {pct !== null ? (
@@ -102,7 +102,7 @@ function Entry({ e, onUndo }) {
               {e.undone_at && <span className="chip chip-down" data-testid={`history-undone-${e.job_id}`}>Undone {when(e.undone_at)}</span>}
             </div>
             <div className="text-xs text-[var(--mut)] mt-1.5 font-mono">
-              {e.by_name ? `${e.by_name} · ` : ""}{e.by_email} · {e.changed ?? 0} of {e.total ?? 0} tenant(s) affected
+              {e.by_name ? `${e.by_name} · ` : ""}{e.by_email} · {e.changed ?? 0} of {e.total ?? 0} client(s) affected
             </div>
             <div className="flex gap-1.5 mt-2 flex-wrap">
               {(e.categories || []).map((c) => <span key={c} className="chip">{c}</span>)}
@@ -141,7 +141,7 @@ export default function RolloutHistory() {
         <Link to="/dashboard" data-testid="history-back-link" className="btn-ghost !p-2"><ArrowLeft size={15} /></Link>
         <div>
           <div className="overline flex items-center gap-2"><History size={12} className="text-[var(--acc)]" /> Rollout history</div>
-          <h1 className="font-display text-xl font-semibold tracking-tight">Every change pushed to live tenants</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight">Every change pushed to live clients</h1>
         </div>
       </header>
 

@@ -1,6 +1,6 @@
-"""30-day restore window for deleted tenants.
+"""30-day restore window for deleted clients.
 
-Deleting a tenant from the dashboard moves it to the trash instead of erasing it: the site goes
+Deleting a client from the dashboard moves it to the trash instead of erasing it: the site goes
 offline immediately, but every page, block, lead, booking, member and file is kept and can be
 restored for 30 days. After that a boot-time sweep purges it for good. The master workspace can
 never be trashed.
@@ -50,7 +50,7 @@ async def erase(db, app_id: str) -> dict:
 
 
 async def sweep_expired(db) -> int:
-    """Purge tenants whose 30-day window has run out. Runs on every boot."""
+    """Purge clients whose 30-day window has run out. Runs on every boot."""
     n = 0
     async for app in db.apps.find({"trashed": True}, {"_id": 0, "app_id": 1, "purge_after": 1, "name": 1}):
         if days_left(app) <= 0 and app.get("purge_after"):
@@ -69,7 +69,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         if app.get("is_test_lab") or app.get("protected"):
             raise HTTPException(400, "The master workspace is permanent and cannot be deleted")
         if app["owner_id"] != user["user_id"]:
-            raise HTTPException(403, "Only the owner can delete a tenant")
+            raise HTTPException(403, "Only the owner can delete a client")
         due = _now() + timedelta(days=WINDOW_DAYS)
         await db.apps.update_one({"app_id": app_id}, {"$set": {
             "trashed": True, "trashed_at": _iso(_now()), "purge_after": _iso(due),
@@ -100,7 +100,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     async def restore_app(app_id: str, user: dict = Depends(get_current_user)):
         app = await get_user_app(app_id, user)
         if not app.get("trashed"):
-            raise HTTPException(400, "That tenant is not in the trash")
+            raise HTTPException(400, "That client is not in the trash")
         await db.apps.update_one({"app_id": app_id}, {"$set": {
             "trashed": False, "archived": False, "updated_at": _iso(_now()),
         }, "$unset": {"trashed_at": "", "purge_after": ""}})
@@ -109,13 +109,13 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.delete("/apps/{app_id}/trash")
     async def purge_now(app_id: str, user: dict = Depends(get_current_user)):
-        """Skip the window and erase a trashed tenant immediately."""
+        """Skip the window and erase a trashed client immediately."""
         app = await get_user_app(app_id, user)
         if app.get("is_test_lab") or app.get("protected"):
             raise HTTPException(400, "The master workspace is permanent and cannot be deleted")
         if app["owner_id"] != user["user_id"]:
-            raise HTTPException(403, "Only the owner can permanently delete a tenant")
+            raise HTTPException(403, "Only the owner can permanently delete a client")
         if not app.get("trashed") and not app.get("archived"):
-            raise HTTPException(400, "Delete this tenant first, then erase it permanently")
+            raise HTTPException(400, "Delete this client first, then erase it permanently")
         removed = await erase(db, app_id)
         return {"ok": True, "app_id": app_id, "removed": removed}

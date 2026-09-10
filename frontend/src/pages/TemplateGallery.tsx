@@ -8,7 +8,7 @@ import BlockPreview, { DesignCtx } from "@/components/builder/BlockPreview";
 import { themeVars, loadFonts, isV2, modeCls } from "@/lib/theme";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-/** Live, scaled render of a template's real pages — same renderer the tenant sites use. */
+/** Live, scaled render of a template's real pages — same renderer the client sites use. */
 import HeroMotionLayer from "@/components/editorial/HeroMotionLayer";
 import ContentMotion from "@/components/editorial/ContentMotion";
 import IndustryVitals from "@/components/editorial/IndustryVitals";
@@ -127,9 +127,9 @@ function Card({ t, detail, onOpen, onUse, useLabel, selected, state, allKeys = [
           <button data-testid={`template-use-${t.key}`} onClick={(e) => { e.stopPropagation(); onUse(t); }}
             className="btn-primary text-xs !py-1.5 !px-3 whitespace-nowrap">{useLabel}</button>
         </div>
-        {/* Always live: design changes reach this template's tenants automatically — no push button. */}
+        {/* Always live: design changes reach this template's clients automatically — no push button. */}
         <div className="mt-2 text-[10px] uppercase tracking-[0.16em] text-[var(--dim)]" data-testid={`template-live-note-${t.key}`}>
-          Live · {state?.tenants_using ?? 0} tenant(s) auto-synced
+          Live · {state?.tenants_using ?? 0} client(s) auto-synced
         </div>
       </div>
     </motion.div>
@@ -237,7 +237,7 @@ export default function TemplateGallery({ clientMode = false }) {
   }
 
   async function createFromTemplate() {
-    if (!form.name.trim()) return toast.error("Give the tenant a name");
+    if (!form.name.trim()) return toast.error("Give the client a name");
     setBusy(true);
     try {
       const { data } = await api.post("/apps", {
@@ -246,7 +246,7 @@ export default function TemplateGallery({ clientMode = false }) {
       });
       toast.success(`${data.name} created with the ${useOpen.brand} design`);
       nav(`/apps/${data.app_id}`);
-    } catch (e) { toast.error(e.response?.data?.detail || "Could not create that tenant"); }
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not create that client"); }
     finally { setBusy(false); }
   }
 
@@ -280,7 +280,7 @@ export default function TemplateGallery({ clientMode = false }) {
           <h1 className="font-display text-3xl lg:text-4xl font-semibold tracking-tight">{clientMode ? "Pick the look you love." : "Start from a finished design."}</h1>
           <p className="text-[var(--mut)] mt-2 max-w-2xl text-sm">{clientMode
             ? "Browse every design side by side, open any one full screen to scroll the whole site, then send your pick to the team."
-            : "Every template is a complete, distinct build — its own palette, typography, hero and section style. Pick one and the tenant is created with that design applied instantly."}</p>
+            : "Every template is a complete, distinct build — its own palette, typography, hero and section style. Pick one and the client is created with that design applied instantly."}</p>
         </div>
         {!clientMode && (
           <button data-testid="preview-for-client-btn" onClick={() => setShareOpen(true)} className="btn-ghost text-sm flex items-center gap-2"><Share2 size={14} /> Preview for client</button>
@@ -353,16 +353,16 @@ export default function TemplateGallery({ clientMode = false }) {
 
       <Dialog open={!!useOpen} onOpenChange={(o) => !o && setUseOpen(null)}>
         <DialogContent className="bg-[var(--card)] border-[var(--line)] text-[var(--fg)]">
-          <DialogHeader><DialogTitle className="font-display">New tenant · {useOpen?.brand} design</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="font-display">New client · {useOpen?.brand} design</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <label className="block"><span className="overline block mb-1">Tenant name</span>
-              <input data-testid="template-tenant-name-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Client business name"
+            <label className="block"><span className="overline block mb-1">Client name</span>
+              <input data-testid="template-client-name-input" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Client business name"
                 className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--acc)]" /></label>
             <label className="block"><span className="overline block mb-1">Description</span>
-              <textarea data-testid="template-tenant-desc-input" rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+              <textarea data-testid="template-client-desc-input" rows={3} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
                 className="w-full bg-[var(--bg-2)] border border-[var(--line)] rounded-lg px-3 py-2 text-sm outline-none focus:border-[var(--acc)]" /></label>
             <div className="text-[11px] text-[var(--mut)]">Creates a 4-page site (Home, About, Services, Contact) with the {useOpen?.brand} palette, typography and section style applied.</div>
-            <button data-testid="template-create-btn" onClick={createFromTemplate} disabled={busy} className="btn-primary w-full disabled:opacity-60">{busy ? "Creating…" : "Create tenant with this design"}</button>
+            <button data-testid="template-create-btn" onClick={createFromTemplate} disabled={busy} className="btn-primary w-full disabled:opacity-60">{busy ? "Creating…" : "Create client with this design"}</button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,5 @@
 """Reviews & testimonials: 20 AI-written, industry-specific 5-star reviews per template
-(plus a LucioDigital agency set), editable per tenant, with a dynamic colour system."""
+(plus a LucioDigital agency set), editable per client, with a dynamic colour system."""
 import json
 import os
 import re
@@ -88,7 +88,7 @@ BRIEFS: Dict[str, str] = {
     "nonprofit": "a nonprofit — people supported, funds to programmes, volunteer experience, donor reporting, community impact",
     "architecture": "an architecture practice — planning approvals, design quality, budget control, contractor coordination, finished buildings",
     "test_template": "an internal design and QA sandbox — release confidence, regression catching, motion quality, build speed, handoff clarity",
-    "luciodigital": "LucioDigital, a platform agencies and freelancers use to build and ship client websites — tenant management, template speed, motion design quality, client handoff, and business growth. Reviewers are agency owners, digital studio founders and freelance designers/developers",
+    "luciodigital": "LucioDigital, a platform agencies and freelancers use to build and ship client websites — client management, template speed, motion design quality, client handoff, and business growth. Reviewers are agency owners, digital studio founders and freelance designers/developers",
 }
 
 SYSTEM = (

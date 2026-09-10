@@ -1,5 +1,5 @@
 """ZIP site import: extract an uploaded bundle, detect its pages and assets, store the media in the
-tenant library and rebuild every HTML page as editable Site Mode pages."""
+client library and rebuild every HTML page as editable Site Mode pages."""
 import io
 import os
 import re

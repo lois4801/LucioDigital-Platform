@@ -6,7 +6,7 @@ import { ArrowLeft, Wand2, Loader2 } from "lucide-react";
 
 const TONE = { dull: "#F87171", ok: "#FBBF24", vivid: "#34D399" };
 
-// Every tenant's accent shown on the real #080808 base with its contrast ratio.
+// Every client's accent shown on the real #080808 base with its contrast ratio.
 export default function AccentAudit() {
   const nav = useNavigate();
   const [rows, setRows] = useState([]);
@@ -55,8 +55,8 @@ export default function AccentAudit() {
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/90 border-b border-[var(--line)] px-6 lg:px-10 py-4 flex flex-wrap items-center gap-3">
         <button data-testid="accent-audit-back" onClick={() => nav("/dashboard")} className="btn-ghost text-sm !py-2 !px-4 inline-flex items-center gap-2"><ArrowLeft size={14} /> Dashboard</button>
         <div>
-          <div className="overline">Tenant accent audit</div>
-          <div className="font-display text-lg font-semibold">{rows.length} tenants · {dull} reading dull on {base}</div>
+          <div className="overline">Client accent audit</div>
+          <div className="font-display text-lg font-semibold">{rows.length} clients · {dull} reading dull on {base}</div>
         </div>
         <button data-testid="accent-autotune-btn" disabled={!dull || busy === "all"} onClick={autotune}
           className="ml-auto btn-primary text-xs !py-2 !px-4 inline-flex items-center gap-2 disabled:opacity-50">

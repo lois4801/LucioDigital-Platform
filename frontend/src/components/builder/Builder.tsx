@@ -11,6 +11,7 @@ import CursorTrail from "@/components/CursorTrail";
 import { PagesBar, GenerateSiteDialog } from "@/components/builder/PagesBar";
 import PageManager from "@/components/builder/PageManager";
 import SiteModeToolbar from "@/components/builder/SiteModeToolbar";
+import SectionPicker from "@/components/builder/SectionPicker";
 import { ThemePanel, StylePanel } from "@/components/builder/Panels";
 import { NicheSwitcher, NichePreviewBar, ClientVoteBanner } from "@/components/builder/NicheSwitcher";
 import { LogoUpload } from "@/components/builder/LogoUpload";
@@ -114,6 +115,7 @@ export default function Builder({ appId, appDoc, user }) {
   const [logo, setLogo] = useState(appDoc?.logo || null);
   const [importOpen, setImportOpen] = useState(false);
   const [siteMode, setSiteMode] = useState(null);
+  const [sectionsFor, setSectionsFor] = useState(null);
   useEffect(() => { api.get(`/apps/${appId}/site-mode`).then(r => setSiteMode(r.data)).catch(() => {}); }, [appId]);
   async function patchSiteMode(next) {
     setSiteMode(s => ({ ...s, ...next }));
@@ -242,8 +244,25 @@ export default function Builder({ appId, appDoc, user }) {
     } catch { toast.error("Save failed"); } finally { setSaving(false); }
   }
   async function createPage(name, nav = "end") {
-    try { const { data } = await api.post(`/apps/${appId}/pages`, { name, slug: name, nav }); setPages([...pages, data]); switchPage(data.page_id); setPages(p => p.some(x => x.page_id === data.page_id) ? p : [...p, data]); toast.success(nav === "hidden" ? `${name} created` : `${name} created and added to the menu`); }
-    catch (e) { toast.error(e.response?.data?.detail || "Could not create page"); }
+    try {
+      const { data } = await api.post(`/apps/${appId}/pages`, { name, slug: name, nav });
+      setPages(p => p.some(x => x.page_id === data.page_id) ? p : [...p, data]);
+      switchPage(data.page_id);
+      setSectionsFor(data.page_id);      // pick a section template before the blank editor loads
+      toast.success(nav === "hidden" ? `${name} created` : `${name} created and added to the menu`);
+    } catch (e) { toast.error(e.response?.data?.detail || "Could not create page"); }
+  }
+
+  async function reorderPages(ids) {
+    const before = pages;
+    setPages(ids.map(id => pages.find(p => p.page_id === id)).filter(Boolean));
+    try {
+      await api.put(`/apps/${appId}/pages/order`, { page_ids: ids });
+      toast.success("Page order saved — the site menu matches it now");
+    } catch (e) {
+      setPages(before);
+      toast.error(e.response?.data?.detail || "Could not save the page order");
+    }
   }
   async function deletePage(pg) {
     if (!confirm(`Delete page "${pg.name}"?`)) return;
@@ -285,11 +304,12 @@ export default function Builder({ appId, appDoc, user }) {
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-      {/* Row 2 — tenant/page selector cards · Row 3 — toolbar. Fully separated, never overlapping. */}
+      {/* Row 2 — client/page selector cards · Row 3 — toolbar. Fully separated, never overlapping. */}
       <div className="-mx-6 lg:-mx-10 -mt-8 mb-6" data-testid="builder-header">
         <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-pages">
           <PageManager pages={pages} current={pageId} onSelect={switchPage} onCreate={createPage} onDelete={deletePage}
-            canLock={canLock} onToggleLock={toggleLock} theme={theme} />
+            canLock={canLock} onToggleLock={toggleLock} theme={theme}
+            onReorder={reorderPages} onSections={p => setSectionsFor(p.page_id)} />
         </div>
         <div className="px-6 lg:px-10 py-4 border-b border-[var(--line)]" data-testid="header-row-toolbar">
           <div className="flex items-center gap-2 mb-4">
@@ -428,7 +448,7 @@ export default function Builder({ appId, appDoc, user }) {
         <div className="min-h-[600px]">
           <div className={`mx-auto transition-all duration-300 ${device === "mobile" ? "max-w-[400px]" : device === "tablet" ? "max-w-[820px]" : "max-w-full"}`}>
             <div className={`rounded-2xl border border-[var(--line)] overflow-hidden shadow-2xl ${isV2(theme) ? "dsv2" : ""} ${modeCls(theme)} ${theme?.grain !== false ? "tgrain" : ""}`} style={{ ...themeVars(theme), background: "var(--tbg)", color: "var(--tbody)", fontFamily: "var(--tfb)" }} data-testid="builder-canvas">
-              <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "tenant.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
+              <div className="bg-[#0B0F17] px-3 py-2 flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-amber-400/80" /><span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" /><span className="ml-3 text-[10px] font-mono text-white/40">{appDoc?.custom_domain || "client.luciostudio.app"}{pages.find(p => p.page_id === pageId)?.slug}</span><span data-testid="inline-edit-hint" className="ml-auto text-[10px] text-white/40 hidden sm:inline">Click any text to edit · Enter to commit</span></div>
               <div className="max-h-[72vh] overflow-y-auto scrollbar-thin">
                 <CtaCtx.Provider value={{ formFor: (label) => ctaForms[ctaKey(label)] || null, onCta: (f) => setFormOpen(f), editMode: true }}>
                 <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
@@ -472,6 +492,8 @@ export default function Builder({ appId, appDoc, user }) {
         </aside>
       </div>
       <GenerateSiteDialog open={genOpen} onOpenChange={setGenOpen} appId={appId} onDone={() => load()} />
+      <SectionPicker appId={appId} pageId={sectionsFor} accent={siteMode?.accent || theme?.primary || "#10B981"}
+        open={!!sectionsFor} onClose={() => setSectionsFor(null)} onApplied={() => load(true)} />
     </DndContext>
   );
 }

@@ -96,7 +96,7 @@ const editorialMagazineFlip: Engine = (accent, mobile) => {
 
 /** internal_tools — a terminal typing itself out line by line. */
 const commandLineTypeOn: Engine = (accent, mobile) => {
-  const lines = ["$ lt deploy --tenant acme", "› building 42 modules", "› migrating schema", "✓ live in 1.8s", "$ lt status --watch"];
+  const lines = ["$ lt deploy --client acme", "› building 42 modules", "› migrating schema", "✓ live in 1.8s", "$ lt status --watch"];
   return (ctx, w, h, t) => {
     ctx.font = `${mobile ? 12 : 15}px ui-monospace, monospace`;
     const cyc = (t * 0.35) % (lines.length + 1.5);

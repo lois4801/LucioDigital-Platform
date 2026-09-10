@@ -1,4 +1,4 @@
-"""Full-site importer: crawls every internal page, downloads media into the tenant library,
+"""Full-site importer: crawls every internal page, downloads media into the client library,
 recreates forms (wired to the Inbox) and navigation, extracts the colour scheme, and reports back."""
 import os
 import re
@@ -359,7 +359,7 @@ async def crawl_site(url: str, max_pages: int = MAX_PAGES, on: Optional[Callable
 
 
 async def save_images(db, app_id: str, urls: List[str], quota_mb: int, on: Optional[Callable] = None):
-    """Download every image into the tenant's media library so nothing is hotlinked."""
+    """Download every image into the client's media library so nothing is hotlinked."""
     async def say(*a):
         if on:
             await on(*a)
@@ -389,7 +389,7 @@ async def save_images(db, app_id: str, urls: List[str], quota_mb: int, on: Optio
                     failures.append({"item": u, "reason": "image over 8 MB — add it manually"})
                     continue
                 if len(data) > budget:
-                    failures.append({"item": u, "reason": "tenant storage quota reached"})
+                    failures.append({"item": u, "reason": "client storage quota reached"})
                     break
                 ext = {"image/jpeg": "jpg", "image/jpg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif", "image/svg+xml": "svg"}.get(ctype)
                 if not ext or ext not in MIME:
@@ -425,7 +425,7 @@ GLOBAL_SYSTEM = (
     "Use ONLY real scraped facts — never invent a different company. theme.primary/secondary must come from the scraped button and background colours "
     "(never pure black or white); bg/surface/fg/muted/border must be consistent with the site's real light or dark scheme (mode 'light' → bg #FFFFFF, "
     "surface #F8FAFC, fg #0F172A; mode 'dark' → dark bg and light fg). Keep the site's own navigation labels, order and dropdown children, and rewrite "
-    "hrefs to the given tenant slugs. All hex values must be 6-digit."
+    "hrefs to the given client slugs. All hex values must be 6-digit."
 )
 
 PAGE_SYSTEM = (

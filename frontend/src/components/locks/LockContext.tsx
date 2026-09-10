@@ -34,7 +34,7 @@ export function LocksProvider({ appId, children }) {
     try {
       const { data: r } = await api.post(`/apps/${appId}/locks/all`, { locked });
       setData(d => ({ ...d, ...r }));
-      toast.success(locked ? `Locked all ${r.items} item(s) across this tenant` : `Unlocked all ${r.items} item(s)`);
+      toast.success(locked ? `Locked all ${r.items} item(s) across this client` : `Unlocked all ${r.items} item(s)`);
     } catch (e) { toast.error(e.response?.data?.detail || "Could not change the locks"); }
     finally { setBusy(false); }
   }

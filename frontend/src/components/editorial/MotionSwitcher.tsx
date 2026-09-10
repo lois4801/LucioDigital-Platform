@@ -26,7 +26,7 @@ export default function MotionSwitcher({ value = "", onPick, label = "LIVE — 4
           <button data-testid="motion-switcher-toggle" onClick={() => setOpen(o => !o)}
             className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1.5 text-sm text-white hover:border-white/35 cursor-pointer">
             <span className="w-2 h-2 rounded-full" style={{ background: active?.accent || "#84FF00" }} />
-            <span className="font-mono text-[12px]">{active ? `${active.hero} · ${active.industry}` : "Tenant's own motion"}</span>
+            <span className="font-mono text-[12px]">{active ? `${active.hero} · ${active.industry}` : "Client's own motion"}</span>
             <ChevronDown size={13} />
           </button>
           {open && (
@@ -34,7 +34,7 @@ export default function MotionSwitcher({ value = "", onPick, label = "LIVE — 4
               className="absolute left-0 mt-2 w-[320px] max-h-[60vh] overflow-auto rounded-2xl border border-white/10 bg-[#0b0b0b] shadow-2xl p-1.5">
               <button data-testid="motion-switcher-reset" onClick={() => { onPick(""); setOpen(false); }}
                 className={`w-full text-left px-3 py-2 rounded-xl text-sm cursor-pointer ${!value ? "bg-[#84FF00]/15 text-[#84FF00]" : "text-white/70 hover:bg-white/5"}`}>
-                Tenant's own motion
+                Client's own motion
               </button>
               {options.map(r => (
                 <button key={r.template_key} data-testid={`motion-switcher-opt-${r.template_key}`}

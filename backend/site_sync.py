@@ -1,4 +1,4 @@
-"""Site → App AI sync: reads a tenant's live Site Mode content and builds/updates its App Mode blueprint."""
+"""Site → App AI sync: reads a client's live Site Mode content and builds/updates its App Mode blueprint."""
 import os
 import json
 import uuid
@@ -51,7 +51,7 @@ async def _claude(system: str, prompt: str, session: str, app_id: str = None, fe
 
 
 async def site_snapshot(db, app_doc: dict) -> dict:
-    """Everything the AI needs to know about the tenant's site."""
+    """Everything the AI needs to know about the client's site."""
     app_id = app_doc["app_id"]
     pages = await db.pages.find({"app_id": app_id}, {"_id": 0}).to_list(50)
     pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))

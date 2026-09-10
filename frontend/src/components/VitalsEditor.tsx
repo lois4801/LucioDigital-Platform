@@ -5,7 +5,7 @@ import api from "@/lib/api";
 import { LiveChart } from "@/components/editorial/IndustryVitals";
 
 /** Live figures editor — the numbers, labels and charts shown in the site's "at a glance" section.
- *  Scoped to one tenant. Clients can drop in a two-column Excel/CSV sheet to replace the figures. */
+ *  Scoped to one client. Clients can drop in a two-column Excel/CSV sheet to replace the figures. */
 export default function VitalsEditor({ appId, accent = "#10B981" }) {
   const [v, setV] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -133,7 +133,7 @@ export default function VitalsEditor({ appId, accent = "#10B981" }) {
         <div className="min-w-0">
           <div className="text-sm font-semibold">Live figures &amp; charts</div>
           <div className="text-xs text-[var(--mut)] mt-0.5">
-            The numbers in this tenant's “at a glance” section. {v.source === "imported" ? "Currently showing imported client data." : "Currently showing demo figures."}
+            The numbers in this client's “at a glance” section. {v.source === "imported" ? "Currently showing imported client data." : "Currently showing demo figures."}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

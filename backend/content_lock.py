@@ -1,5 +1,5 @@
-"""Tenant content lock: saved site content is the source of truth and can never be regenerated
-or overwritten by a builder prompt while the tenant is locked."""
+"""Client content lock: saved site content is the source of truth and can never be regenerated
+or overwritten by a builder prompt while the client is locked."""
 import os
 from datetime import datetime, timezone
 from fastapi import HTTPException, Depends
@@ -11,22 +11,22 @@ def _now():
 
 
 async def assert_unlocked(db, app_id: str, action: str = "replace this site's pages"):
-    """Raise unless the tenant is explicitly unlocked. Called by every wholesale-rewrite path."""
+    """Raise unless the client is explicitly unlocked. Called by every wholesale-rewrite path."""
     doc = await db.apps.find_one({"app_id": app_id}, {"_id": 0, "content_locked": 1, "name": 1})
     if doc and doc.get("content_locked", True):
-        raise HTTPException(423, f"This tenant's site content is locked, so nothing can {action}. "
+        raise HTTPException(423, f"This client's site content is locked, so nothing can {action}. "
                                  "Unlock it in Overview → Content lock if you really want to overwrite the saved site.")
     return doc
 
 
 async def lock_after_build(db, app_id: str):
-    """Auto-lock a tenant once it actually has a site, so later prompts can't wipe it."""
+    """Auto-lock a client once it actually has a site, so later prompts can't wipe it."""
     if await db.pages.count_documents({"app_id": app_id}) > 0:
         await db.apps.update_one({"app_id": app_id}, {"$set": {"content_locked": True, "locked_at": _now()}})
 
 
 async def lock_all_existing(db) -> int:
-    """One-time: lock every tenant that has no explicit setting yet."""
+    """One-time: lock every client that has no explicit setting yet."""
     r = await db.apps.update_many({"content_locked": {"$exists": False}}, {"$set": {"content_locked": True, "locked_at": _now()}})
     return r.modified_count
 
@@ -35,7 +35,7 @@ async def sync_overview(db, app_id: str):
     """Keep the Overview snapshot in step with whatever Site Mode currently holds.
 
     Captures the live hero headline/subheadline/description, the real page and section counts,
-    a fresh thumbnail, and mirrors the Navbar brand name onto the tenant name.
+    a fresh thumbnail, and mirrors the Navbar brand name onto the client name.
     """
     from test_lab import TEST_LAB_ID
     if app_id == TEST_LAB_ID:
@@ -71,7 +71,7 @@ async def sync_overview(db, app_id: str):
     if img:
         upd["thumbnail"] = img
     if brand:
-        # The Navbar brand is the tenant's public name — keep the workspace header in step with it.
+        # The Navbar brand is the client's public name — keep the workspace header in step with it.
         upd["name"] = brand
     blurb = (description or snap["subtitle"] or "").strip()
     if blurb:
@@ -97,7 +97,7 @@ async def clear_synced_label_overrides(db) -> int:
 
 
 async def sync_all_overviews(db) -> int:
-    """Bring every tenant's Overview snapshot in step with its current Site Mode content."""
+    """Bring every client's Overview snapshot in step with its current Site Mode content."""
     import asyncio
     ids = [a["app_id"] async for a in db.apps.find({"is_deleted": {"$ne": True}, "archived": {"$ne": True}}, {"_id": 0, "app_id": 1})]
 
@@ -120,7 +120,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await get_user_app(app_id, user)
         snap = await sync_overview(db, app_id)
         if not snap:
-            raise HTTPException(400, "This tenant has no Site Mode pages yet")
+            raise HTTPException(400, "This client has no Site Mode pages yet")
         return snap
 
     @api.get("/apps/{app_id}/content-lock")

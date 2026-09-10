@@ -38,7 +38,7 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-app = FastAPI(title="Agency Multi-Tenant Platform")
+app = FastAPI(title="Agency Multi-Client Platform")
 api = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -401,7 +401,7 @@ async def list_apps(industry: Optional[str] = None, status_f: Optional[str] = No
     member_app_ids = [m["app_id"] for m in memberships]
     q = {"$or": [{"owner_id": user["user_id"]}, {"app_id": {"$in": member_app_ids}}]}
     q["archived"] = True if archived else {"$ne": True}
-    q["trashed"] = {"$ne": True}          # deleted tenants live in the 30-day trash, not the workspace
+    q["trashed"] = {"$ne": True}          # deleted clients live in the 30-day trash, not the workspace
     if industry:
         q["industry"] = industry
     if status_f:
@@ -416,11 +416,11 @@ class ArchiveIn(BaseModel):
 
 @api.post("/apps/{app_id}/archive")
 async def archive_app(app_id: str, body: ArchiveIn, user: dict = Depends(get_current_user)):
-    """Archiving hides a tenant from the workspace and takes its site offline. Pages, leads,
-    bookings, members and files are all kept, so restoring brings the tenant back intact."""
+    """Archiving hides a client from the workspace and takes its site offline. Pages, leads,
+    bookings, members and files are all kept, so restoring brings the client back intact."""
     app = await get_user_app(app_id, user)
     if app.get("is_test_lab") or app.get("protected"):
-        raise HTTPException(400, "The Test Lab tenant is permanent and cannot be archived")
+        raise HTTPException(400, "The Test Lab client is permanent and cannot be archived")
     upd = {"archived": body.archived, "updated_at": now_utc().isoformat()}
     if body.archived:
         upd["archived_at"] = now_utc().isoformat()
@@ -443,14 +443,14 @@ def _template_key(industry: Optional[str], name: str, explicit: Optional[str] = 
 
 
 def _new_tenant_theme(industry: Optional[str], name: str, explicit: Optional[str] = None) -> dict:
-    """New tenants inherit the chosen industry template's unique look (platform default)."""
+    """New clients inherit the chosen industry template's unique look (platform default)."""
     from site_content import LOOKS, NICHES, theme_for
     key = _template_key(industry, name, explicit)
     return theme_for(NICHES[key], key) if key in LOOKS else {**V2_THEME}
 
 
 async def _build_template_pages(app: dict, key: str):
-    """Materialise a template's full multi-page site for a freshly created tenant."""
+    """Materialise a template's full multi-page site for a freshly created client."""
     from site_content import build_premium_site
     pages, _theme, _n = build_premium_site(app, key, {"name": app["name"]})
     for i, (pname, slug, blocks) in enumerate(pages):
@@ -541,7 +541,7 @@ async def update_app(app_id: str, body: AppUpdateIn, user: dict = Depends(get_cu
 
 @api.get("/apps/archived/summary")
 async def archived_summary(user: dict = Depends(get_current_user)):
-    """Archived tenants plus a snapshot of what will come back on restore."""
+    """Archived clients plus a snapshot of what will come back on restore."""
     docs = await db.apps.find({"owner_id": user["user_id"], "archived": True}, {"_id": 0}).sort("updated_at", -1).to_list(200)
     out = []
     for a in docs:
@@ -560,14 +560,14 @@ async def archived_summary(user: dict = Depends(get_current_user)):
 
 @api.delete("/apps/{app_id}/purge")
 async def purge_app(app_id: str, user: dict = Depends(get_current_user)):
-    """Permanent delete — only allowed once a tenant has been archived."""
+    """Permanent delete — only allowed once a client has been archived."""
     doc = await get_user_app(app_id, user)
     if doc.get("is_test_lab") or doc.get("protected"):
-        raise HTTPException(status_code=400, detail="The Test Lab tenant is permanent and cannot be deleted")
+        raise HTTPException(status_code=400, detail="The Test Lab client is permanent and cannot be deleted")
     if doc["owner_id"] != user["user_id"]:
-        raise HTTPException(status_code=403, detail="Only the owner can permanently delete a tenant")
+        raise HTTPException(status_code=403, detail="Only the owner can permanently delete a client")
     if not doc.get("archived"):
-        raise HTTPException(status_code=400, detail="Archive this tenant first, then permanently delete it")
+        raise HTTPException(status_code=400, detail="Archive this client first, then permanently delete it")
     removed = {}
     for coll in ("apps", "pages", "memberships", "messages", "activity_logs", "submissions",
                  "item_locks", "workflows", "cms_collections", "cms_items", "site_users",
@@ -582,7 +582,7 @@ async def purge_app(app_id: str, user: dict = Depends(get_current_user)):
 async def delete_app(app_id: str, user: dict = Depends(get_current_user)):
     doc = await get_user_app(app_id, user)
     if doc.get("is_test_lab") or doc.get("protected"):
-        raise HTTPException(status_code=400, detail="The Test Lab tenant is permanent and cannot be deleted")
+        raise HTTPException(status_code=400, detail="The Test Lab client is permanent and cannot be deleted")
     if doc["owner_id"] != user["user_id"]:
         raise HTTPException(status_code=403, detail="Only owner can delete")
     await db.apps.delete_one({"app_id": app_id})
@@ -603,7 +603,7 @@ def _default_blocks(name: str) -> List[dict]:
             "heading": "Core Capabilities",
             "items": [
                 {"title": "Fast", "desc": "Sub-100ms responses across the stack."},
-                {"title": "Secure", "desc": "SOC2 aligned, isolated tenants."},
+                {"title": "Secure", "desc": "SOC2 aligned, isolated clients."},
                 {"title": "Scalable", "desc": "From MVP to millions of users."},
             ]
         }},
@@ -977,13 +977,13 @@ async def startup():
             )
 
     admin_id = admin["user_id"]
-    # Tenants are never created automatically. Templates, looks and platform defaults live in
-    # code and are applied the moment the admin creates a tenant from the dashboard.
+    # Clients are never created automatically. Templates, looks and platform defaults live in
+    # code and are applied the moment the admin creates a client from the dashboard.
     try:
-        # Tenant site content is locked to its saved DB state: no retroactive redesign migration ever runs.
+        # Client site content is locked to its saved DB state: no retroactive redesign migration ever runs.
         from content_lock import lock_all_existing, sync_all_overviews, clear_synced_label_overrides
-        logger.info(f"Content lock applied to {await lock_all_existing(db)} tenant(s)")
-        logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} tenant(s)")
+        logger.info(f"Content lock applied to {await lock_all_existing(db)} client(s)")
+        logger.info(f"Overview synced from Site Mode for {await sync_all_overviews(db)} client(s)")
         from site_content import retheme_all  # noqa: F401  (kept for manual/admin use only)
         import test_template
         test_template.install()
@@ -994,22 +994,22 @@ async def startup():
         from sandbox_guard import purge_other_sandboxes
         _purged = await purge_other_sandboxes(db)
         logger.info(f"Extra sandbox sites removed: {len(_purged)} {[p['name'] for p in _purged]}")
-        logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} tenant(s)")
+        logger.info(f"Test Lab re-themed: {await retheme_test_lab_only(db)} client(s)")
         await mark_template_states(db)
-        # Always-live: every template design is pushed to its tenants on every boot. No pending state.
+        # Always-live: every template design is pushed to its clients on every boot. No pending state.
         from tenant_trash import sweep_expired
         _swept = await sweep_expired(db)
         if _swept:
-            logger.info(f"Trash sweep: purged {_swept} tenant(s) past their 30-day window")
+            logger.info(f"Trash sweep: purged {_swept} client(s) past their 30-day window")
         from auto_propagate import run as auto_propagate_run
         _ap = await auto_propagate_run(db)
-        logger.info(f"Auto-propagated {_ap['templates']} template(s) to {_ap['tenants']} tenant(s)")
+        logger.info(f"Auto-propagated {_ap['templates']} template(s) to {_ap['tenants']} client(s)")
         from case_study import ensure_seed as ensure_case_study_seed
         await ensure_case_study_seed(db)
         logger.info(f"Editorial layer staged on Test Template: {await test_template.apply_editorial_to_test_template(db)}")
         from editorial_rollout import ensure_defaults, backfill_new_tenants
         await ensure_defaults(db)
-        logger.info(f"Motion profile inherited by new tenants: {await backfill_new_tenants(db)}")
+        logger.info(f"Motion profile inherited by new clients: {await backfill_new_tenants(db)}")
         await clear_synced_label_overrides(db)
     except Exception as e:
         logger.error(f"startup maintenance skipped: {e}")
@@ -1105,6 +1105,9 @@ from industry_vitals import register as register_industry_vitals
 register_industry_vitals(api, db, get_current_user, get_user_app, log_activity)
 from reviews import register as register_reviews
 register_reviews(api, db, get_current_user, get_user_app, log_activity)
+from page_sections import register as register_page_sections
+from cms import uid as _pg_uid, now_iso as _pg_now
+register_page_sections(api, db, get_current_user, get_user_app, log_activity, _pg_uid, _pg_now)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

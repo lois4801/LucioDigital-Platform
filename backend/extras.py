@@ -32,7 +32,7 @@ stripe.api_key = os.environ.get("STRIPE_SECRET_KEY") or "sk_test_emergent"
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 TAX_MODE = "full"
 
-DNS_CNAME_TARGET = os.environ.get("DNS_CNAME_TARGET", "tenants.luciostudio.app")
+DNS_CNAME_TARGET = os.environ.get("DNS_CNAME_TARGET", "clients.luciostudio.app")
 
 
 def now_iso():
@@ -87,9 +87,9 @@ class PlansReplaceIn(BaseModel):
 
 
 DEFAULT_PLANS = [
-    {"name": "Starter", "price": 29.0, "interval": "month", "description": "Single hosted tenant", "features": ["1 hosted tenant", "Custom domain", "Email support"]},
-    {"name": "Pro", "price": 99.0, "interval": "month", "description": "Growing client portfolio", "features": ["10 hosted tenants", "AI Media Studio", "Priority support"]},
-    {"name": "Scale", "price": 299.0, "interval": "month", "description": "Agency at scale", "features": ["Unlimited tenants", "Dedicated SLA", "White-label handoff"]},
+    {"name": "Starter", "price": 29.0, "interval": "month", "description": "Single hosted client", "features": ["1 hosted client", "Custom domain", "Email support"]},
+    {"name": "Pro", "price": 99.0, "interval": "month", "description": "Growing client portfolio", "features": ["10 hosted clients", "AI Media Studio", "Priority support"]},
+    {"name": "Scale", "price": 299.0, "interval": "month", "description": "Agency at scale", "features": ["Unlimited clients", "Dedicated SLA", "White-label handoff"]},
 ]
 
 

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { MapPin, Navigation } from "lucide-react";
 import api from "@/lib/api";
 
-/** Business address + optional custom "Get directions" link for one tenant.
+/** Business address + optional custom "Get directions" link for one client.
  *  Used by the agency Site Mode panel and by the client portal. */
 export default function LocationFields({ appId, onSaved = () => {}, compact = false }) {
   const [sm, setSm] = useState<any>(null);

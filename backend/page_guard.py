@@ -89,7 +89,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/pages/lock-all")
     async def lock_all_pages(app_id: str, body: LockIn, user: dict = Depends(get_current_user)):
-        """Lock or unlock every page of a tenant at once, plus the tenant-wide content lock."""
+        """Lock or unlock every page of a client at once, plus the client-wide content lock."""
         doc = await get_user_app(app_id, user)
         if await role_of(db, doc, user) not in ("owner", "admin"):
             raise HTTPException(403, "Only the agency owner or an admin can lock or unlock pages")

@@ -3,8 +3,8 @@ import { Reveal, useReducedMotion } from "./motion";
 
 const FEATURES = [
   { icon: GripVertical, t: "Drag-and-drop builder", d: "Reorder hero, features, pricing and chart blocks with real physics — then ask Claude to rewrite any block in plain English.", span: "lg:col-span-7 lg:row-span-2", tone: "lime", art: "draw" },
-  { icon: Sparkles, t: "AI Media Studio", d: "Ad-ready images, cinematic video and studio voiceovers inside every tenant.", span: "lg:col-span-5", tone: "teal", art: "orbit" },
-  { icon: CreditCard, t: "Stripe billing per tenant", d: "Import your price book — tiers sync to Stripe and clients subscribe in one click.", span: "lg:col-span-5", tone: "orange", art: "pulse" },
+  { icon: Sparkles, t: "AI Media Studio", d: "Ad-ready images, cinematic video and studio voiceovers inside every client.", span: "lg:col-span-5", tone: "teal", art: "orbit" },
+  { icon: CreditCard, t: "Stripe billing per client", d: "Import your price book — tiers sync to Stripe and clients subscribe in one click.", span: "lg:col-span-5", tone: "orange", art: "pulse" },
   { icon: Globe, t: "Custom domains", d: "Bind app.clientbrand.com with a live DNS checklist.", span: "lg:col-span-4", tone: "teal", art: "orbit" },
   { icon: Link2, t: "Live preview links", d: "Public read-only URLs partners open before handoff. Revoke anytime.", span: "lg:col-span-4", tone: "lime", art: "pulse" },
   { icon: ShieldCheck, t: "Export & handoff", d: "Full-stack bundle, Supabase migration and plugin packages in one click.", span: "lg:col-span-4", tone: "orange", art: "draw" },

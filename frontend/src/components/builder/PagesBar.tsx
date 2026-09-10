@@ -22,7 +22,7 @@ const rgba = (hex, a) => {
   return `rgba(${r},${g},${b},${a})`;
 };
 
-/** Brand colour is read live from the page's own template theme, then the tenant theme. */
+/** Brand colour is read live from the page's own template theme, then the client theme. */
 const brandOf = (page, theme) => page?.theme_preview?.primary || theme?.primary || "#8B5CF6";
 
 export function PagesBar({ pages, current, onSelect, onCreate, onDelete, onToggleLock, canLock, theme }) {

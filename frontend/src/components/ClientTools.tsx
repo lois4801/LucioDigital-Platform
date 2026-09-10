@@ -3,7 +3,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { UserPlus, ArrowLeftRight, Copy, Trash2, RefreshCw, ExternalLink } from "lucide-react";
 
-/** Client panel invites + the public before/after share link, for one tenant. */
+/** Client panel invites + the public before/after share link, for one client. */
 export default function ClientTools({ appId, appName, converted }) {
   const [invites, setInvites] = useState([]);
   const [email, setEmail] = useState("");

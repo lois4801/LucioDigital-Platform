@@ -157,7 +157,7 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         )
         if membership and membership.get("role") == "admin":
             return app_doc
-        raise HTTPException(403, "Only this tenant's owner or admin can manage data storage")
+        raise HTTPException(403, "Only this client's owner or admin can manage data storage")
 
     @api.get("/apps/{app_id}/data-destination")
     async def get_destination(app_id: str, user: dict = Depends(get_current_user)):

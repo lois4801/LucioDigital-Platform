@@ -1,8 +1,8 @@
-"""Context-aware modal forms on every CTA button, per tenant.
+"""Context-aware modal forms on every CTA button, per client.
 
-Forms are provisioned automatically from the tenant's industry template, stored per tenant
+Forms are provisioned automatically from the client's industry template, stored per client
 (`cta_forms` collection, keyed by app_id + the button label) and are editable live by the agency
-admin and by client editors. Nothing is shared between tenants.
+admin and by client editors. Nothing is shared between clients.
 """
 import re
 from datetime import datetime, timezone
@@ -102,7 +102,7 @@ def default_form(app_id: str, label: str, niche: Optional[str]) -> dict:
 
 
 def cta_labels(pages: List[dict]) -> List[str]:
-    """Every CTA label on the tenant's pages, in page order, de-duplicated."""
+    """Every CTA label on the client's pages, in page order, de-duplicated."""
     out, seen = [], set()
     for pg in pages:
         for b in pg.get("blocks") or []:
@@ -149,7 +149,7 @@ def register(api, db, get_current_user, get_user_app, log_activity, new_message=
         return app, await role_of(db, app, user)
 
     async def _provision(app_id: str, niche: Optional[str]):
-        """Create any missing form for the tenant's current CTA buttons. Never touches other tenants."""
+        """Create any missing form for the client's current CTA buttons. Never touches other clients."""
         pages = await db.pages.find({"app_id": app_id}, {"_id": 0, "slug": 1, "order": 1, "blocks": 1}).to_list(60)
         pages.sort(key=lambda p: (p.get("slug") != "/", p.get("order", 0)))
         made = 0
