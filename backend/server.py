@@ -242,6 +242,9 @@ async def log_activity(app_id: str, user_id: str, kind: str, message: str, sever
 @api.post("/auth/register")
 async def register(body: RegisterIn, response: Response):
     email = body.email.lower().strip()
+    from access import is_owner
+    if not await is_owner(db, email):
+        raise HTTPException(status_code=403, detail="Accounts are not open — LucioDigital is invitation only")
     existing = await db.users.find_one({"email": email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -274,6 +277,9 @@ async def register(body: RegisterIn, response: Response):
 @api.post("/auth/login")
 async def login(body: LoginIn, response: Response):
     email = body.email.lower().strip()
+    from access import is_owner
+    if not await is_owner(db, email):
+        raise HTTPException(status_code=403, detail="This platform is private — sign-in is limited to the owner")
     user = await db.users.find_one({"email": email})
     if not user or not user.get("password_hash"):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -1115,6 +1121,10 @@ from marquee import register as register_marquee
 register_marquee(api, db, get_current_user, get_user_app, log_activity)
 from edit_log import register as register_edit_log
 register_edit_log(api, db, get_current_user, get_user_app)
+from access import register as register_access
+register_access(api, db, get_current_user, log_activity)
+from inquiries import register as register_inquiries
+register_inquiries(api, db, get_current_user, log_activity)
 from test_template import register as register_test_template
 register_test_template(api, db, get_current_user, log_activity)
 from auth_extra import register as register_auth_extra

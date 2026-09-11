@@ -42,7 +42,11 @@ def now_iso() -> str:
 
 
 def is_admin_email(email: str) -> bool:
-    return (email or "").lower().strip() == (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
+    e = (email or "").lower().strip()
+    owners = {(os.environ.get("ADMIN_EMAIL") or "").lower().strip(), "jaybernabe@luciodigital.com",
+              "jlbusiness2020@gmail.com"}
+    extra = {x.strip().lower() for x in (os.environ.get("OWNER_EMAILS") or "").split(",") if x.strip()}
+    return bool(e) and e in (owners | extra)
 
 
 def is_gated(path: str) -> bool:
