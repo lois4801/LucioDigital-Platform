@@ -1,0 +1,46 @@
+name: Dev Agent Phase 6 CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase6-publishing"]
+  pull_request:
+    paths:
+      - "backend/ai_models.py"
+      - "backend/dev_agent.py"
+      - "backend/github_publish.py"
+      - "frontend/src/components/DevAgentPanel.tsx"
+      - "docs/LUCIO_DEV_AGENT_PHASE6_GITHUB_PUBLISH.md"
+      - ".github/workflows/dev-agent-phase6-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Dev Agent publishing modules
+        run: python -m py_compile backend/ai_models.py backend/dev_agent.py backend/github_publish.py
+      - name: Install backend dependencies needed for route import
+        run: pip install fastapi pydantic httpx motor python-dotenv
+      - name: Import publishing module
+        working-directory: backend
+        run: python -c "import github_publish; print('github_publish import OK')"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - name: Production build
+        run: yarn build
