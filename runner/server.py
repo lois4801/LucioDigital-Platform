@@ -16,6 +16,7 @@ import shlex
 import shutil
 import socket
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -46,6 +47,7 @@ ALLOWED_BINARIES = {
     "npm", "npx", "pnpm", "yarn", "node", "python", "python3", "pytest", "pip", "pip3",
     "uvicorn", "ruff", "eslint", "tsc", "vite", "next", "go", "cargo", "make",
 }
+SUPPORTED_SCAFFOLDS = {"react-vite", "fastapi", "fullstack-fastapi"}
 
 # workspace_id -> preview process metadata. Source files live on disk and are the source of truth.
 PREVIEWS: Dict[str, Dict[str, Any]] = {}
@@ -53,8 +55,10 @@ PREVIEWS: Dict[str, Dict[str, Any]] = {}
 
 class WorkspaceCreate(BaseModel):
     workspace_id: str = Field(min_length=3, max_length=96)
-    repo_url: str
+    repo_url: Optional[str] = None
     branch: str = "main"
+    scaffold: str = "react-vite"
+    project_name: str = "Lucio App"
 
 
 class ToolRequest(BaseModel):
@@ -134,6 +138,16 @@ def _truncate(text: str) -> str:
     return text[-MAX_OUTPUT:] + "\n[output truncated]"
 
 
+def _ensure_venv(workspace: Path) -> Path:
+    venv = workspace / ".venv"
+    python_bin = venv / "bin" / "python"
+    if not python_bin.exists():
+        created = subprocess.run([sys.executable, "-m", "venv", str(venv)], cwd=str(workspace), capture_output=True, text=True, timeout=90)
+        if created.returncode != 0:
+            raise HTTPException(500, f"Could not create isolated Python environment: {_truncate(created.stderr or created.stdout)[:1200]}")
+    return python_bin
+
+
 def _run(workspace: Path, argv: List[str], cwd: str = ".", timeout: Optional[int] = None) -> Dict[str, Any]:
     if not argv or not all(isinstance(x, str) and x for x in argv):
         raise HTTPException(400, "argv must contain command arguments")
@@ -143,10 +157,20 @@ def _run(workspace: Path, argv: List[str], cwd: str = ".", timeout: Optional[int
     workdir = _safe_path(workspace, cwd, allow_missing=False)
     if not workdir.is_dir():
         raise HTTPException(400, "cwd must be a directory")
+
+    actual_argv = [binary, *argv[1:]]
+    if binary in {"python", "python3", "pip", "pip3"}:
+        venv_python = _ensure_venv(workspace)
+        actual_argv[0] = str(venv_python if binary in {"python", "python3"} else venv_python.parent / "pip")
+    elif binary in {"pytest", "uvicorn"}:
+        candidate = workspace / ".venv" / "bin" / binary
+        if candidate.exists():
+            actual_argv[0] = str(candidate)
+
     started = time.monotonic()
     try:
         result = subprocess.run(
-            argv,
+            actual_argv,
             cwd=str(workdir),
             capture_output=True,
             text=True,
@@ -184,6 +208,57 @@ def _tree(workspace: Path, limit: int = 600) -> List[str]:
     return out
 
 
+def _scaffold_workspace(dest: Path, preset: str, project_name: str) -> Dict[str, Any]:
+    preset = (preset or "react-vite").strip().lower()
+    if preset not in SUPPORTED_SCAFFOLDS:
+        raise HTTPException(400, f"Unsupported scaffold '{preset}'. Choose one of: {', '.join(sorted(SUPPORTED_SCAFFOLDS))}")
+    safe_name = re.sub(r"[^A-Za-z0-9 _.-]", "", project_name or "Lucio App").strip()[:80] or "Lucio App"
+    dest.mkdir(parents=True, exist_ok=False)
+
+    if preset == "react-vite":
+        (dest / "src").mkdir()
+        (dest / "package.json").write_text(json.dumps({
+            "name": re.sub(r"[^a-z0-9-]", "-", safe_name.lower()).strip("-") or "lucio-app",
+            "private": True,
+            "version": "0.1.0",
+            "type": "module",
+            "scripts": {"dev": "vite", "build": "vite build"},
+            "dependencies": {"react": "^19.1.1", "react-dom": "^19.1.1"},
+            "devDependencies": {"@vitejs/plugin-react": "^4.6.0", "vite": "^6.4.3"},
+        }, indent=2) + "\n")
+        (dest / "index.html").write_text('<!doctype html><html><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>' + safe_name + '</title></head><body><div id="root"></div><script type="module" src="/src/main.jsx"></script></body></html>\n')
+        (dest / "vite.config.js").write_text("import { defineConfig } from 'vite';\nimport react from '@vitejs/plugin-react';\nexport default defineConfig({ plugins: [react()], base: './' });\n")
+        (dest / "src" / "main.jsx").write_text("import React from 'react';\nimport { createRoot } from 'react-dom/client';\nimport App from './App.jsx';\nimport './index.css';\ncreateRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>);\n")
+        (dest / "src" / "App.jsx").write_text("export default function App(){return <main className='shell'><p className='eyebrow'>Lucio AI</p><h1>" + safe_name.replace("'", "") + "</h1><p>Your AI development workspace is ready. Tell Lucio what to build.</p></main>}\n")
+        (dest / "src" / "index.css").write_text("*{box-sizing:border-box}body{margin:0;background:#09090b;color:#f4f4f5;font-family:Inter,system-ui,sans-serif}.shell{max-width:900px;margin:0 auto;padding:12vh 24px}.eyebrow{color:#a78bfa;text-transform:uppercase;letter-spacing:.18em;font-size:12px}h1{font-size:clamp(44px,8vw,92px);line-height:.95;margin:18px 0}p{color:#a1a1aa;font-size:18px;line-height:1.7}\n")
+        install = subprocess.run(["npm", "install", "--no-audit", "--no-fund"], cwd=str(dest), capture_output=True, text=True, timeout=240)
+        if install.returncode != 0:
+            raise HTTPException(500, f"React scaffold dependency install failed: {_truncate(install.stderr or install.stdout)[:1400]}")
+
+    elif preset == "fastapi":
+        (dest / "requirements.txt").write_text("fastapi==0.115.12\nuvicorn[standard]==0.34.2\n")
+        (dest / "main.py").write_text("from fastapi import FastAPI\n\napp = FastAPI(title='" + safe_name.replace("'", "") + "')\n\n@app.get('/api/health')\ndef health():\n    return {'status': 'ok'}\n\n@app.get('/')\ndef root():\n    return {'app': '" + safe_name.replace("'", "") + "', 'message': 'Built with Lucio AI'}\n")
+
+    else:
+        (dest / "requirements.txt").write_text("fastapi==0.115.12\nuvicorn[standard]==0.34.2\n")
+        (dest / "main.py").write_text("from fastapi import FastAPI\nfrom fastapi.responses import HTMLResponse\n\napp = FastAPI(title='" + safe_name.replace("'", "") + "')\n\n@app.get('/api/health')\ndef health():\n    return {'status': 'ok'}\n\n@app.get('/', response_class=HTMLResponse)\ndef home():\n    return '''<!doctype html><html><meta name=viewport content='width=device-width,initial-scale=1'><style>body{margin:0;background:#09090b;color:#fafafa;font-family:system-ui}.wrap{max-width:900px;margin:auto;padding:12vh 24px}small{color:#a78bfa;text-transform:uppercase;letter-spacing:.18em}h1{font-size:clamp(44px,8vw,88px);line-height:.95}p{color:#a1a1aa;font-size:18px;line-height:1.7}</style><div class=wrap><small>Lucio AI full-stack starter</small><h1>" + safe_name.replace("<", "").replace(">", "") + "</h1><p>FastAPI backend and a live frontend are ready for the Dev Agent to extend.</p></div></html>'''\n")
+
+    if (dest / "requirements.txt").exists():
+        venv_python = _ensure_venv(dest)
+        install = subprocess.run([str(venv_python), "-m", "pip", "install", "-r", "requirements.txt"], cwd=str(dest), capture_output=True, text=True, timeout=240)
+        if install.returncode != 0:
+            raise HTTPException(500, f"Python scaffold dependency install failed: {_truncate(install.stderr or install.stdout)[:1400]}")
+
+    subprocess.run(["git", "init"], cwd=str(dest), capture_output=True, text=True, timeout=30)
+    subprocess.run(["git", "config", "user.email", "dev-agent@lucio.local"], cwd=str(dest), capture_output=True, text=True, timeout=15)
+    subprocess.run(["git", "config", "user.name", "Lucio Dev Agent"], cwd=str(dest), capture_output=True, text=True, timeout=15)
+    subprocess.run(["git", "add", "."], cwd=str(dest), capture_output=True, text=True, timeout=30)
+    commit = subprocess.run(["git", "commit", "-m", "Lucio scaffold baseline"], cwd=str(dest), capture_output=True, text=True, timeout=30)
+    if commit.returncode != 0:
+        raise HTTPException(500, f"Could not initialize scaffold baseline: {_truncate(commit.stderr or commit.stdout)[:1200]}")
+    return {"preset": preset, "project_name": safe_name}
+
+
 def _detect(workspace: Path) -> Dict[str, Any]:
     result: Dict[str, Any] = {"stack": [], "scripts": {}, "verify": [], "preview": None}
     pkg = workspace / "package.json"
@@ -206,13 +281,25 @@ def _detect(workspace: Path) -> Dict[str, Any]:
             if "build" in result["scripts"]:
                 result["verify"].append(["npm", "run", "build"])
             if "dev" in result["scripts"]:
-                result["preview"] = ["npm", "run", "dev"]
+                if "vite" in deps:
+                    result["preview"] = ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "{port}", "--base", "{base}"]
+                elif "next" in deps:
+                    result["preview"] = ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "{port}"]
+                else:
+                    result["preview"] = ["npm", "run", "dev"]
             elif "start" in result["scripts"]:
                 result["preview"] = ["npm", "start"]
         except Exception:
             pass
     if (workspace / "requirements.txt").exists() or (workspace / "pyproject.toml").exists():
         result["stack"].append("python")
+        if (workspace / "main.py").exists():
+            result["verify"].append(["python", "-m", "py_compile", "main.py"])
+            try:
+                if "FastAPI(" in (workspace / "main.py").read_text("utf-8", errors="ignore"):
+                    result["preview"] = ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "{port}"]
+            except OSError:
+                pass
         if (workspace / "pytest.ini").exists() or (workspace / "tests").exists():
             result["verify"].append(["pytest", "-q"])
     if (workspace / "go.mod").exists():
@@ -238,20 +325,32 @@ async def health():
 @app.post("/v1/workspaces", dependencies=[Depends(_auth)])
 async def create_workspace(body: WorkspaceCreate):
     wid = _workspace_id(body.workspace_id)
-    repo = _validate_repo_url(body.repo_url)
     dest = (ROOT / wid).resolve()
     if dest.exists():
         shutil.rmtree(dest, ignore_errors=True)
-    clone = subprocess.run(
-        ["git", "clone", "--depth", "1", "--branch", body.branch, "--single-branch", repo, str(dest)],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    if clone.returncode != 0:
-        shutil.rmtree(dest, ignore_errors=True)
-        raise HTTPException(400, f"Repository clone failed: {_truncate(clone.stderr or clone.stdout)[:1200]}")
-    return {"workspace_id": wid, "branch": body.branch, "repository": body.repo_url, "inspection": {"files": _tree(dest), **_detect(dest)}}
+
+    scaffold = None
+    repository = None
+    if body.repo_url:
+        repo = _validate_repo_url(body.repo_url)
+        clone = subprocess.run(
+            ["git", "clone", "--depth", "1", "--branch", body.branch, "--single-branch", repo, str(dest)],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if clone.returncode != 0:
+            shutil.rmtree(dest, ignore_errors=True)
+            raise HTTPException(400, f"Repository clone failed: {_truncate(clone.stderr or clone.stdout)[:1200]}")
+        repository = body.repo_url
+    else:
+        scaffold = _scaffold_workspace(dest, body.scaffold, body.project_name)
+
+    inspection = {"files": _tree(dest), **_detect(dest)}
+    inspection["source_mode"] = "repository" if repository else "scaffold"
+    if scaffold:
+        inspection["scaffold"] = scaffold
+    return {"workspace_id": wid, "branch": body.branch, "repository": repository, "scaffold": scaffold, "inspection": inspection}
 
 
 @app.get("/v1/workspaces/{workspace_id}", dependencies=[Depends(_auth)])
@@ -365,7 +464,7 @@ def _preview_info(workspace_id: str) -> Optional[Dict[str, Any]]:
     alive = process.poll() is None
     if not alive:
         return {"running": False, "returncode": process.returncode, "logs": _read_preview_logs(meta)}
-    public = f"{RUNNER_PUBLIC_URL}/preview/{workspace_id}/?t={meta['token']}" if RUNNER_PUBLIC_URL else None
+    public = f"{RUNNER_PUBLIC_URL}/preview/{workspace_id}/{meta['token']}/" if RUNNER_PUBLIC_URL else None
     return {"running": True, "port": meta["port"], "url": public, "started_at": meta["started_at"]}
 
 
@@ -393,8 +492,15 @@ async def start_preview(workspace_id: str, body: PreviewRequest):
     token = secrets.token_urlsafe(24)
     log_path = workspace / ".lucio-preview.log"
     log_handle = open(log_path, "w", encoding="utf-8")
-    env = {**os.environ, "PORT": str(port), "HOST": "0.0.0.0", "CI": "0", "BROWSER": "none"}
-    process = subprocess.Popen(body.argv, cwd=str(cwd), stdout=log_handle, stderr=subprocess.STDOUT, text=True, env=env)
+    base = f"/preview/{workspace_id}/{token}/"
+    env = {**os.environ, "PORT": str(port), "HOST": "0.0.0.0", "CI": "0", "BROWSER": "none", "LUCIO_PREVIEW_BASE": base}
+    argv = [str(port) if part == "{port}" else base if part == "{base}" else part for part in body.argv]
+    binary = Path(argv[0]).name
+    if binary in {"python", "python3", "uvicorn"}:
+        candidate = workspace / ".venv" / "bin" / ("python" if binary in {"python", "python3"} else binary)
+        if candidate.exists():
+            argv[0] = str(candidate)
+    process = subprocess.Popen(argv, cwd=str(cwd), stdout=log_handle, stderr=subprocess.STDOUT, text=True, env=env)
     PREVIEWS[workspace_id] = {"process": process, "port": port, "token": token, "log_path": log_path, "log_handle": log_handle, "started_at": time.time()}
     await asyncio.sleep(1.2)
     info = _preview_info(workspace_id)
@@ -432,14 +538,14 @@ async def stop_preview(workspace_id: str):
     return {"ok": True}
 
 
-@app.api_route("/preview/{workspace_id}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-async def proxy_preview(workspace_id: str, path: str, request: Request):
+@app.api_route("/preview/{workspace_id}/{token}/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+async def proxy_preview(workspace_id: str, token: str, path: str, request: Request):
     meta = PREVIEWS.get(workspace_id)
     if not meta or meta["process"].poll() is not None:
         raise HTTPException(404, "Preview is not running")
-    if request.query_params.get("t") != meta["token"]:
+    if not secrets.compare_digest(token, meta["token"]):
         raise HTTPException(403, "Invalid preview token")
-    query = [(k, v) for k, v in request.query_params.multi_items() if k != "t"]
+    query = list(request.query_params.multi_items())
     target = f"http://127.0.0.1:{meta['port']}/{path}"
     body = await request.body()
     headers = {k: v for k, v in request.headers.items() if k.lower() not in {"host", "content-length", "connection"}}

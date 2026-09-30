@@ -54,7 +54,7 @@ function Verification({ value }: { value?: AnyDoc }) {
 
 export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc?: AnyDoc }) {
   const [platform, setPlatform] = useState<AnyDoc | null>(null);
-  const [config, setConfig] = useState<AnyDoc>({ repo_url: "", branch: "main" });
+  const [config, setConfig] = useState<AnyDoc>({ repo_url: "", branch: "main", scaffold: "react-vite" });
   const [sessions, setSessions] = useState<AnyDoc[]>([]);
   const [active, setActive] = useState<AnyDoc | null>(null);
   const [goal, setGoal] = useState("");
@@ -72,7 +72,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
         api.get(`/apps/${appId}/dev-agent/sessions`),
       ]);
       setPlatform(s.data);
-      setConfig(c.data || { repo_url: "", branch: "main" });
+      setConfig(c.data || { repo_url: "", branch: "main", scaffold: "react-vite" });
       setSessions(list.data || []);
       if (!activeId && list.data?.length) setActive(list.data[0]);
     } catch (e: any) {
@@ -103,7 +103,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
   async function saveConfig() {
     setBusy("config");
     try {
-      const body: AnyDoc = { repo_url: config.repo_url?.trim() || null, branch: config.branch?.trim() || "main" };
+      const body: AnyDoc = { repo_url: config.repo_url?.trim() || null, branch: config.branch?.trim() || "main", scaffold: config.scaffold || "react-vite" };
       if (showAdvanced) {
         if (config.preview_text?.trim()) body.preview_argv = config.preview_text.trim().split(/\s+/);
         if (config.verify_text?.trim()) {
@@ -120,11 +120,11 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
 
   async function createRun(auto = false) {
     if (!goal.trim()) return toast.error("Tell Lucio what you want to build or improve first");
-    if (!config.repo_url?.trim()) return toast.error("Connect this app to its GitHub repository first");
+    // A GitHub repository is optional. When blank, Lucio starts from the selected production scaffold.
     setBusy("create");
     try {
       const { data } = await api.post(`/apps/${appId}/dev-agent/sessions`, {
-        goal: goal.trim(), repo_url: config.repo_url.trim(), branch: config.branch || "main", auto_execute: auto,
+        goal: goal.trim(), repo_url: config.repo_url?.trim() || null, branch: config.branch || "main", scaffold: config.scaffold || "react-vite", project_name: appDoc?.name || "Lucio App", auto_execute: auto,
       });
       setActive(data);
       setSessions((xs) => [data, ...xs.filter((x) => x.session_id !== data.session_id)]);
@@ -199,8 +199,8 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
 
         <div className="grid gap-5 p-6 lg:grid-cols-[1fr_220px]">
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[var(--mut)]">GitHub repository</label>
-            <div className="grid gap-3 md:grid-cols-[1fr_180px]">
+            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-[var(--mut)]">GitHub repository <span className="normal-case tracking-normal text-[var(--mut)]/70">(optional — leave blank to start a new app)</span></label>
+            <div className="grid gap-3 md:grid-cols-[1fr_160px_190px]">
               <div className="relative">
                 <Code2 size={15} className="absolute left-3 top-3.5 text-[var(--mut)]" />
                 <input value={config.repo_url || ""} onChange={(e) => setConfig((c: AnyDoc) => ({ ...c, repo_url: e.target.value }))}
@@ -211,7 +211,13 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
                 <input value={config.branch || "main"} onChange={(e) => setConfig((c: AnyDoc) => ({ ...c, branch: e.target.value }))}
                   placeholder="main" className="input w-full pl-9" />
               </div>
+              <select value={config.scaffold || "react-vite"} onChange={(e) => setConfig((c: AnyDoc) => ({ ...c, scaffold: e.target.value }))} className="input w-full text-sm" title="Starter used when no repository is supplied">
+                <option value="react-vite">React + Vite starter</option>
+                <option value="fastapi">FastAPI starter</option>
+                <option value="fullstack-fastapi">Full-stack FastAPI starter</option>
+              </select>
             </div>
+            <p className="mt-2 text-xs text-[var(--mut)]">Connect an existing repository to improve it, or leave the repository blank and Lucio will create an isolated starter project before planning and coding.</p>
             <button onClick={() => setShowAdvanced((x) => !x)} className="mt-3 text-xs text-[var(--mut)] hover:text-white">{showAdvanced ? "Hide" : "Show"} advanced commands</button>
             {showAdvanced && (
               <div className="mt-3 grid gap-3 md:grid-cols-2">

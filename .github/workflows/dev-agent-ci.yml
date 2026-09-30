@@ -30,6 +30,41 @@ jobs:
         env:
           NEXUS_RUNNER_ALLOW_INSECURE: "true"
         run: python -c "import server; print(server.app.title)"
+      - name: Smoke test isolated app scaffolds
+        working-directory: runner
+        env:
+          NEXUS_RUNNER_ALLOW_INSECURE: "true"
+          WORKSPACE_ROOT: /tmp/lucio-ci-workspaces
+        run: |
+          python - <<'PY'
+          import shutil
+          from pathlib import Path
+          import server
+
+          fast = Path('/tmp/lucio-fastapi-smoke')
+          react = Path('/tmp/lucio-react-smoke')
+          shutil.rmtree(fast, ignore_errors=True)
+          shutil.rmtree(react, ignore_errors=True)
+
+          info = server._scaffold_workspace(fast, 'fastapi', 'Lucio FastAPI Smoke')
+          detected = server._detect(fast)
+          assert info['preset'] == 'fastapi'
+          assert (fast / '.venv' / 'bin' / 'python').exists()
+          assert detected['preview'][-1] == '{port}'
+          result = server._run(fast, ['python', '-m', 'py_compile', 'main.py'])
+          assert result['ok'], result
+
+          info = server._scaffold_workspace(react, 'react-vite', 'Lucio React Smoke')
+          detected = server._detect(react)
+          assert info['preset'] == 'react-vite'
+          assert '{port}' in detected['preview'] and '{base}' in detected['preview']
+          result = server._run(react, ['npm', 'run', 'build'])
+          assert result['ok'], result
+
+          shutil.rmtree(fast, ignore_errors=True)
+          shutil.rmtree(react, ignore_errors=True)
+          print('Scaffold smoke tests passed')
+          PY
 
   frontend:
     runs-on: ubuntu-latest
