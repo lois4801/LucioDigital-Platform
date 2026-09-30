@@ -13,8 +13,9 @@ WORKDIR /app
 COPY requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt
 COPY server.py ./server.py
+COPY entrypoint.py ./entrypoint.py
 
 RUN mkdir -p ${WORKSPACE_ROOT}
 
 EXPOSE 9000
-CMD ["sh", "-c", "uvicorn server:app --host 0.0.0.0 --port ${PORT:-9000}"]
+CMD ["python", "entrypoint.py"]
