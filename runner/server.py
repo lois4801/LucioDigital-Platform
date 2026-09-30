@@ -495,6 +495,11 @@ async def start_preview(workspace_id: str, body: PreviewRequest):
     base = f"/preview/{workspace_id}/{token}/"
     env = {**os.environ, "PORT": str(port), "HOST": "0.0.0.0", "CI": "0", "BROWSER": "none", "LUCIO_PREVIEW_BASE": base}
     argv = [str(port) if part == "{port}" else base if part == "{base}" else part for part in body.argv]
+    binary = Path(argv[0]).name
+    if binary in {"python", "python3", "uvicorn"}:
+        candidate = workspace / ".venv" / "bin" / ("python" if binary in {"python", "python3"} else binary)
+        if candidate.exists():
+            argv[0] = str(candidate)
     process = subprocess.Popen(argv, cwd=str(cwd), stdout=log_handle, stderr=subprocess.STDOUT, text=True, env=env)
     PREVIEWS[workspace_id] = {"process": process, "port": port, "token": token, "log_path": log_path, "log_handle": log_handle, "started_at": time.time()}
     await asyncio.sleep(1.2)
