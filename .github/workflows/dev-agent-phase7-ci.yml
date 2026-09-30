@@ -1,0 +1,27 @@
+name: Dev Agent Phase 7 CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase7-preview-deploy"]
+  pull_request:
+    paths:
+      - "backend/ai_models.py"
+      - "backend/deployment_control.py"
+      - "docs/LUCIO_DEV_AGENT_PHASE7_DEPLOYMENT_CONTROL.md"
+      - ".github/workflows/dev-agent-phase7-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile deployment control modules
+        run: python -m py_compile backend/ai_models.py backend/deployment_control.py
+      - name: Install import dependencies
+        run: pip install fastapi pydantic httpx
+      - name: Import deployment control module
+        working-directory: backend
+        run: python -c "import deployment_control; print('deployment_control import OK')"
