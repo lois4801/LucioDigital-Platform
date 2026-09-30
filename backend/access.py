@@ -85,3 +85,19 @@ def register(api, db, get_current_user, log_activity):
         await db.settings.update_one({"key": "owners"}, {"$set": {"emails": emails}}, upsert=True)
         await log_activity(None, user["user_id"], "owner.remove", f"Removed admin access for {email}")
         return await list_owners(user)
+
+    # LucioDigital Dev Agent runtime bootstrap. Keeping this beside access registration lets the
+    # existing server registration block remain stable while ensuring every Dev Agent phase is
+    # actually mounted in FastAPI. Project intelligence installs its memory hooks before the core
+    # Dev Agent routes are registered.
+    from project_intelligence import register as register_project_intelligence
+    from dev_agent import register as register_dev_agent
+    from github_publish import register as register_github_publish
+    from deployment_control import register as register_deployment_control
+    from browser_qa_bridge import register as register_browser_qa
+
+    register_project_intelligence(api, db, get_current_user)
+    register_dev_agent(api, db, get_current_user)
+    register_github_publish(api, db, get_current_user)
+    register_deployment_control(api, db, get_current_user)
+    register_browser_qa(api, db, get_current_user)
