@@ -25,7 +25,9 @@ The platform model update endpoint now authorizes LucioDigital owners through th
 `/api/ai/models` returns runtime readiness as booleans only. Secret values are never returned.
 
 ## BYO providers
-`litellm` is now an explicit backend dependency because BYO OpenAI, Anthropic and Gemini routing imports LiteLLM at runtime.
+The existing `emergentintegrations==0.2.0` package supplies the compatible LiteLLM runtime used by the current provider layer. Do not add a second exact LiteLLM version pin beside it: Railway's dependency resolver correctly rejects conflicting exact LiteLLM requirements.
+
+A future provider-decoupling phase can remove the Emergent integration dependency entirely and then pin/manage LiteLLM (or direct provider SDKs) independently.
 
 Provider credentials still remain server-side environment variables. The dashboard only displays whether a provider/runtime is available.
 
