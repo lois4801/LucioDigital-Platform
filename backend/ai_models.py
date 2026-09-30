@@ -1,5 +1,5 @@
 """AI model routing: a platform default that each client can override, across every LLM call.
-Text models: Claude, OpenAI and Gemini (3 Flash / 3.1 Pro). Images: Gemini Nano Banana."""
+Text models: Claude, OpenAI and Gemini. Images: provider-dependent image generation."""
 import logging
 import os
 from datetime import datetime, timezone
@@ -34,6 +34,23 @@ class ModelIn(BaseModel):
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
+
+
+def _provider_readiness() -> dict:
+    """Expose provider availability as booleans only; never return secret values."""
+    from llm_provider import llm_mode, llm_available, image_available, video_available
+    return {
+        "mode": llm_mode(),
+        "llm_available": llm_available(),
+        "providers": {
+            "openai": bool((os.environ.get("OPENAI_API_KEY") or "").strip()),
+            "anthropic": bool((os.environ.get("ANTHROPIC_API_KEY") or "").strip()),
+            "gemini": bool((os.environ.get("GEMINI_API_KEY") or "").strip()),
+            "emergent_router": bool((os.environ.get("EMERGENT_LLM_KEY") or "").strip()),
+        },
+        "images": image_available(),
+        "video": video_available(),
+    }
 
 
 async def resolve_model(db, app_id: Optional[str], feature: str = "") -> Tuple[str, str]:
@@ -145,16 +162,20 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     @api.get("/ai/models")
     async def list_models(user: dict = Depends(get_current_user)):
         plat = await db.platform_settings.find_one({"_id": "ai"}) or {}
-        return {"models": [{"id": k, "provider": v[0], "label": v[1]} for k, v in TEXT_MODELS.items()],
-                "features": list(FEATURES), "feature_defaults": FEATURE_DEFAULTS,
-                "platform": {"model": plat.get("model") or DEFAULT_MODEL, "features": plat.get("features") or {}},
-                "image_model": "gemini-2.5-flash-image-preview"}
+        return {
+            "models": [{"id": k, "provider": v[0], "label": v[1]} for k, v in TEXT_MODELS.items()],
+            "features": list(FEATURES),
+            "feature_defaults": FEATURE_DEFAULTS,
+            "platform": {"model": plat.get("model") or DEFAULT_MODEL, "features": plat.get("features") or {}},
+            "image_model": "gemini-2.5-flash-image-preview",
+            "runtime": _provider_readiness(),
+        }
 
     @api.patch("/ai/models")
     async def set_platform_model(body: ModelIn, user: dict = Depends(get_current_user)):
-        admin_email = (os.environ.get("ADMIN_EMAIL") or "").lower().strip()
-        if not user.get("is_admin") and (user.get("email") or "").lower().strip() != admin_email:
-            raise HTTPException(403, "Only a platform admin can change the default model")
+        from access import is_owner
+        if not await is_owner(db, user.get("email") or ""):
+            raise HTTPException(403, "Only a LucioDigital platform owner can change the default model")
         upd = _clean(body)
         ops = {"$set": {**upd, "updated_at": _now()}}
         if not upd:
@@ -235,15 +256,5 @@ def register(api, db, get_current_user, get_user_app, log_activity):
         await log_activity(app_id, user["user_id"], "ai.seo", f"SEO metadata written for {len(out)} page(s) with {model}")
         return {"model": model, "provider": provider, "pages": out}
 
-    from dev_agent import register as register_dev_agent
-    register_dev_agent(api, db, get_current_user)
-
-    from github_publish import register as register_github_publish
-    register_github_publish(api, db, get_current_user)
-
-    from deployment_control import register as register_deployment_control
-    register_deployment_control(api, db, get_current_user)
-
-    # Phase 9: persist real Chromium QA evidence from Nexus Runner on each Dev Agent session.
-    from browser_qa_bridge import register as register_browser_qa_bridge
-    register_browser_qa_bridge(api, db, get_current_user)
+    # Dev Agent, publishing, deployment and Browser QA are registered once by access.register().
+    # Keeping a single bootstrap avoids duplicate FastAPI routes while preserving the AI-model seam.
