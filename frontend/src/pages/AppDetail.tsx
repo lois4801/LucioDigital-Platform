@@ -32,6 +32,7 @@ import CtaFormsPanel from "@/components/CtaFormsPanel";
 import RolloutModal from "@/components/RolloutModal";
 import SiteModePanel from "@/components/SiteModePanel";
 import DevAgentPanel from "@/components/DevAgentPanel";
+import ProjectIntelligencePanel from "@/components/ProjectIntelligencePanel";
 import DevAgentRuntimePanel from "@/components/DevAgentRuntimePanel";
 
 const TABS = [
@@ -166,6 +167,7 @@ export default function AppDetail() {
         {tab === "dev-agent" && (
           <div className="space-y-10">
             <DevAgentPanel appId={appId!} appDoc={appDoc} />
+            <ProjectIntelligencePanel appId={appId!} />
             <DevAgentRuntimePanel appId={appId!} />
           </div>
         )}
