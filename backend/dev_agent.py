@@ -27,9 +27,13 @@ MAX_STEPS = max(3, min(40, int(os.environ.get("DEV_AGENT_MAX_STEPS", "16"))))
 MAX_EVENT_CHARS = max(1000, min(24000, int(os.environ.get("DEV_AGENT_EVENT_CHARS", "9000"))))
 
 
+SUPPORTED_SCAFFOLDS = {"react-vite", "fastapi", "fullstack-fastapi"}
+
+
 class DevConfigIn(BaseModel):
     repo_url: Optional[str] = None
     branch: str = "main"
+    scaffold: Optional[str] = "react-vite"
     preview_argv: Optional[List[str]] = None
     verify_commands: Optional[List[List[str]]] = None
 
@@ -38,6 +42,8 @@ class SessionCreateIn(BaseModel):
     goal: str = Field(min_length=5, max_length=12000)
     repo_url: Optional[str] = None
     branch: Optional[str] = None
+    scaffold: Optional[str] = None
+    project_name: Optional[str] = Field(default=None, max_length=120)
     auto_execute: bool = False
 
 
@@ -347,13 +353,14 @@ def register(api, db, get_current_user):
                 "phase_3_agentic_loop": True,
                 "phase_4_goal_to_working_app": True,
             },
-            "capabilities": ["repository_inspection", "planning", "read_search", "code_editing", "commands", "tests", "self_healing", "git_diff", "review", "live_preview", "approval_gate"],
+            "scaffolds": sorted(SUPPORTED_SCAFFOLDS),
+            "capabilities": ["repository_inspection", "new_app_scaffolding", "planning", "read_search", "code_editing", "commands", "tests", "self_healing", "git_diff", "review", "live_preview", "approval_gate"],
         }
 
     @api.get("/apps/{app_id}/dev-agent/config")
     async def get_config(app_id: str, user: dict = Depends(get_current_user)):
         doc = await get_app(app_id, user)
-        return doc.get("dev_agent") or {"repo_url": "", "branch": "main", "preview_argv": None, "verify_commands": None}
+        return doc.get("dev_agent") or {"repo_url": "", "branch": "main", "scaffold": "react-vite", "preview_argv": None, "verify_commands": None}
 
     @api.patch("/apps/{app_id}/dev-agent/config")
     async def set_config(app_id: str, body: DevConfigIn, user: dict = Depends(get_current_user)):
@@ -362,6 +369,11 @@ def register(api, db, get_current_user):
         data = body.model_dump(exclude_unset=True)
         if data.get("repo_url"):
             data["repo_url"] = _clean_repo_url(data["repo_url"])
+        if data.get("scaffold"):
+            scaffold = str(data["scaffold"]).strip().lower()
+            if scaffold not in SUPPORTED_SCAFFOLDS:
+                raise HTTPException(400, f"Unsupported scaffold: {scaffold}")
+            data["scaffold"] = scaffold
         merged = {**current, **data, "updated_at": _now()}
         await db.apps.update_one({"app_id": app_id}, {"$set": {"dev_agent": merged}})
         return merged
@@ -376,7 +388,12 @@ def register(api, db, get_current_user):
     async def create_session(app_id: str, body: SessionCreateIn, background: BackgroundTasks, user: dict = Depends(get_current_user)):
         app_doc = await require_editor(app_id, user)
         config = app_doc.get("dev_agent") or {}
-        repo_url = _clean_repo_url(body.repo_url or config.get("repo_url") or "")
+        repo_candidate = (body.repo_url or config.get("repo_url") or "").strip()
+        repo_url = _clean_repo_url(repo_candidate) if repo_candidate else ""
+        scaffold = (body.scaffold or config.get("scaffold") or "react-vite").strip().lower()
+        if scaffold not in SUPPORTED_SCAFFOLDS:
+            raise HTTPException(400, f"Unsupported scaffold: {scaffold}")
+        source_mode = "repository" if repo_url else "scaffold"
         branch = (body.branch or config.get("branch") or "main").strip()[:160]
         session_id = _id("dev")
         workspace_id = session_id
@@ -388,8 +405,10 @@ def register(api, db, get_current_user):
             "goal": body.goal.strip(),
             "repo_url": repo_url,
             "branch": branch,
+            "source_mode": source_mode,
+            "scaffold": scaffold if source_mode == "scaffold" else None,
             "status": "preparing",
-            "config": {**config, "repo_url": repo_url, "branch": branch},
+            "config": {**config, "repo_url": repo_url, "branch": branch, "scaffold": scaffold},
             "events": [],
             "created_at": _now(),
             "updated_at": _now(),
@@ -397,10 +416,16 @@ def register(api, db, get_current_user):
         await db.dev_agent_sessions.insert_one(doc)
         try:
             await _push_event(db, session_id, "workspace", "Creating isolated development workspace")
-            runner = await _runner("POST", "/v1/workspaces", body={"workspace_id": workspace_id, "repo_url": repo_url, "branch": branch}, timeout=180.0)
+            runner = await _runner("POST", "/v1/workspaces", body={
+                "workspace_id": workspace_id,
+                "repo_url": repo_url or None,
+                "branch": branch,
+                "scaffold": scaffold,
+                "project_name": body.project_name or app_doc.get("name") or "Lucio App",
+            }, timeout=300.0)
             inspection = runner.get("inspection") or runner
             await _set_session(db, session_id, status="planning", inspection=inspection)
-            await _push_event(db, session_id, "workspace", "Repository cloned and inspected", {"stack": inspection.get("stack"), "file_count": len(inspection.get("files") or [])})
+            await _push_event(db, session_id, "workspace", "Development workspace prepared and inspected", {"source_mode": source_mode, "scaffold": inspection.get("scaffold"), "stack": inspection.get("stack"), "file_count": len(inspection.get("files") or [])})
             plan = await _plan(app_id, body.goal.strip(), inspection, session_id)
             await _set_session(db, session_id, status="planned", plan=plan)
             await _push_event(db, session_id, "plan", "Development plan generated", plan)
