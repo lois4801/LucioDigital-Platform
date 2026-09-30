@@ -11,8 +11,8 @@ import {
 type Doc = Record<string, any>;
 
 type Props = {
-  apps: Doc[];
-  onCreateProject: () => void;
+  apps?: Doc[];
+  onCreateProject?: () => void;
 };
 
 function StatusPill({ ok, label, warn = false }: { ok: boolean; label: string; warn?: boolean }) {
@@ -38,7 +38,7 @@ const AGENTS = [
   { name: "Deployment", detail: "Preview and production gates", icon: Rocket },
 ];
 
-export default function AICommandCenter({ apps, onCreateProject }: Props) {
+export default function AICommandCenter({ apps: suppliedApps, onCreateProject }: Props = {}) {
   const nav = useNavigate();
   const [status, setStatus] = useState<Doc>({});
   const [models, setModels] = useState<Doc>({ models: [], platform: {} });
@@ -46,12 +46,15 @@ export default function AICommandCenter({ apps, onCreateProject }: Props) {
   const [browserQa, setBrowserQa] = useState<Doc>({});
   const [publishing, setPublishing] = useState<Doc>({});
   const [deployment, setDeployment] = useState<Doc>({});
+  const [ownedApps, setOwnedApps] = useState<Doc[]>([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [goal, setGoal] = useState("");
   const [selectedModel, setSelectedModel] = useState("");
   const [busy, setBusy] = useState("");
   const [expanded, setExpanded] = useState(true);
 
+  const apps = suppliedApps || ownedApps;
+  const createProject = onCreateProject || (() => nav("/templates"));
   const activeApps = useMemo(() => apps.filter((a) => !a.archived && !a.trashed), [apps]);
 
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function AICommandCenter({ apps, onCreateProject }: Props) {
       api.get("/dev-agent/browser-qa"),
       api.get("/dev-agent/publishing"),
       api.get("/dev-agent/deployment-control"),
+      suppliedApps ? Promise.resolve({ data: suppliedApps }) : api.get("/apps"),
     ];
     const settled = await Promise.allSettled(requests);
     const value = (i: number) => settled[i].status === "fulfilled" ? (settled[i] as PromiseFulfilledResult<any>).value.data : {};
@@ -78,6 +82,7 @@ export default function AICommandCenter({ apps, onCreateProject }: Props) {
     setBrowserQa(value(3));
     setPublishing(value(4));
     setDeployment(value(5));
+    if (!suppliedApps) setOwnedApps(Array.isArray(value(6)) ? value(6) : []);
     setBusy("");
   }
 
@@ -99,7 +104,7 @@ export default function AICommandCenter({ apps, onCreateProject }: Props) {
 
   async function launch() {
     if (!goal.trim()) return toast.error("Tell Lucio what you want to build or improve");
-    if (!selectedProject) return onCreateProject();
+    if (!selectedProject) return createProject();
     setBusy("launch");
     try {
       const { data } = await api.post(`/apps/${selectedProject}/dev-agent/sessions`, {
@@ -189,9 +194,16 @@ export default function AICommandCenter({ apps, onCreateProject }: Props) {
                   Build with Lucio AI
                 </button>
               ) : (
-                <button onClick={onCreateProject} className="btn-primary inline-flex items-center justify-center gap-2"><Sparkles size={15} /> Create first project</button>
+                <button onClick={createProject} className="btn-primary inline-flex items-center justify-center gap-2"><Sparkles size={15} /> Create first project</button>
               )}
             </div>
+            {selectedProject && (
+              <div className="mt-3 flex justify-end">
+                <button onClick={() => nav(`/apps/${selectedProject}?tab=dev-agent`)} className="btn-ghost text-xs !py-1.5 !px-3 inline-flex items-center gap-1.5">
+                  <Bot size={12} /> Open selected project in Dev Agent
+                </button>
+              </div>
+            )}
             {(!llmReady || !runnerOnline) && (
               <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-200/90">
                 <CircleAlert size={14} className="mt-0.5 shrink-0" />
