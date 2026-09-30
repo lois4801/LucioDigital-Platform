@@ -235,3 +235,14 @@ def register(api, db, get_current_user, get_user_app, log_activity):
                 out.append({"page_id": pg["page_id"], "name": pg.get("name"), "title": title, "description": desc})
         await log_activity(app_id, user["user_id"], "ai.seo", f"SEO metadata written for {len(out)} page(s) with {model}")
         return {"model": model, "provider": provider, "pages": out}
+
+    # Dev Agent is a first-class backend module. Register it here because server.py already
+    # initializes the AI router after auth/database setup, which keeps the agent routes on
+    # the same authenticated /api router without making production execute generated code.
+    from dev_agent import register as register_dev_agent
+    register_dev_agent(api, db, get_current_user)
+
+    # Phase 6: approval-gated GitHub publishing. Credentials remain backend-only; the runner
+    # never receives them and publishing always targets a newly-created branch.
+    from github_publish import register as register_github_publish
+    register_github_publish(api, db, get_current_user)
