@@ -1,0 +1,27 @@
+name: Dev Agent Phase 9 Browser Evidence CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase9-browser-evidence"]
+  pull_request:
+    paths:
+      - "backend/ai_models.py"
+      - "backend/browser_qa_bridge.py"
+      - "docs/LUCIO_DEV_AGENT_PHASE9_BROWSER_EVIDENCE.md"
+      - ".github/workflows/dev-agent-phase9-browser-evidence-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Browser QA bridge
+        run: python -m py_compile backend/ai_models.py backend/browser_qa_bridge.py
+      - name: Install import dependencies
+        run: pip install fastapi pydantic httpx requests
+      - name: Import Browser QA bridge
+        working-directory: backend
+        run: python -c "import browser_qa_bridge; print('browser_qa_bridge import OK')"
