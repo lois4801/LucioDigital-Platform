@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from "axios";
 
-const BACKEND_URL: string = process.env.REACT_APP_BACKEND_URL as string;
+const BACKEND_URL: string = (process.env.REACT_APP_BACKEND_URL || "").replace(/\/$/, "");
 export const API = `${BACKEND_URL}/api`;
 
 const api: AxiosInstance = axios.create({
