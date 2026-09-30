@@ -54,6 +54,8 @@ function Verification({ value }: { value?: AnyDoc }) {
 
 export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc?: AnyDoc }) {
   const [platform, setPlatform] = useState<AnyDoc | null>(null);
+  const [publishing, setPublishing] = useState<AnyDoc | null>(null);
+  const [publishReadiness, setPublishReadiness] = useState<AnyDoc | null>(null);
   const [config, setConfig] = useState<AnyDoc>({ repo_url: "", branch: "main", scaffold: "react-vite" });
   const [sessions, setSessions] = useState<AnyDoc[]>([]);
   const [active, setActive] = useState<AnyDoc | null>(null);
@@ -66,17 +68,30 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
 
   async function loadBase() {
     try {
-      const [s, c, list] = await Promise.all([
+      const [s, c, list, pub] = await Promise.all([
         api.get("/dev-agent/status"),
         api.get(`/apps/${appId}/dev-agent/config`),
         api.get(`/apps/${appId}/dev-agent/sessions`),
+        api.get("/dev-agent/publishing"),
       ]);
       setPlatform(s.data);
+      setPublishing(pub.data);
       setConfig(c.data || { repo_url: "", branch: "main", scaffold: "react-vite" });
       setSessions(list.data || []);
       if (!activeId && list.data?.length) setActive(list.data[0]);
     } catch (e: any) {
       toast.error(e.response?.data?.detail || "Could not load Lucio Dev Agent");
+    }
+  }
+
+  async function loadPublishReadiness(id = activeId, quiet = true) {
+    if (!id) return;
+    try {
+      const { data } = await api.get(`/apps/${appId}/dev-agent/sessions/${id}/publish-readiness`);
+      setPublishReadiness(data);
+    } catch (e: any) {
+      setPublishReadiness(null);
+      if (!quiet) toast.error(e.response?.data?.detail || "Could not check GitHub publish readiness");
     }
   }
 
@@ -86,6 +101,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
       const { data } = await api.get(`/apps/${appId}/dev-agent/sessions/${id}`);
       setActive(data);
       setSessions((xs) => [data, ...xs.filter((x) => x.session_id !== data.session_id)].slice(0, 30));
+      if (data.status === "approved" || data.publication) loadPublishReadiness(data.session_id, true);
     } catch (e: any) {
       if (!quiet) toast.error(e.response?.data?.detail || "Could not refresh the agent run");
     }
@@ -99,6 +115,10 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     }
     return () => { if (pollRef.current) window.clearInterval(pollRef.current); };
   }, [activeId, active?.status]);
+  useEffect(() => {
+    if (activeId && (active?.status === "approved" || active?.publication)) loadPublishReadiness(activeId, true);
+    else setPublishReadiness(null);
+  }, [activeId, active?.status, active?.publication?.commit_sha]);
 
   async function saveConfig() {
     setBusy("config");
@@ -120,13 +140,13 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
 
   async function createRun(auto = false) {
     if (!goal.trim()) return toast.error("Tell Lucio what you want to build or improve first");
-    // A GitHub repository is optional. When blank, Lucio starts from the selected production scaffold.
     setBusy("create");
     try {
       const { data } = await api.post(`/apps/${appId}/dev-agent/sessions`, {
         goal: goal.trim(), repo_url: config.repo_url?.trim() || null, branch: config.branch || "main", scaffold: config.scaffold || "react-vite", project_name: appDoc?.name || "Lucio App", auto_execute: auto,
       });
       setActive(data);
+      setPublishReadiness(null);
       setSessions((xs) => [data, ...xs.filter((x) => x.session_id !== data.session_id)]);
       if (data.status === "failed") toast.error(data.error || "Dev Agent could not start");
       else toast.success(auto ? "Lucio is building in an isolated workspace" : "Development plan is ready");
@@ -141,6 +161,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     try {
       await api.post(`/apps/${appId}/dev-agent/sessions/${activeId}/execute`, { max_steps: 16, start_preview: true });
       setActive((x: AnyDoc) => ({ ...x, status: "queued" }));
+      setPublishReadiness(null);
       toast.success("Agentic coding loop started");
     } catch (e: any) { toast.error(e.response?.data?.detail || "Could not run the coding agent"); }
     finally { setBusy(""); }
@@ -152,6 +173,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     try {
       await api.post(`/apps/${appId}/dev-agent/sessions/${activeId}/continue`, { instruction: instruction.trim(), max_steps: 12, start_preview: true });
       setInstruction("");
+      setPublishReadiness(null);
       setActive((x: AnyDoc) => ({ ...x, status: "queued" }));
       toast.success("Follow-up sent to the coding agents");
     } catch (e: any) { toast.error(e.response?.data?.detail || "Could not continue the run"); }
@@ -185,9 +207,24 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     try {
       await api.post(`/apps/${appId}/dev-agent/sessions/${activeId}/${state}`, { note: "", cleanup_workspace: false });
       await refreshSession(activeId);
+      if (state === "approve") await loadPublishReadiness(activeId, true);
       toast.success(state === "approve" ? "Change set approved and project source saved" : "Change set rejected");
     } catch (e: any) { toast.error(e.response?.data?.detail || `Could not ${state} this run`); }
     finally { setBusy(""); }
+  }
+
+  async function publishToGitHub() {
+    if (!activeId) return;
+    if (!confirm("Publish this approved and verified change set to a NEW GitHub branch? Lucio will not merge it into the base branch.")) return;
+    setBusy("publish");
+    try {
+      const { data } = await api.post(`/apps/${appId}/dev-agent/sessions/${activeId}/publish`, {});
+      setActive((x: AnyDoc) => ({ ...x, publication: data }));
+      setPublishReadiness((x: AnyDoc) => ({ ...(x || {}), ready: true, already_published: data }));
+      toast.success(`Published to ${data.branch}`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.detail || "Could not publish this change set to GitHub");
+    } finally { setBusy(""); }
   }
 
   const runnerOk = !!platform?.runner?.reachable;
@@ -198,6 +235,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
   const untracked = active?.diff?.untracked || [];
   const canExecute = active && ["planned", "failed", "completed", "approved", "rejected"].includes(active.status);
   const previewUrl = active?.preview?.url;
+  const publication = active?.publication || publishReadiness?.already_published;
 
   return (
     <div className="space-y-6" data-testid="dev-agent-panel">
@@ -212,6 +250,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
             <div className="flex flex-wrap gap-2">
               <Badge tone={aiOk ? "ok" : "bad"}><BrainCircuit size={12} className="mr-1" /> AI {aiOk ? "ready" : "not configured"}</Badge>
               <Badge tone={runnerOk ? "ok" : platform?.runner?.configured ? "warn" : "bad"}><TerminalSquare size={12} className="mr-1" /> Runner {runnerOk ? "online" : platform?.runner?.configured ? "offline" : "not configured"}</Badge>
+              <Badge tone={publishing?.configured ? "ok" : "warn"}><GitBranch size={12} className="mr-1" /> GitHub {publishing?.configured ? "publish ready" : "artifact only"}</Badge>
               <Badge tone="ok"><ShieldCheck size={12} className="mr-1" /> isolated</Badge>
             </div>
           </div>
@@ -321,6 +360,40 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
                   {diff && <pre className="mt-4 max-h-[520px] overflow-auto rounded-xl border border-[var(--line)] bg-black/30 p-4 text-[11px] leading-5 text-zinc-300">{diff}</pre>}
                   {active.status === "awaiting_approval" && <div className="mt-5 flex flex-wrap gap-3"><button onClick={() => decide("approve")} disabled={!!busy} className="btn-primary flex items-center gap-2"><Check size={14} /> {busy === "approve" ? "Saving project…" : "Approve & save project"}</button><button onClick={() => decide("reject")} disabled={!!busy} className="btn-ghost flex items-center gap-2 text-red-300"><X size={14} /> Reject</button></div>}
                   {active.artifact?.download_url && <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[.05] p-4"><div className="min-w-0 flex-1"><div className="text-xs font-semibold text-emerald-300">Durable project source saved</div><div className="mt-1 truncate text-xs text-[var(--mut)]">{active.artifact.filename} · {Math.max(1, Math.round((active.artifact.size || 0) / 1024))} KB</div></div><button onClick={downloadArtifact} disabled={!!busy} className="btn-ghost flex items-center gap-2 text-xs"><FileCode2 size={13} /> {busy === "download" ? "Preparing…" : "Download ZIP"}</button></div>}
+                </Card>
+              )}
+
+              {(active.status === "approved" || publication) && (
+                <Card className="p-6">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 font-semibold"><GitBranch size={16} /> GitHub handoff</div>
+                    <Badge tone={publication ? "ok" : publishing?.configured ? "ok" : "warn"}>{publication ? "published" : publishing?.configured ? "connected" : "artifact only"}</Badge>
+                  </div>
+                  {publication ? (
+                    <div className="mt-4 rounded-xl border border-emerald-500/20 bg-emerald-500/[.05] p-4">
+                      <div className="text-sm font-semibold text-emerald-200">Published safely to a new branch</div>
+                      <div className="mt-1 font-mono text-xs text-[var(--mut)]">{publication.branch}</div>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <a href={publication.branch_url} target="_blank" rel="noreferrer" className="btn-ghost flex items-center gap-2 text-xs">Open branch <ExternalLink size={12} /></a>
+                        <a href={publication.compare_url} target="_blank" rel="noreferrer" className="btn-primary flex items-center gap-2 text-xs">Review / create PR <ExternalLink size={12} /></a>
+                      </div>
+                      <p className="mt-3 text-xs text-[var(--mut)]">Lucio did not merge this branch. Production remains unchanged until a separate deployment approval.</p>
+                    </div>
+                  ) : (
+                    <div className="mt-4">
+                      {!!publishReadiness?.reasons?.length && (
+                        <div className="rounded-xl border border-amber-500/20 bg-amber-500/[.05] p-4">
+                          <div className="text-xs font-semibold text-amber-200">Not ready to publish yet</div>
+                          <div className="mt-2 space-y-1 text-xs text-[var(--mut)]">{publishReadiness.reasons.map((r: string) => <div key={r}>• {r}</div>)}</div>
+                        </div>
+                      )}
+                      {!publishing?.configured && <p className="mt-3 text-xs text-[var(--mut)]">The approved ZIP is still available. Connect backend GitHub publishing later without exposing a token to Nexus Runner or generated apps.</p>}
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button onClick={publishToGitHub} disabled={!!busy || !publishReadiness?.ready} className="btn-primary flex items-center gap-2"><GitBranch size={14} /> {busy === "publish" ? "Publishing…" : "Publish new branch"}</button>
+                        <button onClick={() => loadPublishReadiness(activeId, false)} disabled={!!busy} className="btn-ghost flex items-center gap-2"><RefreshCw size={13} /> Recheck</button>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               )}
 
