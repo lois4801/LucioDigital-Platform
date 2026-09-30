@@ -31,8 +31,10 @@ import ProSettings from "@/components/ProSettings";
 import CtaFormsPanel from "@/components/CtaFormsPanel";
 import RolloutModal from "@/components/RolloutModal";
 import SiteModePanel from "@/components/SiteModePanel";
+import DevAgentPanel from "@/components/DevAgentPanel";
 const TABS = [
   { key: "overview", label: "Overview" },
+  { key: "dev-agent", label: "Dev Agent" },
   { key: "builder", label: "Site Mode" },
   { key: "cms", label: "CMS" },
   { key: "blueprint", label: "App Mode" },
@@ -163,6 +165,7 @@ export default function AppDetail() {
 
       <main className="px-6 lg:px-10 pr-6 lg:pr-10 py-8 fade-in w-full max-w-full" data-testid="app-main">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
+        {tab === "dev-agent" && <DevAgentPanel appId={appId} appDoc={appDoc} />}
         {tab === "builder" && (
           <div className="space-y-6">
             <SiteModePanel appId={appId} appName={appDoc?.name || ""} appDoc={appDoc} />
