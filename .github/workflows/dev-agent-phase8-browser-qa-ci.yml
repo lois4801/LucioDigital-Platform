@@ -1,0 +1,45 @@
+name: Dev Agent Phase 8 Browser QA CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase8-browser-qa"]
+  pull_request:
+    paths:
+      - "runner/browser_qa.py"
+      - "runner/entrypoint.py"
+      - "runner/requirements.txt"
+      - "runner/Dockerfile"
+      - ".github/workflows/dev-agent-phase8-browser-qa-ci.yml"
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile runner browser QA
+        run: python -m py_compile runner/server.py runner/browser_qa.py runner/entrypoint.py
+      - name: Install runner dependencies
+        run: pip install -r runner/requirements.txt
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Launch Chromium smoke test
+        working-directory: runner
+        env:
+          NEXUS_RUNNER_ALLOW_INSECURE: "true"
+        run: |
+          python - <<'PY'
+          from playwright.sync_api import sync_playwright
+          import server, browser_qa
+          browser_qa.register(server.app)
+          with sync_playwright() as p:
+              browser = p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-dev-shm-usage"])
+              page = browser.new_page()
+              page.set_content("<title>Lucio Browser QA</title><main>ready</main>")
+              assert page.title() == "Lucio Browser QA"
+              assert page.locator("main").inner_text() == "ready"
+              browser.close()
+          print("Chromium browser QA smoke test OK")
+          PY
