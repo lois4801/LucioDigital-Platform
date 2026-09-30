@@ -1,0 +1,55 @@
+name: LucioDigital Phase 12 Project Intelligence CI
+
+on:
+  push:
+    branches: ["feature/luciodigital-phase12-project-intelligence"]
+  pull_request:
+    paths:
+      - "backend/project_intelligence.py"
+      - "backend/access.py"
+      - "frontend/src/components/ProjectIntelligencePanel.tsx"
+      - "frontend/src/pages/AppDetail.tsx"
+      - ".github/workflows/dev-agent-phase12-project-intelligence-ci.yml"
+      - "docs/LUCIODIGITAL_PHASE12_PROJECT_INTELLIGENCE.md"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Phase 12 and Dev Agent runtime modules
+        run: >-
+          python -m py_compile
+          backend/project_intelligence.py
+          backend/dev_agent.py
+          backend/github_publish.py
+          backend/deployment_control.py
+          backend/browser_qa_bridge.py
+          backend/browser_self_heal.py
+          backend/access.py
+      - name: Install minimal import dependencies
+        run: pip install fastapi pydantic httpx requests motor python-dotenv
+      - name: Import Project Intelligence module
+        working-directory: backend
+        run: python -c "import project_intelligence; print('project intelligence import OK')"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Production build
+        run: yarn build
