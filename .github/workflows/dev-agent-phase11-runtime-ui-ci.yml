@@ -1,0 +1,28 @@
+name: Dev Agent Phase 11 Runtime UI CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase11-runtime-ui"]
+  pull_request:
+    paths:
+      - "frontend/src/components/DevAgentRuntimePanel.tsx"
+      - "frontend/src/pages/AppDetail.tsx"
+      - ".github/workflows/dev-agent-phase11-runtime-ui-ci.yml"
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - name: Production build
+        run: yarn build
