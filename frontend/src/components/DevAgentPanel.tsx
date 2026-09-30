@@ -158,6 +158,26 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     finally { setBusy(""); }
   }
 
+  async function downloadArtifact() {
+    if (!activeId) return;
+    setBusy("download");
+    try {
+      const url = active?.artifact?.download_url || `/apps/${appId}/dev-agent/sessions/${activeId}/artifact`;
+      const res = await api.get(url, { responseType: "blob" });
+      const blob = new Blob([res.data], { type: res.headers?.["content-type"] || "application/zip" });
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = active?.artifact?.filename || `lucio-${activeId}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+      toast.success("Project source ZIP downloaded");
+    } catch (e: any) { toast.error(e.response?.data?.detail || "Could not download project artifact"); }
+    finally { setBusy(""); }
+  }
+
   async function decide(state: "approve" | "reject") {
     if (!activeId) return;
     if (state === "reject" && !confirm("Reject this change set? The isolated workspace will be kept so you can still inspect it.")) return;
@@ -165,7 +185,7 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
     try {
       await api.post(`/apps/${appId}/dev-agent/sessions/${activeId}/${state}`, { note: "", cleanup_workspace: false });
       await refreshSession(activeId);
-      toast.success(state === "approve" ? "Change set approved" : "Change set rejected");
+      toast.success(state === "approve" ? "Change set approved and project source saved" : "Change set rejected");
     } catch (e: any) { toast.error(e.response?.data?.detail || `Could not ${state} this run`); }
     finally { setBusy(""); }
   }
@@ -299,7 +319,8 @@ export default function DevAgentPanel({ appId, appDoc }: { appId: string; appDoc
                   {!!active.review && <div className="mt-4 rounded-xl border border-violet-500/20 bg-violet-500/[.05] p-4"><div className="text-xs font-semibold text-violet-200">Reviewer</div><div className="mt-1 text-sm leading-6 text-[var(--mut)]">{active.review.summary}</div>{!!active.review.risks?.length && <div className="mt-2 text-xs text-amber-200">Risks: {active.review.risks.join(" · ")}</div>}</div>}
                   {untracked.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{untracked.map((f: string) => <Badge key={f}>{f}</Badge>)}</div>}
                   {diff && <pre className="mt-4 max-h-[520px] overflow-auto rounded-xl border border-[var(--line)] bg-black/30 p-4 text-[11px] leading-5 text-zinc-300">{diff}</pre>}
-                  {active.status === "awaiting_approval" && <div className="mt-5 flex flex-wrap gap-3"><button onClick={() => decide("approve")} disabled={!!busy} className="btn-primary flex items-center gap-2"><Check size={14} /> Approve change set</button><button onClick={() => decide("reject")} disabled={!!busy} className="btn-ghost flex items-center gap-2 text-red-300"><X size={14} /> Reject</button></div>}
+                  {active.status === "awaiting_approval" && <div className="mt-5 flex flex-wrap gap-3"><button onClick={() => decide("approve")} disabled={!!busy} className="btn-primary flex items-center gap-2"><Check size={14} /> {busy === "approve" ? "Saving project…" : "Approve & save project"}</button><button onClick={() => decide("reject")} disabled={!!busy} className="btn-ghost flex items-center gap-2 text-red-300"><X size={14} /> Reject</button></div>}
+                  {active.artifact?.download_url && <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-emerald-500/20 bg-emerald-500/[.05] p-4"><div className="min-w-0 flex-1"><div className="text-xs font-semibold text-emerald-300">Durable project source saved</div><div className="mt-1 truncate text-xs text-[var(--mut)]">{active.artifact.filename} · {Math.max(1, Math.round((active.artifact.size || 0) / 1024))} KB</div></div><button onClick={downloadArtifact} disabled={!!busy} className="btn-ghost flex items-center gap-2 text-xs"><FileCode2 size={13} /> {busy === "download" ? "Preparing…" : "Download ZIP"}</button></div>}
                 </Card>
               )}
 

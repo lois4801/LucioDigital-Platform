@@ -8,6 +8,7 @@ application secrets.
 from __future__ import annotations
 
 import asyncio
+import io
 import json
 import os
 import re
@@ -18,6 +19,7 @@ import socket
 import subprocess
 import sys
 import time
+import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -37,6 +39,8 @@ ALLOW_INSECURE = (os.environ.get("NEXUS_RUNNER_ALLOW_INSECURE") or "").lower() =
 MAX_OUTPUT = int(os.environ.get("NEXUS_RUNNER_MAX_OUTPUT", "120000"))
 MAX_FILE_BYTES = int(os.environ.get("NEXUS_RUNNER_MAX_FILE_BYTES", "750000"))
 COMMAND_TIMEOUT = int(os.environ.get("NEXUS_RUNNER_COMMAND_TIMEOUT", "180"))
+MAX_ARCHIVE_SOURCE_BYTES = int(os.environ.get("NEXUS_RUNNER_MAX_ARCHIVE_SOURCE_BYTES", str(50 * 1024 * 1024)))
+MAX_ARCHIVE_FILES = int(os.environ.get("NEXUS_RUNNER_MAX_ARCHIVE_FILES", "5000"))
 
 DENIED_PARTS = {
     ".env", ".git", ".ssh", ".aws", ".npmrc", ".pypirc", "credentials", "secrets",
@@ -351,6 +355,53 @@ async def create_workspace(body: WorkspaceCreate):
     if scaffold:
         inspection["scaffold"] = scaffold
     return {"workspace_id": wid, "branch": body.branch, "repository": repository, "scaffold": scaffold, "inspection": inspection}
+
+
+
+def _workspace_archive(workspace: Path) -> tuple[bytes, int]:
+    """Create a source-only ZIP. Dependencies, build output, VCS data and secret-like paths are excluded."""
+    buffer = io.BytesIO()
+    total_source = 0
+    included = 0
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+        for path in sorted(workspace.rglob("*")):
+            if not path.is_file():
+                continue
+            rel = path.relative_to(workspace)
+            parts = set(rel.parts)
+            if parts & IGNORED_TREE or parts & DENIED_PARTS:
+                continue
+            if any(part.lower() in DENIED_PARTS for part in rel.parts):
+                continue
+            if rel.name == ".lucio-preview.log":
+                continue
+            try:
+                size = path.stat().st_size
+            except OSError:
+                continue
+            total_source += size
+            included += 1
+            if included > MAX_ARCHIVE_FILES:
+                raise HTTPException(413, f"Workspace contains more than {MAX_ARCHIVE_FILES} exportable files")
+            if total_source > MAX_ARCHIVE_SOURCE_BYTES:
+                raise HTTPException(413, f"Workspace source exceeds {MAX_ARCHIVE_SOURCE_BYTES // (1024 * 1024)} MB export limit")
+            zf.write(path, arcname=rel.as_posix())
+    return buffer.getvalue(), included
+
+
+@app.get("/v1/workspaces/{workspace_id}/archive", dependencies=[Depends(_auth)])
+async def archive_workspace(workspace_id: str):
+    workspace = _workspace(workspace_id)
+    payload, files = _workspace_archive(workspace)
+    return Response(
+        content=payload,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{workspace_id}.zip"',
+            "X-Lucio-Archive-Files": str(files),
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.get("/v1/workspaces/{workspace_id}", dependencies=[Depends(_auth)])
