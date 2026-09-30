@@ -1,0 +1,27 @@
+name: Dev Agent Phase 10 Browser Self-Heal CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent-phase10-browser-self-heal"]
+  pull_request:
+    paths:
+      - "backend/browser_self_heal.py"
+      - "backend/browser_qa_bridge.py"
+      - "docs/LUCIO_DEV_AGENT_PHASE10_BROWSER_SELF_HEAL.md"
+      - ".github/workflows/dev-agent-phase10-browser-self-heal-ci.yml"
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile browser repair modules
+        run: python -m py_compile backend/browser_self_heal.py backend/browser_qa_bridge.py backend/dev_agent.py
+      - name: Install import dependencies
+        run: pip install fastapi pydantic httpx requests motor python-dotenv
+      - name: Import repair orchestrator
+        working-directory: backend
+        run: python -c "import browser_self_heal, browser_qa_bridge; print('browser self-heal imports OK')"
