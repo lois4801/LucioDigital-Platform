@@ -1,0 +1,52 @@
+name: Harden Dev Agent Archive
+
+on:
+  push:
+    branches: ["feature/dev-agent-artifacts"]
+
+permissions:
+  contents: write
+
+jobs:
+  harden:
+    if: ${{ !startsWith(github.event.head_commit.message, 'Apply generated archive hardening') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/dev-agent-artifacts
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Harden secret filtering
+        run: python scripts/harden_dev_agent_archive.py
+      - name: Verify syntax and archive security
+        run: |
+          python -m py_compile runner/server.py backend/dev_agent.py
+          pip install -r runner/requirements.txt
+          cd runner
+          NEXUS_RUNNER_ALLOW_INSECURE=true WORKSPACE_ROOT=/tmp/lucio-archive-sec python - <<'PY'
+          import io, shutil, zipfile
+          from pathlib import Path
+          import server
+          root = Path('/tmp/lucio-archive-secret-smoke')
+          shutil.rmtree(root, ignore_errors=True)
+          root.mkdir()
+          (root / 'app.py').write_text('print(1)')
+          (root / '.env.local').write_text('SECRET=1')
+          (root / '.env.production').write_text('SECRET=2')
+          data, count = server._workspace_archive(root)
+          names = zipfile.ZipFile(io.BytesIO(data)).namelist()
+          assert names == ['app.py'], names
+          assert count == 1
+          print('Archive secret filter passed')
+          PY
+      - name: Commit generated hardening
+        run: |
+          git config user.name "Lucio Dev Agent CI"
+          git config user.email "dev-agent@lucio.local"
+          git add runner/server.py
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Apply generated archive hardening"
+          git push origin HEAD:feature/dev-agent-artifacts
