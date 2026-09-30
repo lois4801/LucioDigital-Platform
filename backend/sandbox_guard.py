@@ -1,8 +1,8 @@
-"""Single-sandbox guarantee: LucioDigital Test Lab is the only test/staging/demo site allowed.
+"""Single client-demo sandbox guarantee.
 
-Runs on every startup and is also exposed as an admin endpoint. Any other app tagged or named as
-TEST / STAGING / DEMO is deactivated and permanently deleted together with its dependent records,
-so newly created clients can never inherit a second sandbox.
+LucioDigital Test Lab is the only database client tagged as test/staging/demo. Dev Agent build
+workspaces are separate ephemeral Nexus Runner workspaces and are intentionally not represented
+as client apps, so this guard never removes active development workspaces.
 """
 import logging
 import re
@@ -22,7 +22,7 @@ TAG_WORDS = {"test", "staging", "stage", "demo", "sandbox"}
 DEPENDENT = ["pages", "blocks", "leads", "messages", "activity", "cms_records", "cms_collections",
              "cta_forms", "form_submissions", "bookings", "files", "media", "videos", "workflows",
              "app_members", "case_studies", "site_locks", "edit_requests", "followups",
-             "rollout_snapshots", "domains", "billing_plans", "subscriptions"]
+             "rollout_snapshots", "domains", "billing_plans", "subscriptions", "dev_agent_sessions"]
 
 
 def _is_other_sandbox(app: Dict[str, Any]) -> bool:
@@ -37,7 +37,7 @@ def _is_other_sandbox(app: Dict[str, Any]) -> bool:
 
 
 async def purge_other_sandboxes(db) -> List[Dict[str, str]]:
-    """Deactivates then permanently removes every sandbox that is not the Test Lab."""
+    """Deactivates then permanently removes every client demo sandbox that is not the Test Lab."""
     removed: List[Dict[str, str]] = []
     async for app in db.apps.find({}, {"_id": 0}):
         if not _is_other_sandbox(app):
@@ -72,3 +72,8 @@ def register(api, db, get_current_user):
     async def enforce(user: dict = Depends(get_current_user)):
         removed = await purge_other_sandboxes(db)
         return {"removed": removed, "count": len(removed), "clean": True}
+
+    # Register the isolated Goal -> Working App development API after the normal client sandbox
+    # guard. Dev Agent workspaces live in Nexus Runner and are not database client sandboxes.
+    from dev_agent import register as register_dev_agent
+    register_dev_agent(api, db, get_current_user)
