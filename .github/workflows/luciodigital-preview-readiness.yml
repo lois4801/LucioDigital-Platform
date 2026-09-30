@@ -1,0 +1,54 @@
+name: LucioDigital Preview Readiness
+
+on:
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile backend modules
+        run: |
+          python -m py_compile backend/server.py backend/dev_agent.py backend/browser_qa_bridge.py backend/browser_self_heal.py
+
+  frontend:
+    name: Frontend production build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+  runner:
+    name: Nexus Runner readiness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile runner modules
+        run: python -m py_compile runner/app.py runner/browser_qa.py
+
+  preview-ready:
+    name: Preview ready
+    needs: [backend, frontend, runner]
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "LucioDigital PR passed preview-readiness checks. Railway PR Environment may be tested before merge."
