@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api, { API } from "@/lib/api";
 import { toast } from "sonner";
-import { ArrowLeft, ExternalLink, Trash2, Rocket, FlaskConical } from "lucide-react";
+import { ArrowLeft, ExternalLink, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import Builder from "@/components/builder/Builder";
 import HandoffPanel from "@/components/HandoffPanel";
@@ -32,6 +32,8 @@ import CtaFormsPanel from "@/components/CtaFormsPanel";
 import RolloutModal from "@/components/RolloutModal";
 import SiteModePanel from "@/components/SiteModePanel";
 import DevAgentPanel from "@/components/DevAgentPanel";
+import DevAgentRuntimePanel from "@/components/DevAgentRuntimePanel";
+
 const TABS = [
   { key: "overview", label: "Overview" },
   { key: "dev-agent", label: "Dev Agent" },
@@ -57,15 +59,13 @@ export default function AppDetail() {
   const { appId } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
-  const [appDoc, setAppDoc] = useState(null);
+  const [appDoc, setAppDoc] = useState<any>(null);
   const [tab, setTab] = useState("overview");
   const [loading, setLoading] = useState(true);
   const [rolloutOpen, setRolloutOpen] = useState(false);
 
   useEffect(() => { load(); }, [appId]);
 
-  // Site Mode edits, look switches and rebuilds all refresh the client doc, so the header name and
-  // the Overview "Live site" card stay in step without a manual reload.
   useEffect(() => {
     const quiet = async () => {
       try { const { data } = await api.get(`/apps/${appId}`); setAppDoc(data); } catch { /* transient */ }
@@ -84,7 +84,7 @@ export default function AppDetail() {
     finally { setLoading(false); }
   }
 
-  async function patch(fields) {
+  async function patch(fields: any) {
     try {
       const { data } = await api.patch(`/apps/${appId}`, fields);
       setAppDoc(data);
@@ -106,8 +106,8 @@ export default function AppDetail() {
   }
 
   return (
-    <UiLabelsProvider appId={appId}>
-    <LocksProvider appId={appId}>
+    <UiLabelsProvider appId={appId!}>
+    <LocksProvider appId={appId!}>
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--bg)]/85 border-b border-[var(--line)] w-full max-w-full" data-testid="builder-page-header">
         <div className="px-6 lg:px-10 py-4 flex items-center justify-between gap-4">
@@ -133,8 +133,7 @@ export default function AppDetail() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <ConvertToWebApp appId={appId} appName={appDoc?.name} inline />
-            {/* Test Lab action buttons removed permanently. */}
+            <ConvertToWebApp appId={appId!} appName={appDoc?.name} inline />
             <LockStateBadge />
             <MasterLockButton />
             <CursorFXPicker />
@@ -152,43 +151,47 @@ export default function AppDetail() {
           </div>
         </div>
 
-      {/* Row 1 — main navigation tabs */}
-      <div className="px-6 lg:px-10 pr-6 lg:pr-10 flex tenant-scroll border-b border-[var(--line)]" data-testid="header-row-tabs">
-        {TABS.map((t) => (
-          <button key={t.key} data-testid={`tab-${t.key}-btn`} onClick={() => setTab(t.key)}
-            data-active={tab === t.key} className="tab-underline shrink-0">
-            <L k={`tab_${t.key}`} d={t.label} testid={`label-tab-${t.key}`} />
-          </button>
-        ))}
-      </div>
+        <div className="px-6 lg:px-10 pr-6 lg:pr-10 flex tenant-scroll border-b border-[var(--line)]" data-testid="header-row-tabs">
+          {TABS.map((t) => (
+            <button key={t.key} data-testid={`tab-${t.key}-btn`} onClick={() => setTab(t.key)}
+              data-active={tab === t.key} className="tab-underline shrink-0">
+              <L k={`tab_${t.key}`} d={t.label} testid={`label-tab-${t.key}`} />
+            </button>
+          ))}
+        </div>
       </header>
 
       <main className="px-6 lg:px-10 pr-6 lg:pr-10 py-8 fade-in w-full max-w-full" data-testid="app-main">
         {tab === "overview" && <OverviewPanel appDoc={appDoc} patch={patch} />}
-        {tab === "dev-agent" && <DevAgentPanel appId={appId} appDoc={appDoc} />}
-        {tab === "builder" && (
-          <div className="space-y-6">
-            <SiteModePanel appId={appId} appName={appDoc?.name || ""} appDoc={appDoc} />
-            <Builder appId={appId} appDoc={appDoc} user={user} />
+        {tab === "dev-agent" && (
+          <div className="space-y-10">
+            <DevAgentPanel appId={appId!} appDoc={appDoc} />
+            <DevAgentRuntimePanel appId={appId!} />
           </div>
         )}
-        {tab === "blueprint" && <BlueprintPanel appId={appId} apiRoot={API} />}
-        {tab === "cms" && <CmsPanel appId={appId} />}
-        {tab === "workflows" && <WorkflowsPanel appId={appId} />}
-        {tab === "inbox" && <InboxPanel appId={appId} />}
-        {tab === "forms" && <CtaFormsPanel appId={appId} />}
-        {tab === "media" && <MediaStudio appId={appId} />}
-        {tab === "videos" && <VideoStudio appId={appId} appDoc={appDoc} />}
-        {tab === "files" && <FilesPanel appId={appId} />}
+        {tab === "builder" && (
+          <div className="space-y-6">
+            <SiteModePanel appId={appId!} appName={appDoc?.name || ""} appDoc={appDoc} />
+            <Builder appId={appId!} appDoc={appDoc} user={user} />
+          </div>
+        )}
+        {tab === "blueprint" && <BlueprintPanel appId={appId!} apiRoot={API} />}
+        {tab === "cms" && <CmsPanel appId={appId!} />}
+        {tab === "workflows" && <WorkflowsPanel appId={appId!} />}
+        {tab === "inbox" && <InboxPanel appId={appId!} />}
+        {tab === "forms" && <CtaFormsPanel appId={appId!} />}
+        {tab === "media" && <MediaStudio appId={appId!} />}
+        {tab === "videos" && <VideoStudio appId={appId!} appDoc={appDoc} />}
+        {tab === "files" && <FilesPanel appId={appId!} />}
         {tab === "bookings" && (appDoc?.webapp?.converted
-          ? <div className="space-y-8"><BookingsCalendar appId={appId} token={appDoc.preview_token} /><ProSettings appId={appId} /></div>
+          ? <div className="space-y-8"><BookingsCalendar appId={appId!} token={appDoc.preview_token} /><ProSettings appId={appId!} /></div>
           : <div className="text-sm text-[var(--mut)]">Convert this site to a web app from Overview and bookings, the weekly digest and the paid members area appear here.</div>)}
-        {tab === "data" && <div className="space-y-8"><SubmissionsPanel appId={appId} /><DataDestinationPanel appId={appId} /></div>}
+        {tab === "data" && <div className="space-y-8"><SubmissionsPanel appId={appId!} /><DataDestinationPanel appId={appId!} /></div>}
         {tab === "billing" && <BillingPanel appDoc={appDoc} />}
         {tab === "domain" && <DomainPanel appDoc={appDoc} setAppDoc={setAppDoc} />}
         {tab === "handoff" && <HandoffPanel appDoc={appDoc} patch={patch} apiRoot={API} setAppDoc={setAppDoc} />}
-        {tab === "activity" && <ActivityLog appId={appId} />}
-        {tab === "members" && <MembersPanel appId={appId} currentUser={user} />}
+        {tab === "activity" && <ActivityLog appId={appId!} />}
+        {tab === "members" && <MembersPanel appId={appId!} currentUser={user} />}
       </main>
     </div>
     </LocksProvider>
