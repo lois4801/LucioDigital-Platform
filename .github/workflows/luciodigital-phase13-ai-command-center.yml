@@ -1,0 +1,56 @@
+name: LucioDigital Phase 13 AI Command Center CI
+
+on:
+  pull_request:
+    branches: ["main"]
+    paths:
+      - "frontend/src/components/AICommandCenter.tsx"
+      - "frontend/src/components/EditorialRolloutCard.tsx"
+      - "frontend/src/pages/AppDetail.tsx"
+      - "backend/ai_models.py"
+      - "backend/llm_provider.py"
+      - "backend/access.py"
+      - "backend/requirements.txt"
+      - ".github/workflows/luciodigital-phase13-ai-command-center.yml"
+  workflow_dispatch:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile AI runtime modules
+        run: python -m py_compile backend/ai_models.py backend/llm_provider.py backend/access.py backend/dev_agent.py backend/project_intelligence.py
+      - name: Assert single Dev Agent bootstrap
+        run: |
+          if grep -q "register_dev_agent(api" backend/ai_models.py; then
+            echo "Dev Agent must be registered only by access.py"
+            exit 1
+          fi
+          grep -q "register_dev_agent(api" backend/access.py
+      - name: Assert LiteLLM dependency for BYO providers
+        run: grep -q '^litellm==' backend/requirements.txt
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - run: yarn install --frozen-lockfile
+      - name: Production build
+        run: yarn build
+      - name: Assert command center is mounted on dashboard
+        run: |
+          grep -q 'AICommandCenter' src/components/EditorialRolloutCard.tsx
+          grep -q 'Lucio AI Command Center' src/components/AICommandCenter.tsx
