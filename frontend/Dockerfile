@@ -8,6 +8,7 @@ COPY . .
 RUN yarn build
 
 FROM nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+ENV BACKEND_HOST=backend:8001
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/frontend/build /usr/share/nginx/html
 EXPOSE 80
