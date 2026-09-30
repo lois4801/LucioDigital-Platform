@@ -11,8 +11,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt \
+    && python -m playwright install --with-deps chromium
 COPY server.py ./server.py
+COPY browser_qa.py ./browser_qa.py
 COPY entrypoint.py ./entrypoint.py
 
 RUN mkdir -p ${WORKSPACE_ROOT}
