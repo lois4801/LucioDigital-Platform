@@ -203,7 +203,6 @@ def register(api, db, get_current_user, get_user_app, log_activity):
 
     @api.post("/apps/{app_id}/ai/seo")
     async def write_seo(app_id: str, user: dict = Depends(get_current_user)):
-        """Gemini writes SEO title + meta description for every page, from its real content."""
         doc = await get_user_app(app_id, user)
         from llm_provider import get_chat, UserMessage, TextDelta, StreamDone
         provider, model = await resolve_model(db, app_id, "seo")
@@ -242,7 +241,9 @@ def register(api, db, get_current_user, get_user_app, log_activity):
     from github_publish import register as register_github_publish
     register_github_publish(api, db, get_current_user)
 
-    # Phase 7: a separate deployment control plane. Preview deployment requires an approved,
-    # verified and published branch; production promotion remains disabled in this phase.
     from deployment_control import register as register_deployment_control
     register_deployment_control(api, db, get_current_user)
+
+    # Phase 9: persist real Chromium QA evidence from Nexus Runner on each Dev Agent session.
+    from browser_qa_bridge import register as register_browser_qa_bridge
+    register_browser_qa_bridge(api, db, get_current_user)
