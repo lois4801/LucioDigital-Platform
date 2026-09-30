@@ -138,6 +138,8 @@ def register(api, db, get_current_user):
             "checked_at": _now(),
             "checked_by": user.get("user_id"),
             "path": body.path,
+            "expected_text": body.expected_text,
+            "fail_on_console_errors": body.fail_on_console_errors,
             "screenshot": screenshot,
         }
         await db.dev_agent_sessions.update_one(
@@ -165,5 +167,11 @@ def register(api, db, get_current_user):
     async def get_browser_qa(app_id: str, session_id: str, user: dict = Depends(get_current_user)):
         session = await get_session(app_id, session_id, user)
         return session.get("browser_qa") or {}
+
+    # Phase 10 extends the Browser QA surface with a bounded repair orchestrator. Registering it
+    # here keeps the core Dev Agent file unchanged and reduces the risk of destabilizing the main
+    # coding loop while still reusing its existing safe runner/tool primitives.
+    from browser_self_heal import register as register_browser_self_heal
+    register_browser_self_heal(api, db, get_current_user)
 
     return {"configured": bool(RUNNER_URL and RUNNER_SECRET), "runner_url_set": bool(RUNNER_URL)}
