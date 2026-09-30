@@ -1,0 +1,51 @@
+name: Dev Agent CI
+
+on:
+  push:
+    branches: ["feature/lucio-dev-agent"]
+  pull_request:
+    paths:
+      - "backend/dev_agent.py"
+      - "backend/sandbox_guard.py"
+      - "frontend/src/components/DevAgentPanel.tsx"
+      - "frontend/src/pages/AppDetail.tsx"
+      - "runner/**"
+      - ".github/workflows/dev-agent-ci.yml"
+
+jobs:
+  python-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile Dev Agent and Runner
+        run: python -m py_compile backend/dev_agent.py backend/sandbox_guard.py runner/server.py
+      - name: Install runner dependencies
+        run: pip install -r runner/requirements.txt
+      - name: Import Nexus Runner
+        working-directory: runner
+        env:
+          NEXUS_RUNNER_ALLOW_INSECURE: "true"
+        run: python -c "import server; print(server.app.title)"
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "yarn"
+          cache-dependency-path: frontend/yarn.lock
+      - run: corepack enable
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Typecheck
+        run: yarn typecheck
+      - name: Production build
+        run: yarn build
