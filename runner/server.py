@@ -371,7 +371,8 @@ def _workspace_archive(workspace: Path) -> tuple[bytes, int]:
             parts = set(rel.parts)
             if parts & IGNORED_TREE or parts & DENIED_PARTS:
                 continue
-            if any(part.lower() in DENIED_PARTS for part in rel.parts):
+            lowered_parts = {part.lower() for part in rel.parts}
+            if lowered_parts & DENIED_PARTS or any(part.startswith(".env") for part in lowered_parts):
                 continue
             if rel.name == ".lucio-preview.log":
                 continue
