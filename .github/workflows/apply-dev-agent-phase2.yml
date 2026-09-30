@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Apply patch
-        run: python scripts/apply_dev_agent_phase2.py
+        run: python scripts/run_dev_agent_phase2_patch.py
       - name: Verify syntax and frontend build
         run: |
           python -m py_compile backend/dev_agent.py runner/server.py runner/entrypoint.py
