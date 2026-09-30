@@ -16,7 +16,7 @@ jobs:
           python-version: "3.12"
       - name: Compile backend modules
         run: |
-          python -m py_compile backend/server.py backend/dev_agent.py backend/browser_qa_bridge.py backend/browser_self_heal.py
+          python -m py_compile backend/server.py backend/dev_agent.py backend/project_intelligence.py backend/github_publish.py backend/deployment_control.py backend/browser_qa_bridge.py backend/browser_self_heal.py
 
   frontend:
     name: Frontend production build
@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile runner modules
-        run: python -m py_compile runner/app.py runner/browser_qa.py
+        run: python -m py_compile runner/server.py runner/browser_qa.py runner/entrypoint.py
 
   preview-ready:
     name: Preview ready
