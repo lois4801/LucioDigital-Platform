@@ -61,7 +61,10 @@ export default function AppDetail() {
   const nav = useNavigate();
   const { user } = useAuth();
   const [appDoc, setAppDoc] = useState<any>(null);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get("tab") || "overview";
+    return TABS.some((t) => t.key === requested) ? requested : "overview";
+  });
   const [loading, setLoading] = useState(true);
   const [rolloutOpen, setRolloutOpen] = useState(false);
 
