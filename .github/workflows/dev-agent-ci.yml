@@ -22,7 +22,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile Dev Agent and Runner
-        run: python -m py_compile backend/dev_agent.py backend/sandbox_guard.py runner/server.py
+        run: python -m py_compile backend/dev_agent.py backend/sandbox_guard.py runner/server.py runner/entrypoint.py
       - name: Install runner dependencies
         run: pip install -r runner/requirements.txt
       - name: Import Nexus Runner
