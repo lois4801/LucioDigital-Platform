@@ -23,7 +23,7 @@ jobs:
       - name: Compile Dev Agent publishing modules
         run: python -m py_compile backend/ai_models.py backend/dev_agent.py backend/github_publish.py
       - name: Install backend dependencies needed for route import
-        run: pip install fastapi pydantic httpx motor python-dotenv
+        run: pip install fastapi pydantic httpx motor python-dotenv requests
       - name: Import publishing module
         working-directory: backend
         run: python -c "import github_publish; print('github_publish import OK')"
