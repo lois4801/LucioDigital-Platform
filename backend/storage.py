@@ -27,7 +27,12 @@ def _fs():
 
 
 def init_storage(force=False):
+    """Initialize the configured storage backend without calling Emergent in GridFS mode."""
     global storage_key
+    if STORAGE_DRIVER == "gridfs":
+        _fs()
+        storage_key = "gridfs"
+        return storage_key
     if storage_key and not force:
         return storage_key
     r = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
