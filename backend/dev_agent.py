@@ -16,7 +16,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import httpx
-from fastapi import BackgroundTasks, Depends, HTTPException
+from fastapi import BackgroundTasks, Depends, HTTPException, Response
+from storage import get_object, put_object
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("agency.dev_agent")
@@ -100,6 +101,25 @@ async def _runner(method: str, path: str, *, body: Optional[dict] = None, timeou
         detail = payload.get("detail") if isinstance(payload, dict) else str(payload)
         raise HTTPException(res.status_code, f"Runner: {str(detail)[:1200]}")
     return payload if isinstance(payload, dict) else {"result": payload}
+
+
+
+
+async def _runner_bytes(path: str, *, timeout: float = 180.0) -> tuple[bytes, str]:
+    if not RUNNER_URL:
+        raise HTTPException(503, "NEXUS_RUNNER_URL is not configured")
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            res = await client.get(f"{RUNNER_URL}{path}", headers=_runner_headers())
+    except httpx.HTTPError as exc:
+        raise HTTPException(502, f"Nexus Runner is unreachable: {str(exc)[:220]}")
+    if res.status_code >= 400:
+        try:
+            detail = res.json().get("detail")
+        except Exception:
+            detail = res.text[:1200]
+        raise HTTPException(res.status_code, f"Runner: {str(detail)[:1200]}")
+    return res.content, res.headers.get("content-type", "application/octet-stream")
 
 
 async def _runner_health() -> dict:
@@ -352,9 +372,10 @@ def register(api, db, get_current_user):
                 "phase_2_isolated_runtime": bool(runner.get("configured")),
                 "phase_3_agentic_loop": True,
                 "phase_4_goal_to_working_app": True,
+                "phase_5_durable_artifacts": True,
             },
             "scaffolds": sorted(SUPPORTED_SCAFFOLDS),
-            "capabilities": ["repository_inspection", "new_app_scaffolding", "planning", "read_search", "code_editing", "commands", "tests", "self_healing", "git_diff", "review", "live_preview", "approval_gate"],
+            "capabilities": ["repository_inspection", "new_app_scaffolding", "planning", "read_search", "code_editing", "commands", "tests", "self_healing", "git_diff", "review", "live_preview", "approval_gate", "durable_artifacts", "project_zip_export"],
         }
 
     @api.get("/apps/{app_id}/dev-agent/config")
@@ -477,15 +498,75 @@ def register(api, db, get_current_user):
         doc = await db.dev_agent_sessions.find_one({"app_id": app_id, "session_id": session_id}, {"_id": 0})
         if not doc:
             raise HTTPException(404, "Dev Agent session not found")
+
+        # Approval first creates a durable source artifact. If persistence fails, keep the
+        # session reviewable and do not delete its workspace.
+        artifact = doc.get("artifact")
+        if not artifact:
+            try:
+                payload, content_type = await _runner_bytes(f"/v1/workspaces/{doc['workspace_id']}/archive", timeout=180.0)
+                if not payload:
+                    raise RuntimeError("Runner returned an empty project archive")
+                filename = f"lucio-{app_id}-{session_id}.zip"
+                storage_path = f"omnistack/dev-agent/{app_id}/{session_id}.zip"
+                stored = put_object(storage_path, payload, "application/zip")
+                artifact = {
+                    "file_id": f"devagent-{session_id}",
+                    "storage_path": stored.get("path", storage_path),
+                    "filename": filename,
+                    "content_type": "application/zip",
+                    "size": stored.get("size", len(payload)),
+                    "saved_at": _now(),
+                    "download_url": f"/api/apps/{app_id}/dev-agent/sessions/{session_id}/artifact",
+                }
+                await db.files.update_one(
+                    {"file_id": artifact["file_id"]},
+                    {"$set": {
+                        "file_id": artifact["file_id"], "app_id": app_id, "storage_path": artifact["storage_path"],
+                        "original_filename": filename, "content_type": "application/zip", "size": artifact["size"],
+                        "private": True, "is_deleted": False, "source": "dev_agent", "session_id": session_id,
+                        "created_at": artifact["saved_at"],
+                    }},
+                    upsert=True,
+                )
+                await _set_session(db, session_id, artifact=artifact)
+                await _push_event(db, session_id, "artifact", "Approved project source saved as a durable ZIP artifact", {"filename": filename, "size": artifact["size"]})
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.exception("Could not persist Dev Agent artifact for %s", session_id)
+                raise HTTPException(502, f"Could not persist project artifact: {str(exc)[:300]}")
+
         decision = {"state": "approved", "by": user["user_id"], "at": _now(), "note": body.note}
-        await _set_session(db, session_id, status="approved", decision=decision)
+        await _set_session(db, session_id, status="approved", decision=decision, artifact=artifact)
         await _push_event(db, session_id, "approval", "Change set approved by human reviewer", decision)
         if body.cleanup_workspace:
             try:
                 await _runner("DELETE", f"/v1/workspaces/{doc['workspace_id']}", timeout=30.0)
+                await _set_session(db, session_id, workspace_cleaned_at=_now(), preview=None)
             except Exception:
                 pass
-        return {"session_id": session_id, "status": "approved", "decision": decision, "diff": doc.get("diff")}
+        return {"session_id": session_id, "status": "approved", "decision": decision, "diff": doc.get("diff"), "artifact": artifact}
+
+    @api.get("/apps/{app_id}/dev-agent/sessions/{session_id}/artifact")
+    async def download_artifact(app_id: str, session_id: str, user: dict = Depends(get_current_user)):
+        await get_app(app_id, user)
+        doc = await db.dev_agent_sessions.find_one({"app_id": app_id, "session_id": session_id}, {"_id": 0, "artifact": 1})
+        if not doc or not doc.get("artifact"):
+            raise HTTPException(404, "No durable project artifact is available for this run")
+        artifact = doc["artifact"]
+        try:
+            payload, content_type = get_object(artifact["storage_path"])
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(502, f"Could not read project artifact: {str(exc)[:240]}")
+        filename = re.sub(r"[^A-Za-z0-9_.-]", "-", artifact.get("filename") or f"lucio-{session_id}.zip")
+        return Response(
+            content=payload,
+            media_type=artifact.get("content_type") or content_type or "application/zip",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"', "Cache-Control": "no-store"},
+        )
 
     @api.post("/apps/{app_id}/dev-agent/sessions/{session_id}/reject")
     async def reject(app_id: str, session_id: str, body: DecisionIn, user: dict = Depends(get_current_user)):
