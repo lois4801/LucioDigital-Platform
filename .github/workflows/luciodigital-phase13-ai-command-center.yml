@@ -31,8 +31,15 @@ jobs:
             exit 1
           fi
           grep -q "register_dev_agent(api" backend/access.py
-      - name: Assert LiteLLM dependency for BYO providers
-        run: grep -q '^litellm==' backend/requirements.txt
+      - name: Assert compatible provider runtime dependency
+        run: |
+          # emergentintegrations 0.2.0 supplies its compatible LiteLLM runtime.
+          # Do not add a second exact LiteLLM pin here; Railway/pip correctly rejects the conflict.
+          grep -q '^emergentintegrations==0.2.0$' backend/requirements.txt
+          if grep -q '^litellm==' backend/requirements.txt; then
+            echo "Do not pin a second LiteLLM version alongside emergentintegrations 0.2.0"
+            exit 1
+          fi
 
   frontend:
     runs-on: ubuntu-latest
